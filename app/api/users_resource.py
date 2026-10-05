@@ -4,6 +4,7 @@ from flask_login import current_user
 from flask_restful import Resource
 from marshmallow import Schema, fields
 
+from app.api.serializers import HashidField
 from app.auth.decorators import role_required
 from app.extensions import db
 from app.models import AuditLog, User
@@ -27,7 +28,7 @@ def _paginate(query):
 
 
 class UserSchema(Schema):
-    id = fields.Int()
+    id = HashidField()
     name = fields.Str()
     email = fields.Str()
     role = fields.Str()

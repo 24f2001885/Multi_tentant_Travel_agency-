@@ -58,8 +58,8 @@
 
     <!-- Action Button -->
     <div class="mt-auto">
-      <!-- Fixed Smart Routing Logic directly inside the href -->
-      <a href="{% if current_user.is_authenticated %}{% if current_user.role == 'admin' %}{{ url_for('admin.trek_detail', trek_id=trek.id) }}{% elif current_user.role == 'staff' %}{{ url_for('staff.trek_manage', trek_id=trek.id) }}{% else %}{{ url_for('trekker.trek_detail', trek_id=trek.id) }}{% endif %}{% else %}{{ url_for('auth.login', next=url_for('trekker.trek_detail', trek_id=trek.id)) }}{% endif %}" 
+      <!-- Smart Routing Logic: anonymous visitors can view public trek detail directly -->
+      <a href="{% if current_user.is_authenticated %}{% if current_user.role == 'admin' %}{{ url_for('admin.trek_detail', trek_id=trek.id) }}{% elif current_user.role == 'staff' %}{{ url_for('staff.trek_manage', trek_id=trek.id) }}{% else %}{{ url_for('trekker.trek_detail', trek_id=trek.id) }}{% endif %}{% else %}{{ url_for('public.trek_detail', id=trek.id) }}{% endif %}" 
          class="btn w-100 py-2 tma-trek-card-btn text-center d-block text-decoration-none">
         View Trek Details
       </a>

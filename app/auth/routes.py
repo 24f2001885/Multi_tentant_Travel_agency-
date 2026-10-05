@@ -1,12 +1,15 @@
+"""
+Authentication routes and session lifecycle (TDR v2 §5.5, §6).
+"""
 
 from urllib.parse import urlparse
 
-
-from flask import flash, redirect, render_template, request, url_for, session
+from flask import flash, g, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.auth import auth_bp
 from app.auth.forms import (
+    CompleteAccountForm,
     ForcedPasswordChangeForm,
     ForgotPasswordForm,
     LoginForm,
@@ -15,8 +18,11 @@ from app.auth.forms import (
 )
 from app.extensions import db, limiter, login_manager
 from app.services import auth_service
-from app.services.auth_service import DuplicateEmailError
-
+from app.services.auth_service import (
+    DuplicateEmailError,
+    InvalidMobileError,
+    TermsNotAcceptedError,
+)
 
 _ROLE_DASHBOARD_ENDPOINTS = {
     "admin": "admin.dashboard",
@@ -26,30 +32,41 @@ _ROLE_DASHBOARD_ENDPOINTS = {
 
 
 def _role_dashboard_url(role: str) -> str:
-    
-    endpoint = _ROLE_DASHBOARD_ENDPOINTS.get(role, "auth.login")
+    endpoint = _ROLE_DASHBOARD_ENDPOINTS.get(role, "public.index")
     return url_for(endpoint)
 
 
 def _is_safe_next_url(target: str) -> bool:
-   
     if not target or target.startswith("//"):
         return False
     parsed = urlparse(target)
     return not parsed.netloc and not parsed.scheme and target.startswith("/")
 
 
-@login_manager.user_loader
-def load_user(user_id: str):
-    """Flask-Login callback to load a user instance from the database by ID."""
-    from app.models.user import User
 
-    return User.query.get(int(user_id))
+
+@auth_bp.before_app_request
+def enforce_account_completion():
+    """
+    Ensures cross-tenant session isolation and requires legacy users to complete account details.
+    """
+    if current_user.is_authenticated:
+        # Cross-tenant session protection: reject session if user belongs to another tenant
+        active_org_id = getattr(g, "organization_id", None)
+        if active_org_id is not None and str(getattr(current_user, "organization_id", None)) != str(active_org_id):
+            logout_user()
+            return redirect(url_for("auth.login"))
+
+        if getattr(current_user, "needs_account_completion", False):
+            exempt_endpoints = {"auth.complete_account", "auth.logout", "static"}
+            if request.endpoint not in exempt_endpoints and not request.path.startswith("/static/"):
+                # print(f"[DEBUG] completion gate user_id={getattr(current_user,'id',None)} needs=True")
+                return redirect(url_for("auth.complete_account"))
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
 def register():
-    """Handles new user registration for Trekkers and Trek Staff."""
+    """Handles new user registration for Trekkers and Trek Staff with country-code mobile and terms consent."""
     form = RegisterForm()
     next_url = request.args.get("next")
 
@@ -61,17 +78,22 @@ def register():
                 password=form.password.data,
                 role=form.role.data,
                 contact_details=form.contact_details.data or None,
+                mobile_country_code=form.mobile_country_code.data,
+                mobile_number=form.mobile_number.data,
+                accept_terms=form.accept_terms.data,
             )
         except DuplicateEmailError:
-            flash("An account with that email already exists.", "danger")
+            flash("An account with that email already exists in this organization.", "danger")
+            return render_template("auth/register.html", form=form, next_url=next_url)
+        except (InvalidMobileError, TermsNotAcceptedError) as exc:
+            flash(str(exc), "danger")
             return render_template("auth/register.html", form=form, next_url=next_url)
 
         if user.role == "trekker":
             flash("Account created — you can now log in.", "success")
         else:
             flash(
-                "Account created — you'll be able to log in once an Admin "
-                "approves your Trek Staff account.",
+                "Account created — you'll be able to log in once an Admin approves your Trek Staff account.",
                 "info",
             )
 
@@ -85,11 +107,9 @@ def register():
 @auth_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5/minute")
 def login():
-    
-    
     if request.method == "GET" and request.args.get("next"):
         session["next_url"] = request.args.get("next")
-        
+
     form = LoginForm()
 
     if form.validate_on_submit():
@@ -98,34 +118,59 @@ def login():
             flash("Invalid email or password.", "danger")
             return render_template("auth/login.html", form=form)
 
-        # Higher-priority interrupt: 
+        login_user(user)
+
+        # 1. Pending approval staff checkpoint
         if (
             user.role == "staff"
             and user.staff_profile
             and user.staff_profile.approval_status != "approved"
         ):
-            login_user(user)
             return redirect(url_for("auth.pending_approval"))
 
-        # Higher-priority interrupt:
+        # 2. Forced password change checkpoint
         if user.must_reset_password:
-            login_user(user)
             return redirect(url_for("auth.forced_password_change"))
 
-        login_user(user)
+        # 3. Account completion checkpoint (missing mobile or unaccepted terms)
+        if user.needs_account_completion:
+            return redirect(url_for("auth.complete_account"))
 
-        # Smart Redirect
+        # 4. Success redirect
         next_url = session.pop("next_url", None)
-        
         if next_url and _is_safe_next_url(next_url):
             return redirect(next_url)
-            
+
         return redirect(_role_dashboard_url(user.role))
 
     return render_template("auth/login.html", form=form)
 
 
-@auth_bp.route("/logout", methods=["POST"])
+@auth_bp.route("/complete-account", methods=["GET", "POST"])
+@login_required
+def complete_account():
+    """Gated screen requiring legacy or staff-created users to provide valid mobile and accept terms."""
+    if not current_user.needs_account_completion:
+        return redirect(_role_dashboard_url(current_user.role))
+
+    form = CompleteAccountForm()
+    if form.validate_on_submit():
+        try:
+            auth_service.complete_account(
+                user=current_user,
+                country_code=form.mobile_country_code.data,
+                number=form.mobile_number.data,
+                accept_terms=form.accept_terms.data,
+            )
+            flash("Account completed successfully.", "success")
+            return redirect(_role_dashboard_url(current_user.role))
+        except (InvalidMobileError, TermsNotAcceptedError) as exc:
+            flash(str(exc), "danger")
+
+    return render_template("auth/complete_account.html", form=form)
+
+
+@auth_bp.route("/logout", methods=["POST", "GET"])
 @login_required
 def logout():
     """Logs out the active user session and redirects to the login page."""
@@ -136,7 +181,6 @@ def logout():
 @auth_bp.route("/forgot-password", methods=["GET", "POST"])
 @limiter.limit("5/minute")
 def forgot_password():
-    """Generates password reset tokens without leaking email existence."""
     form = ForgotPasswordForm()
     submitted = False
     if form.validate_on_submit():
@@ -148,7 +192,6 @@ def forgot_password():
 @auth_bp.route("/reset-password/<token>", methods=["GET", "POST"])
 @limiter.limit("5/minute")
 def reset_password(token):
-    """Processes password resets using secure time-sensitive tokens."""
     form = ResetPasswordForm(token=token)
     if form.validate_on_submit():
         if auth_service.reset_password(form.token.data, form.new_password.data):
@@ -161,13 +204,14 @@ def reset_password(token):
 @auth_bp.route("/forced-password-change", methods=["GET", "POST"])
 @login_required
 def forced_password_change():
-    """Forces administrative password updates upon initial login."""
     form = ForcedPasswordChangeForm()
     if form.validate_on_submit():
         current_user.set_password(form.new_password.data)
         current_user.must_reset_password = False
         db.session.commit()
         flash("Password updated.", "success")
+        if current_user.needs_account_completion:
+            return redirect(url_for("auth.complete_account"))
         return redirect(_role_dashboard_url(current_user.role))
     return render_template("auth/forced_password_change.html", form=form)
 
@@ -175,5 +219,4 @@ def forced_password_change():
 @auth_bp.route("/pending-approval")
 @login_required
 def pending_approval():
-    """Rendered when a Staff user logs in before an Admin has approved their account."""
     return render_template("staff/pending_approval.html")
