@@ -1,12 +1,12 @@
-
 {% extends "shared/base.html" %}
-{% block title %}Register — TMA{% endblock %}
+{% block title %}Register — {{ current_org.name if current_org and current_org.name else 'TMA' }}{% endblock %}
 {% block content %}
+<!-- DEBUG: register.html mobile+consent fields rendered -->
 <div class="d-flex justify-content-center align-items-center py-5">
-  <div class="card shadow-sm" style="width: 440px; max-width: 100%;">
+  <div class="card shadow-sm" style="width: 480px; max-width: 100%;">
     <div class="card-body p-4">
       <h1 class="h4 mb-4 text-center">Register</h1>
-      <form method="POST" action="{{ url_for('auth.register') }}" id="register-form">
+      <form method="POST" action="{{ url_for('auth.register', next=next_url) }}" id="register-form">
         {{ form.hidden_tag() }}
         <div class="btn-group w-100 mb-3" role="group" aria-label="Role toggle">
           {% for subfield in form.role %}
@@ -19,12 +19,31 @@
         </div>
         <div class="mb-3">
           {{ form.name.label(class="form-label") }}
-          {{ form.name(class="form-control") }}
+          {{ form.name(class="form-control", required=True) }}
+          {% for error in form.name.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
         <div class="mb-3">
           {{ form.email.label(class="form-label") }}
-          {{ form.email(class="form-control") }}
+          {{ form.email(class="form-control", required=True) }}
+          {% for error in form.email.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
+
+        <!-- P7: Mobile Number with Country Code -->
+        <div class="mb-3">
+          <label class="form-label" for="mobile_number">Mobile Number</label>
+          <div class="input-group">
+            {{ form.mobile_country_code(class="form-select", style="max-width: 140px;") }}
+            {{ form.mobile_number(class="form-control", placeholder="9999999999", required=True) }}
+          </div>
+          {% for error in form.mobile_number.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
         <div class="mb-3" id="contact-details-group">
           {{ form.contact_details.label(class="form-label") }}
           {{ form.contact_details(class="form-control") }}
@@ -32,12 +51,30 @@
         </div>
         <div class="mb-3">
           {{ form.password.label(class="form-label") }}
-          {{ form.password(class="form-control") }}
+          {{ form.password(class="form-control", required=True) }}
+          {% for error in form.password.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
         <div class="mb-3">
           {{ form.confirm_password.label(class="form-label") }}
-          {{ form.confirm_password(class="form-control") }}
+          {{ form.confirm_password(class="form-control", required=True) }}
+          {% for error in form.confirm_password.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
         </div>
+
+        <!-- P7: Mandatory Terms and Conditions & Privacy Policy -->
+        <div class="mb-3 form-check">
+          {{ form.accept_terms(class="form-check-input", id="accept_terms") }}
+          <label class="form-check-label small" for="accept_terms">
+            I accept the <a href="{{ url_for('public.terms') }}" target="_blank">Terms and Conditions</a> and <a href="{{ url_for('public.privacy') }}" target="_blank">Privacy Policy</a>
+          </label>
+          {% for error in form.accept_terms.errors %}
+            <div class="text-danger small">{{ error }}</div>
+          {% endfor %}
+        </div>
+
         <button type="submit" class="btn btn-primary w-100">Register</button>
         <p class="text-center small mt-3 mb-0">
           Already have an account? <a href="{{ url_for('auth.login') }}">Log In</a>
