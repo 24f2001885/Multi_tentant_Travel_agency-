@@ -82,12 +82,14 @@ def platform_admin_required(fn: Callable) -> Callable:
     Route decorator ensuring a valid Platform Admin session.
     Redirects to platform.login if unauthenticated.
     Never stacks with tenant-aware decorators.
+    Runs view and template rendering under tenant_bypass().
     """
     @wraps(fn)
     def decorated_view(*args, **kwargs):
         admin = current_platform_admin()
         if not admin:
             return redirect(url_for("platform.login"))
-        return fn(*args, **kwargs)
+        with tenant_bypass():
+            return fn(*args, **kwargs)
 
     return decorated_view

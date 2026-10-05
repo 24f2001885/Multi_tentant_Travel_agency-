@@ -7,10 +7,16 @@ from wtforms import PasswordField, StringField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Regexp
 
 
+EMAIL_REGEX = r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$"
+
+
 class PlatformLoginForm(FlaskForm):
     email = StringField(
         "Email Address",
-        validators=[DataRequired(message="Email is required."), Email(message="Invalid email address.")],
+        validators=[
+            DataRequired(message="Email is required."),
+            Regexp(EMAIL_REGEX, message="Invalid email address."),
+        ],
     )
     password = PasswordField(
         "Password",
@@ -49,7 +55,7 @@ class OnboardOrganizationForm(FlaskForm):
         "Tenant Admin Email",
         validators=[
             DataRequired(message="Tenant Admin email is required."),
-            Email(message="Invalid email address."),
+            Regexp(EMAIL_REGEX, message="Invalid email address."),
             Length(max=255, message="Email must be 255 characters or fewer."),
         ],
     )

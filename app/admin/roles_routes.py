@@ -151,18 +151,18 @@ def staff_assign_role(id: int) -> Any:
     role_id_str = request.form.get("role_id", "").strip()
     if not role_id_str:
         flash("Please select a role to assign.", "danger")
-        return redirect(url_for("admin.staff_detail", id=id))
+        return redirect(url_for("admin.staff_detail", staff_id=id))
 
     try:
         role_uuid = uuid.UUID(role_id_str)
     except (ValueError, TypeError):
         flash("Invalid role identifier provided.", "danger")
-        return redirect(url_for("admin.staff_detail", id=id))
+        return redirect(url_for("admin.staff_detail", staff_id=id))
 
     role = Role.query.filter_by(id=role_uuid, organization_id=g.organization_id).first()
     if not role:
         flash("The selected role does not belong to this organization.", "danger")
-        return redirect(url_for("admin.staff_detail", id=id))
+        return redirect(url_for("admin.staff_detail", staff_id=id))
 
     try:
         rbac_service.assign_role(actor=current_user, staff_profile=staff_profile, role=role)
@@ -172,4 +172,4 @@ def staff_assign_role(id: int) -> Any:
         db.session.rollback()
         flash(f"Failed to assign role: {err}", "danger")
 
-    return redirect(url_for("admin.staff_detail", id=id))
+    return redirect(url_for("admin.staff_detail", staff_id=id))

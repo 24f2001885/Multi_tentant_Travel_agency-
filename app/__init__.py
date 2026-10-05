@@ -2,7 +2,7 @@ import os
 import click
 from datetime import timedelta
 from dotenv import load_dotenv
-from flask import Flask, render_template, request, redirect, url_for, flash, abort, g
+from flask import Flask, render_template, request, redirect, url_for, flash, abort, g, session
 from werkzeug.security import generate_password_hash
 from flask_login import login_required, current_user
 from sqlalchemy import select

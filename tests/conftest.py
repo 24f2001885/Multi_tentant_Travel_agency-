@@ -74,10 +74,17 @@ def clean_db_session(app):
         db.session.rollback()
         # Clean up database tables between tests to prevent row leaks
         with tenant_bypass():
+            db.session.execute(text("UPDATE organizations SET tenant_admin_user_id = NULL"))
             for table in reversed(db.metadata.sorted_tables):
                 db.session.execute(table.delete())
             db.session.commit()
         db.session.remove()
+        from app.extensions import limiter
+        try:
+            limiter.storage.storage.clear()
+            limiter.storage.events.clear()
+        except Exception:
+            pass
 
 
 from sqlalchemy.orm import make_transient
@@ -165,6 +172,7 @@ def client_a(app, org_a):
     """Test client bound to Tenant A (Host: a.localhost)."""
     client = app.test_client()
     orig_open = client.open
+    orig_sess = client.session_transaction
 
     def bound_open(*args, **kwargs):
         headers = kwargs.get("headers")
@@ -174,7 +182,13 @@ def client_a(app, org_a):
             headers["Host"] = "a.localhost"
         return orig_open(*args, **kwargs)
 
+    def bound_session(*args, **kwargs):
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "http://a.localhost"
+        return orig_sess(*args, **kwargs)
+
     client.open = bound_open
+    client.session_transaction = bound_session
     return client
 
 
@@ -183,6 +197,7 @@ def client_b(app, org_b):
     """Test client bound to Tenant B (Host: b.localhost)."""
     client = app.test_client()
     orig_open = client.open
+    orig_sess = client.session_transaction
 
     def bound_open(*args, **kwargs):
         headers = kwargs.get("headers")
@@ -192,7 +207,38 @@ def client_b(app, org_b):
             headers["Host"] = "b.localhost"
         return orig_open(*args, **kwargs)
 
+    def bound_session(*args, **kwargs):
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "http://b.localhost"
+        return orig_sess(*args, **kwargs)
+
     client.open = bound_open
+    client.session_transaction = bound_session
+    return client
+
+
+@pytest.fixture
+def client_platform(app):
+    """Test client bound to Platform Control Plane (Host: platform.localhost)."""
+    client = app.test_client()
+    orig_open = client.open
+    orig_sess = client.session_transaction
+
+    def bound_open(*args, **kwargs):
+        headers = kwargs.get("headers")
+        if headers is None:
+            kwargs["headers"] = {"Host": "platform.localhost"}
+        elif isinstance(headers, dict) and "Host" not in headers:
+            headers["Host"] = "platform.localhost"
+        return orig_open(*args, **kwargs)
+
+    def bound_session(*args, **kwargs):
+        if "base_url" not in kwargs:
+            kwargs["base_url"] = "http://platform.localhost"
+        return orig_sess(*args, **kwargs)
+
+    client.open = bound_open
+    client.session_transaction = bound_session
     return client
 
 
