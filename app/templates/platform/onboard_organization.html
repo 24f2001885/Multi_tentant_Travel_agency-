@@ -1,0 +1,128 @@
+{% extends "platform/base_platform.html" %}
+
+{% block title %}Onboard Organization — Platform Console{% endblock %}
+
+{% block content %}
+<!-- DEBUG: onboard_organization.html state={{ 'result' if temp_password else 'form' }} -->
+<div class="mb-4">
+  <a href="{{ url_for('platform.organizations_list') }}" class="text-decoration-none text-muted small">
+    <i class="bi bi-arrow-left me-1"></i> Back to Organizations
+  </a>
+  <h2 class="fw-bold mt-2 mb-1">Onboard New Organization</h2>
+  <p class="text-muted mb-0">Provision a new isolated tenant organization, primary subdomain, and initial administrator.</p>
+</div>
+
+{% if temp_password %}
+  <!-- One-Time Credential Reveal State -->
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card border-success shadow-sm">
+        <div class="card-header bg-success text-white py-3">
+          <h5 class="fw-bold mb-0"><i class="bi bi-check-circle-fill me-2"></i> Tenant Provisioned Successfully</h5>
+        </div>
+        <div class="card-body p-4">
+          <div class="alert alert-warning border-warning" role="alert">
+            <h6 class="fw-bold text-dark mb-1"><i class="bi bi-exclamation-triangle-fill text-warning me-2"></i> Important: One-Time Temporary Password</h6>
+            <p class="small text-dark mb-0">
+              The temporary password below is displayed <strong>ONLY ONCE</strong> and is never logged or stored in plaintext. Copy it and transmit it securely to the tenant administrator.
+            </p>
+          </div>
+
+          <div class="bg-light p-3 rounded border mb-4">
+            <div class="row g-3">
+              <div class="col-sm-6">
+                <span class="text-muted small d-block">Organization Name</span>
+                <strong>{{ new_org.name }}</strong>
+              </div>
+              <div class="col-sm-6">
+                <span class="text-muted small d-block">Primary Host</span>
+                <code>{{ new_org.domains[0].domain_name if new_org.domains else '—' }}</code>
+              </div>
+              <div class="col-sm-6">
+                <span class="text-muted small d-block">Tenant Administrator</span>
+                <span>{{ admin_user.name }} ({{ admin_user.email }})</span>
+              </div>
+              <div class="col-sm-6">
+                <span class="text-muted small d-block">Temporary Password</span>
+                <div class="input-group">
+                  <input type="text" class="form-control font-monospace fw-bold text-primary bg-white" value="{{ temp_password }}" id="tempPassInput" readonly>
+                  <button class="btn btn-outline-secondary" type="button" onclick="navigator.clipboard.writeText(document.getElementById('tempPassInput').value); this.innerText='Copied!';">
+                    Copy
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-between">
+            <a href="{{ url_for('platform.organization_detail', id=new_org.id) }}" class="btn btn-primary">
+              <i class="bi bi-gear me-1"></i> Go to Organization Management
+            </a>
+            <a href="{{ url_for('platform.organizations_list') }}" class="btn btn-outline-secondary">
+              Return to Directory
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% else %}
+  <!-- Input Form State -->
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="card p-4">
+        <form method="POST" action="{{ url_for('platform.organization_new') }}">
+          {{ form.hidden_tag() }}
+
+          <h5 class="fw-semibold mb-3 border-bottom pb-2">Organization Details</h5>
+          <div class="mb-3">
+            <label for="name" class="form-label small fw-semibold">Organization Name</label>
+            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), placeholder="e.g. Himalayan Trail Explorers", id="name") }}
+            {% for error in form.name.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <div class="form-text">The official brand name displayed on the trekker portal and receipts.</div>
+          </div>
+
+          <div class="mb-4">
+            <label for="subdomain" class="form-label small fw-semibold">Tenant Subdomain</label>
+            <div class="input-group">
+              {{ form.subdomain(class="form-control" + (" is-invalid" if form.subdomain.errors else ""), placeholder="himalayan", id="subdomain") }}
+              <span class="input-group-text bg-light text-muted">.{{ base_domain }}</span>
+              {% for error in form.subdomain.errors %}
+                <div class="invalid-feedback d-block">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="form-text">3–63 lowercase alphanumeric characters. Cannot conflict with reserved words.</div>
+          </div>
+
+          <h5 class="fw-semibold mb-3 border-bottom pb-2 pt-2">Initial Tenant Administrator</h5>
+          <div class="row g-3 mb-4">
+            <div class="col-md-6">
+              <label for="tenant_admin_name" class="form-label small fw-semibold">Admin Full Name</label>
+              {{ form.tenant_admin_name(class="form-control" + (" is-invalid" if form.tenant_admin_name.errors else ""), placeholder="John Doe", id="tenant_admin_name") }}
+              {% for error in form.tenant_admin_name.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+            <div class="col-md-6">
+              <label for="tenant_admin_email" class="form-label small fw-semibold">Admin Email Address</label>
+              {{ form.tenant_admin_email(class="form-control" + (" is-invalid" if form.tenant_admin_email.errors else ""), placeholder="admin@tenant.com", id="tenant_admin_email") }}
+              {% for error in form.tenant_admin_email.errors %}
+                <div class="invalid-feedback">{{ error }}</div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="d-flex justify-content-end gap-2 border-top pt-3">
+            <a href="{{ url_for('platform.organizations_list') }}" class="btn btn-outline-secondary">Cancel</a>
+            <button type="submit" class="btn btn-platform">
+              <i class="bi bi-plus-circle me-1"></i> Provision Tenant
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

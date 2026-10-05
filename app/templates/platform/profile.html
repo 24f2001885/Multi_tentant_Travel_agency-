@@ -1,0 +1,82 @@
+{% extends "platform/base_platform.html" %}
+
+{% block title %}Profile & Settings — Platform Console{% endblock %}
+
+{% block content %}
+<!-- DEBUG: platform/profile.html rendered -->
+<div class="mb-4">
+  <h2 class="fw-bold mb-1">Operator Profile & Security</h2>
+  <p class="text-muted mb-0">Manage your platform operator account details and authentication credentials.</p>
+</div>
+
+<div class="row g-4">
+  <!-- Profile Info Form -->
+  <div class="col-lg-6">
+    <div class="card p-4 h-100">
+      <h5 class="fw-semibold mb-3 border-bottom pb-2">Profile Details</h5>
+      <form method="POST" action="{{ url_for('platform.profile') }}">
+        {{ profile_form.hidden_tag() }}
+        <input type="hidden" name="form_action" value="profile">
+
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-muted">Email Address (Platform Identity)</label>
+          <input type="text" class="form-control bg-light" value="{{ admin.email }}" disabled readonly>
+          <div class="form-text">Platform operator email cannot be changed.</div>
+        </div>
+
+        <div class="mb-4">
+          <label for="name" class="form-label small fw-semibold">Display Name</label>
+          {{ profile_form.name(class="form-control" + (" is-invalid" if profile_form.name.errors else ""), id="name") }}
+          {% for error in profile_form.name.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-platform">
+          <i class="bi bi-check2 me-1"></i> Update Profile
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Change Password Form -->
+  <div class="col-lg-6">
+    <div class="card p-4 h-100">
+      <h5 class="fw-semibold mb-3 border-bottom pb-2">Change Password</h5>
+      <form method="POST" action="{{ url_for('platform.profile') }}">
+        {{ password_form.hidden_tag() }}
+        <input type="hidden" name="form_action" value="password">
+
+        <div class="mb-3">
+          <label for="current_password" class="form-label small fw-semibold">Current Password</label>
+          {{ password_form.current_password(class="form-control" + (" is-invalid" if password_form.current_password.errors else ""), placeholder="••••••••••••", id="current_password") }}
+          {% for error in password_form.current_password.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <div class="mb-3">
+          <label for="new_password" class="form-label small fw-semibold">New Password</label>
+          {{ password_form.new_password(class="form-control" + (" is-invalid" if password_form.new_password.errors else ""), placeholder="••••••••••••", id="new_password") }}
+          {% for error in password_form.new_password.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+          {% endfor %}
+          <div class="form-text">Minimum 8 characters.</div>
+        </div>
+
+        <div class="mb-4">
+          <label for="confirm_password" class="form-label small fw-semibold">Confirm New Password</label>
+          {{ password_form.confirm_password(class="form-control" + (" is-invalid" if password_form.confirm_password.errors else ""), placeholder="••••••••••••", id="confirm_password") }}
+          {% for error in password_form.confirm_password.errors %}
+            <div class="invalid-feedback">{{ error }}</div>
+          {% endfor %}
+        </div>
+
+        <button type="submit" class="btn btn-outline-primary">
+          <i class="bi bi-key me-1"></i> Change Password
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

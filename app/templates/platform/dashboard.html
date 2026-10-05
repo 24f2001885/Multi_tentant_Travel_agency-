@@ -1,0 +1,132 @@
+{% extends "platform/base_platform.html" %}
+
+{% block title %}Dashboard — Platform Console{% endblock %}
+
+{% block content %}
+<!-- DEBUG: platform/dashboard.html orgs={{ orgs|length }} -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="fw-bold mb-1">Platform Overview</h2>
+    <p class="text-muted mb-0">Multi-tenant operations, health, and aggregate activity.</p>
+  </div>
+  <div>
+    <a href="{{ url_for('platform.organization_new') }}" class="btn btn-platform">
+      <i class="bi bi-plus-circle me-1"></i> Onboard Organization
+    </a>
+  </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card p-3 h-100 border-start border-4 border-primary">
+      <div class="text-muted small text-uppercase fw-semibold">Total Organizations</div>
+      <div class="fs-2 fw-bold text-dark mt-2">{{ total_orgs }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 h-100 border-start border-4 border-success">
+      <div class="text-muted small text-uppercase fw-semibold">Active Tenants</div>
+      <div class="fs-2 fw-bold text-success mt-2">{{ active_orgs }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 h-100 border-start border-4 border-danger">
+      <div class="text-muted small text-uppercase fw-semibold">Suspended Tenants</div>
+      <div class="fs-2 fw-bold text-danger mt-2">{{ suspended_orgs }}</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 h-100 border-start border-4 border-info">
+      <div class="text-muted small text-uppercase fw-semibold">Global Bookings</div>
+      <div class="fs-2 fw-bold text-info mt-2">{{ total_bookings }}</div>
+    </div>
+  </div>
+</div>
+
+<!-- Tenants Table -->
+<div class="card mb-4">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <h5 class="fw-semibold mb-0">Tenant Organizations</h5>
+    <a href="{{ url_for('platform.organizations_list') }}" class="btn btn-sm btn-outline-secondary">View All</a>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Organization</th>
+            <th>Primary Domain</th>
+            <th>Status</th>
+            <th>Users</th>
+            <th>Bookings</th>
+            <th class="text-end pe-3">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in orgs %}
+            <tr>
+              <td class="ps-3 fw-medium">
+                <a href="{{ url_for('platform.organization_detail', id=row.organization.id) }}" class="text-decoration-none text-dark">
+                  {{ row.organization.name }}
+                </a>
+              </td>
+              <td><code>{{ row.primary_domain }}</code></td>
+              <td>
+                {% if row.organization.status == 'active' %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle badge-status">Active</span>
+                {% else %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle badge-status">Suspended</span>
+                {% endif %}
+              </td>
+              <td>{{ row.users_count }}</td>
+              <td>{{ row.bookings_count }}</td>
+              <td class="text-end pe-3">
+                <a href="{{ url_for('platform.organization_detail', id=row.organization.id) }}" class="btn btn-sm btn-outline-primary">
+                  Manage
+                </a>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="6" class="text-center py-4 text-muted">No organizations registered yet.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Deferred Panels (P9 / P13) -->
+<div class="row g-4">
+  <div class="col-md-6">
+    <div class="card h-100 p-4 bg-light border-dashed">
+      <div class="d-flex align-items-center mb-3">
+        <i class="bi bi-wallet2 fs-3 text-secondary me-3"></i>
+        <div>
+          <h5 class="fw-semibold mb-0">Net Route Revenue</h5>
+          <small class="text-muted">Automated payment split and commission engine</small>
+        </div>
+      </div>
+      <div class="alert alert-secondary mb-0 small" role="alert">
+        <i class="bi bi-clock-history me-1"></i> Available after Milestone P9 (Booking & Money Engine v2).
+      </div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="card h-100 p-4 bg-light border-dashed">
+      <div class="d-flex align-items-center mb-3">
+        <i class="bi bi-cpu fs-3 text-secondary me-3"></i>
+        <div>
+          <h5 class="fw-semibold mb-0">Infrastructure Load</h5>
+          <small class="text-muted">Database pool metrics and async job queue telemetry</small>
+        </div>
+      </div>
+      <div class="alert alert-secondary mb-0 small" role="alert">
+        <i class="bi bi-clock-history me-1"></i> Available after Milestone P13 (Platform Operations & Observability).
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

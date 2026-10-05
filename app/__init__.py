@@ -168,6 +168,9 @@ def create_app(config_object=None) -> Flask:
         return id_codec.encode(val)
 
     # 7. Blueprints Registration (public_bp MUST be registered LAST)
+    from app.platform import platform_bp
+    app.register_blueprint(platform_bp)
+
     from app.auth import auth_bp
     app.register_blueprint(auth_bp)
 

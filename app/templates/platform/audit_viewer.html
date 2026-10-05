@@ -1,0 +1,94 @@
+{% extends "platform/base_platform.html" %}
+
+{% block title %}Audit Logs: {{ org.name }} — Platform Console{% endblock %}
+
+{% block content %}
+<!-- DEBUG: audit_viewer.html org={{ org.id }} page={{ page }} -->
+<div class="mb-4">
+  <a href="{{ url_for('platform.organization_detail', id=org.id) }}" class="text-decoration-none text-muted small">
+    <i class="bi bi-arrow-left me-1"></i> Back to {{ org.name }}
+  </a>
+  <h2 class="fw-bold mt-2 mb-1">Cross-Tenant Audit Log</h2>
+  <p class="text-muted mb-0">Inspecting security and operational audit trail for <strong>{{ org.name }}</strong>.</p>
+</div>
+
+<!-- Mandatory Meta-Audit Notice Banner -->
+<div class="alert alert-info border-info d-flex align-items-center mb-4" role="alert">
+  <i class="bi bi-shield-check fs-4 text-info me-3"></i>
+  <div>
+    <strong>Meta-Audit Notice:</strong> Accessing and viewing this tenant's audit trail is strictly recorded in the immutable <code>platform_access_logs</code> meta-audit trail with your operator credentials and timestamp.
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table table-hover align-middle mb-0">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-3">Timestamp</th>
+            <th>Actor</th>
+            <th>Action</th>
+            <th>Target</th>
+            <th>Details</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for log in pagination.items %}
+            <tr>
+              <td class="ps-3 text-nowrap small text-muted">
+                {{ log.created_at.strftime('%Y-%m-%d %H:%M:%S UTC') if log.created_at else '—' }}
+              </td>
+              <td>
+                <span class="badge bg-light text-dark border">
+                  User #{{ log.actor_user_id }}
+                </span>
+              </td>
+              <td>
+                <span class="badge bg-secondary-subtle text-secondary border border-secondary-subtle font-monospace">
+                  {{ log.action }}
+                </span>
+              </td>
+              <td>
+                <code>{{ log.target_type }}:{{ log.target_id }}</code>
+              </td>
+              <td class="small font-monospace text-muted" style="max-width: 320px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                {{ log.details or '—' }}
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="5" class="text-center py-4 text-muted">No audit log records found for this tenant.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  {% if pagination.pages > 1 %}
+    <div class="card-footer bg-white d-flex justify-content-between align-items-center py-3">
+      <small class="text-muted">Page {{ pagination.page }} of {{ pagination.pages }}</small>
+      <nav>
+        <ul class="pagination pagination-sm mb-0">
+          {% if pagination.has_prev %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('platform.organization_audit_logs', id=org.id, page=pagination.prev_num) }}">Previous</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Previous</span></li>
+          {% endif %}
+
+          {% if pagination.has_next %}
+            <li class="page-item">
+              <a class="page-link" href="{{ url_for('platform.organization_audit_logs', id=org.id, page=pagination.next_num) }}">Next</a>
+            </li>
+          {% else %}
+            <li class="page-item disabled"><span class="page-link">Next</span></li>
+          {% endif %}
+        </ul>
+      </nav>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}
