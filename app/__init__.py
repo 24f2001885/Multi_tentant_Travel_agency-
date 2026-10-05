@@ -48,7 +48,15 @@ def create_app(config_object=None) -> Flask:
 
     # 2. Configuration
     app.config["SECRET_KEY"] = secret_key
-    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
+
+    # Normalize postgres URL to postgresql+psycopg2 driver
+    db_uri = database_url
+    if db_uri.startswith("postgres://"):
+        db_uri = db_uri.replace("postgres://", "postgresql+psycopg2://", 1)
+    elif db_uri.startswith("postgresql://") and not db_uri.startswith("postgresql+"):
+        db_uri = db_uri.replace("postgresql://", "postgresql+psycopg2://", 1)
+
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
     os.makedirs("/app/instance", exist_ok=True)
 
@@ -86,9 +94,12 @@ def create_app(config_object=None) -> Flask:
             os.environ.get("PROBLEM_TICKET_RETENTION_DAYS")
         )
 
-    # External config object override if provided (e.g. test configs)
+    # External config object or dict override if provided (e.g. test configs)
     if config_object:
-        app.config.from_object(config_object)
+        if isinstance(config_object, dict):
+            app.config.from_mapping(config_object)
+        else:
+            app.config.from_object(config_object)
 
     # Session cookie / security hardening
     # Note: Never set SESSION_COOKIE_DOMAIN — host-only cookies keep tenant sessions separate.
@@ -136,7 +147,12 @@ def create_app(config_object=None) -> Flask:
             uid = int(user_id)
         except (ValueError, TypeError):
             return None
-        return db.session.execute(select(User).where(User.id == uid)).scalar_one_or_none()
+        org_id = getattr(g, "organization_id", None)
+        if not org_id:
+            return None
+        return db.session.execute(
+            select(User).where(User.id == uid, User.organization_id == org_id)
+        ).scalar_one_or_none()
 
     # 6. Context processors & Jinja filters
     @app.context_processor
@@ -190,7 +206,7 @@ def create_app(config_object=None) -> Flask:
 
         with tenant_bypass():
             existing_domain = db.session.execute(
-                select(Domain).where(Domain.domain == full_domain)
+                select(Domain).where(Domain.domain_name == full_domain)
             ).scalar_one_or_none()
 
             if existing_domain:
@@ -199,15 +215,13 @@ def create_app(config_object=None) -> Flask:
                 )
                 return
 
-            slug = subdomain
             existing_org = db.session.execute(
-                select(Organization).where(Organization.slug == slug)
+                select(Organization).where(Organization.name == name)
             ).scalar_one_or_none()
 
             if not existing_org:
                 org = Organization(
                     name=name,
-                    slug=slug,
                     status="active",
                 )
                 db.session.add(org)
@@ -217,9 +231,9 @@ def create_app(config_object=None) -> Flask:
 
             domain = Domain(
                 organization_id=org.id,
-                domain=full_domain,
-                is_custom=False,
-                is_verified=True,
+                domain_name=full_domain,
+                domain_type="subdomain",
+                is_primary=True,
             )
             db.session.add(domain)
             db.session.commit()
@@ -229,6 +243,7 @@ def create_app(config_object=None) -> Flask:
     def seed_admin():
         """Seeds the database with the initial Admin user for Tenant Zero if one does not already exist."""
         from app.models.organization import Organization
+        from app.models.domain import Domain
         from app.models.user import User
         from app.tenancy.scoping import tenant_context, tenant_bypass
 
@@ -240,9 +255,9 @@ def create_app(config_object=None) -> Flask:
             return
 
         with tenant_bypass():
-            subdomain = os.environ.get("TENANT_ZERO_SUBDOMAIN", "tenantzero")
+            tenant_name = os.environ.get("TENANT_ZERO_NAME", "Summit Expeditions")
             org = db.session.execute(
-                select(Organization).where(Organization.slug == subdomain)
+                select(Organization).where(Organization.name == tenant_name)
             ).scalar_one_or_none()
             if not org:
                 org = db.session.execute(

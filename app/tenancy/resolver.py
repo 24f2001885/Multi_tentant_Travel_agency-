@@ -45,24 +45,26 @@ def resolve_tenant():
     with tenant_bypass():
         domain = Domain.query.filter_by(domain_name=host).first()
 
-    # 6. Validate routability
-    if not domain or not domain.is_routable:
-        abort(404)
+        # 6. Validate routability
+        if not domain or not domain.is_routable:
+            abort(404)
 
-    org = domain.organization
-    if not org or org.status != "active":
-        return (
-            render_template(
-                "errors/generic.html",
-                code=403,
-                message="This organization is currently unavailable.",
-            ),
-            403,
-        )
+        org = domain.organization
+        if not org or org.status != "active":
+            return (
+                render_template(
+                    "errors/generic.html",
+                    code=403,
+                    message="This organization is currently unavailable.",
+                ),
+                403,
+            )
 
-    # 7. Set tenant context on flask.g
-    g.organization_id = org.id
-    g.organization = org
+        # 7. Set tenant context on flask.g
+        g.organization_id = org.id
+        g.organization = org
+        if hasattr(g, "_login_user"):
+            del g._login_user
     # print(f"[DEBUG] tenant resolve host={host} -> org={getattr(g,'organization_id',None)}")
 
 

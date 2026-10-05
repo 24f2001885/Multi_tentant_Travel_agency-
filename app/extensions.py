@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_wtf.csrf import CSRFProtect
 from werkzeug.routing import BaseConverter, ValidationError
 
-db = SQLAlchemy()
+db = SQLAlchemy(session_options={"expire_on_commit": False})
 login_manager = LoginManager()
 login_manager.login_view = "auth.login"
 mail = Mail()

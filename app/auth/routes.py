@@ -4,7 +4,7 @@ Authentication routes and session lifecycle (TDR v2 §5.5, §6).
 
 from urllib.parse import urlparse
 
-from flask import flash, redirect, render_template, request, session, url_for
+from flask import flash, g, redirect, render_template, request, session, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 
 from app.auth import auth_bp
@@ -43,24 +43,25 @@ def _is_safe_next_url(target: str) -> bool:
     return not parsed.netloc and not parsed.scheme and target.startswith("/")
 
 
-@login_manager.user_loader
-def load_user(user_id: str):
-    from app.models.user import User
-
-    return User.query.get(int(user_id))
 
 
 @auth_bp.before_app_request
 def enforce_account_completion():
     """
-    Ensures that any logged-in user with missing mobile or terms acceptance
-    is strictly redirected to the complete-account screen before accessing any other page.
+    Ensures cross-tenant session isolation and requires legacy users to complete account details.
     """
-    if current_user.is_authenticated and getattr(current_user, "needs_account_completion", False):
-        exempt_endpoints = {"auth.complete_account", "auth.logout", "static"}
-        if request.endpoint not in exempt_endpoints and not request.path.startswith("/static/"):
-            # print(f"[DEBUG] completion gate user_id={getattr(current_user,'id',None)} needs=True")
-            return redirect(url_for("auth.complete_account"))
+    if current_user.is_authenticated:
+        # Cross-tenant session protection: reject session if user belongs to another tenant
+        active_org_id = getattr(g, "organization_id", None)
+        if active_org_id is not None and str(getattr(current_user, "organization_id", None)) != str(active_org_id):
+            logout_user()
+            return redirect(url_for("auth.login"))
+
+        if getattr(current_user, "needs_account_completion", False):
+            exempt_endpoints = {"auth.complete_account", "auth.logout", "static"}
+            if request.endpoint not in exempt_endpoints and not request.path.startswith("/static/"):
+                # print(f"[DEBUG] completion gate user_id={getattr(current_user,'id',None)} needs=True")
+                return redirect(url_for("auth.complete_account"))
 
 
 @auth_bp.route("/register", methods=["GET", "POST"])
