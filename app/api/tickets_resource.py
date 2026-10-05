@@ -4,6 +4,7 @@ from flask_login import current_user, login_required
 from flask_restful import Resource
 from marshmallow import Schema, fields
 
+from app.api.serializers import HashidField, decode_id
 from app.auth.decorators import ticket_access_required
 from app.extensions import db
 from app.services import notification_service, ticket_service
@@ -19,16 +20,16 @@ def _error(code, message, status_code):
 
 
 class TicketSchema(Schema):
-    id = fields.Int()
-    user_id = fields.Int()
-    trek_id = fields.Int(allow_none=True)
-    booking_id = fields.Int(allow_none=True)
+    id = HashidField()
+    user_id = HashidField()
+    trek_id = HashidField(allow_none=True)
+    booking_id = HashidField(allow_none=True)
     type = fields.Str()
     subject = fields.Str()
     message = fields.Str()
     status = fields.Str()
     response = fields.Str(allow_none=True)
-    responded_by_id = fields.Int(allow_none=True)
+    responded_by_id = HashidField(allow_none=True)
     responded_at = fields.DateTime(allow_none=True)
     created_at = fields.DateTime()
 
@@ -53,13 +54,21 @@ class TicketListResource(Resource):
         if not ticket_type or not subject or not message:
             return _error("VALIDATION_ERROR", "type, subject, and message are required.", 422)
 
+        raw_booking_id = payload.get("booking_id")
+        booking_id = None
+        if raw_booking_id:
+            try:
+                booking_id = decode_id(raw_booking_id, kind="booking_id")
+            except ValueError as err:
+                return _error("VALIDATION_ERROR", str(err), 422)
+
         try:
             ticket = ticket_service.create_ticket(
                 user_id=current_user.id,
                 ticket_type=ticket_type,
                 subject=subject,
                 message=message,
-                booking_id=payload.get("booking_id"),
+                booking_id=booking_id,
             )
         except MissingBookingReferenceError:
             return _error("MISSING_BOOKING_REFERENCE", "A Problem ticket requires a booking_id.", 422)

@@ -4,6 +4,7 @@ from flask_login import current_user, login_required
 from flask_restful import Resource
 from marshmallow import Schema, fields
 
+from app.api.serializers import HashidField, decode_id
 from app.extensions import db
 from app.services import history_service, payment_service
 from app.services.booking_service import (
@@ -18,9 +19,9 @@ def _error(code, message, status_code):
 
 
 class BookingSchema(Schema):
-    id = fields.Int()
-    user_id = fields.Int()
-    trek_id = fields.Int()
+    id = HashidField()
+    user_id = HashidField()
+    trek_id = HashidField()
     booking_date = fields.DateTime()
     status = fields.Str()
     payment_status = fields.Str()
@@ -44,9 +45,14 @@ class BookingListResource(Resource):
             return _error("FORBIDDEN", "Only trekkers may create bookings.", 403)
 
         payload = request.get_json(silent=True) or {}
-        trek_id = payload.get("trek_id")
-        if not trek_id:
+        raw_trek_id = payload.get("trek_id")
+        if not raw_trek_id:
             return _error("VALIDATION_ERROR", "trek_id is required.", 422)
+
+        try:
+            trek_id = decode_id(raw_trek_id, kind="trek_id")
+        except ValueError as err:
+            return _error("VALIDATION_ERROR", str(err), 422)
 
         try:
             booking = initiate_booking(current_user.id, trek_id)

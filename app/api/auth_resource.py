@@ -4,6 +4,7 @@ from flask_login import current_user, login_required, login_user, logout_user
 from flask_restful import Resource
 from marshmallow import Schema, ValidationError, fields, validate
 
+from app.api.serializers import encode_id
 from app.extensions import db, limiter
 from app.services import auth_service
 from app.services.auth_service import DuplicateEmailError
@@ -60,7 +61,7 @@ class RegisterResource(Resource):
             return _error("EMAIL_TAKEN", "An account with this email already exists.", 409)
 
         status = "active" if user.role == "trekker" else "pending_approval"
-        return {"id": user.id, "role": user.role, "status": status}, 201
+        return {"id": encode_id(user.id), "role": user.role, "status": status}, 201
 
 
 class LoginResource(Resource):
@@ -81,7 +82,7 @@ class LoginResource(Resource):
         redirect = {"admin": "/admin", "staff": "/staff", "trekker": "/trekker"}[user.role]
         return {
             "user": {
-                "id": user.id,
+                "id": encode_id(user.id),
                 "name": user.name,
                 "email": user.email,
                 "role": user.role,

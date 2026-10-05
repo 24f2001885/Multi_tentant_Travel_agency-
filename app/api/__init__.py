@@ -42,6 +42,7 @@ from app.api.treks_resource import (  # noqa: E402
     TrekListResource,
     TrekResource,
 )
+from app.api.serializers import HashidField, encode_id, decode_id  # noqa: E402
 from app.api.users_resource import UserListResource, UserResource  # noqa: E402
 
 api.add_resource(PaymentWebhookResource, "/payments/webhook")
@@ -52,23 +53,23 @@ api.add_resource(ForgotPasswordResource, "/auth/forgot-password")
 api.add_resource(ResetPasswordResource, "/auth/reset-password")
 api.add_resource(ChangePasswordResource, "/auth/change-password")
 api.add_resource(UserListResource, "/users")
-api.add_resource(UserResource, "/users/<int:id>")
+api.add_resource(UserResource, "/users/<hashid:id>")
 api.add_resource(StaffListResource, "/staff")
-api.add_resource(StaffApproveResource, "/staff/<int:id>/approve")
-api.add_resource(StaffBlacklistResource, "/staff/<int:id>/blacklist")
+api.add_resource(StaffApproveResource, "/staff/<hashid:id>/approve")
+api.add_resource(StaffBlacklistResource, "/staff/<hashid:id>/blacklist")
 api.add_resource(TrekListResource, "/treks")
-api.add_resource(TrekResource, "/treks/<int:id>")
-api.add_resource(TrekAssignStaffResource, "/treks/<int:id>/assign-staff")
+api.add_resource(TrekResource, "/treks/<hashid:id>")
+api.add_resource(TrekAssignStaffResource, "/treks/<hashid:id>/assign-staff")
 api.add_resource(BookingListResource, "/bookings")
-api.add_resource(BookingResource, "/bookings/<int:id>")
-api.add_resource(PaymentListForBookingResource, "/payments/<int:booking_id>")
+api.add_resource(BookingResource, "/bookings/<hashid:id>")
+api.add_resource(PaymentListForBookingResource, "/payments/<hashid:booking_id>")
 api.add_resource(TicketListResource, "/tickets")
-api.add_resource(TicketResource, "/tickets/<int:id>")
-api.add_resource(TicketRespondResource, "/tickets/<int:id>/respond")
-api.add_resource(TicketResolveResource, "/tickets/<int:id>/resolve")
+api.add_resource(TicketResource, "/tickets/<hashid:id>")
+api.add_resource(TicketRespondResource, "/tickets/<hashid:id>/respond")
+api.add_resource(TicketResolveResource, "/tickets/<hashid:id>/resolve")
 api.add_resource(AdminStatsResource, "/stats/admin")
-api.add_resource(StaffStatsResource, "/stats/staff/<int:staff_id>")
-api.add_resource(TrekkerStatsResource, "/stats/trekker/<int:user_id>")
+api.add_resource(StaffStatsResource, "/stats/staff/<hashid:staff_id>")
+api.add_resource(TrekkerStatsResource, "/stats/trekker/<hashid:user_id>")
 
 
 def _is_api_request():
