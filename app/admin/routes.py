@@ -15,7 +15,7 @@ from app.admin.forms import TrekForm, StaffActionForm, UserSearchForm
 from app.auth.decorators import role_required
 from app.extensions import db
 from app.models import User, StaffProfile, Trek, Booking, Payment, AuditLog
-from app.services import trek_service, auth_service, notification_service, history_service
+from app.services import trek_service, auth_service, notification_service, history_service, id_codec
 
 PER_PAGE_DEFAULT = 20
 PER_PAGE_MAX = 100
@@ -43,8 +43,14 @@ def _dashboard_context():
     total_bookings = db.session.scalar(select(func.count(Booking.id))) or 0
 
     eight_weeks_ago = datetime.now(UTC) - timedelta(weeks=8)
+    dialect_name = db.engine.dialect.name if hasattr(db, "engine") and db.engine else "postgresql"
+    if dialect_name == "sqlite":
+        week_col = func.strftime("%Y-W%W", Booking.booking_date).label("week")
+    else:
+        week_col = func.to_char(Booking.booking_date, 'YYYY-"W"IW').label("week")
+
     weekly_rows = db.session.execute(
-        select(func.strftime("%Y-W%W", Booking.booking_date).label("week"), func.count(Booking.id))
+        select(week_col, func.count(Booking.id))
         .where(Booking.booking_date >= eight_weeks_ago)
         .group_by("week")
         .order_by("week")
@@ -157,10 +163,11 @@ def trek_new():
     return render_template("admin/trek_form.html", form=form, trek=None)
 
 
-@admin_bp.route("/treks/<int:trek_id>/edit", methods=["GET", "POST"])
+@admin_bp.route("/treks/<hashid:trek_id>/edit", methods=["GET", "POST"])
 @login_required
 @role_required("admin")
 def trek_edit(trek_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     trek = db.session.get(Trek, trek_id)
     if trek is None:
         abort(404)
@@ -213,10 +220,11 @@ def trek_edit(trek_id):
     return render_template("admin/trek_form.html", form=form, trek=trek)
 
 
-@admin_bp.route("/treks/<int:trek_id>")
+@admin_bp.route("/treks/<hashid:trek_id>")
 @login_required
 @role_required("admin")
 def trek_detail(trek_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     trek = db.session.get(Trek, trek_id)
     if trek is None:
         abort(404)
@@ -241,10 +249,11 @@ def trek_detail(trek_id):
     )
 
 
-@admin_bp.route("/treks/<int:trek_id>/transition", methods=["POST"])
+@admin_bp.route("/treks/<hashid:trek_id>/transition", methods=["POST"])
 @login_required
 @role_required("admin")
 def trek_transition(trek_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     trek = db.session.get(Trek, trek_id)
     if trek is None:
         abort(404)
@@ -265,10 +274,11 @@ def trek_transition(trek_id):
     return redirect(url_for("admin.trek_detail", trek_id=trek.id))
 
 
-@admin_bp.route("/treks/<int:trek_id>/assign-staff", methods=["POST"])
+@admin_bp.route("/treks/<hashid:trek_id>/assign-staff", methods=["POST"])
 @login_required
 @role_required("admin")
 def assign_staff(trek_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     trek = db.session.get(Trek, trek_id)
     if trek is None:
         abort(404)
@@ -289,10 +299,11 @@ def assign_staff(trek_id):
     return redirect(url_for("admin.trek_detail", trek_id=trek.id))
 
 
-@admin_bp.route("/treks/<int:trek_id>/delete", methods=["POST"])
+@admin_bp.route("/treks/<hashid:trek_id>/delete", methods=["POST"])
 @login_required
 @role_required("admin")
 def trek_delete(trek_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     trek = db.session.get(Trek, trek_id)
     if trek is None:
         abort(404)
@@ -322,10 +333,11 @@ def bookings():
     return render_template("admin/bookings_list.html", bookings=bookings_list, status=status_filter)
 
 
-@admin_bp.route("/bookings/<int:booking_id>")
+@admin_bp.route("/bookings/<hashid:booking_id>")
 @login_required
 @role_required("admin")
 def booking_detail(booking_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     booking = db.session.get(Booking, booking_id)
     if booking is None:
         abort(404)
@@ -337,7 +349,13 @@ def booking_detail(booking_id):
 @role_required("admin")
 def payments_list():
     status = request.args.get("status", "")
-    booking_id = request.args.get("booking_id", type=int)
+    raw_booking_id = request.args.get("booking_id")
+    booking_id = id_codec.decode(raw_booking_id) if raw_booking_id else None
+    if booking_id is None and raw_booking_id:
+        try:
+            booking_id = int(raw_booking_id)
+        except ValueError:
+            booking_id = None
 
     stmt = select(Payment)
     if status:
@@ -351,10 +369,11 @@ def payments_list():
     )
 
 
-@admin_bp.route("/payments/<int:payment_id>")
+@admin_bp.route("/payments/<hashid:payment_id>")
 @login_required
 @role_required("admin")
 def payment_detail(payment_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     payment = db.session.get(Payment, payment_id)
     if payment is None:
         abort(404)
@@ -381,20 +400,22 @@ def staff_list():
     )
 
 
-@admin_bp.route("/staff/<int:staff_id>")
+@admin_bp.route("/staff/<hashid:staff_id>")
 @login_required
 @role_required("admin")
 def staff_detail(staff_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     staff = db.session.get(StaffProfile, staff_id)
     if staff is None:
         abort(404)
     return render_template("admin/staff_detail.html", staff=staff)
 
 
-@admin_bp.route("/staff/<int:staff_id>/action", methods=["POST"])
+@admin_bp.route("/staff/<hashid:staff_id>/action", methods=["POST"])
 @login_required
 @role_required("admin")
 def staff_action(staff_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     form = StaffActionForm()
     if not form.validate_on_submit() or form.action.data not in ("approve", "blacklist"):
         flash("Invalid or unrecognized staff action.", "danger")
@@ -443,10 +464,11 @@ def users_list():
     return render_template("admin/users_list.html", users=users, form=form)
 
 
-@admin_bp.route("/users/<int:user_id>")
+@admin_bp.route("/users/<hashid:user_id>")
 @login_required
 @role_required("admin")
 def user_detail(user_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     user = db.session.get(User, user_id)
     if user is None:
         abort(404)
@@ -456,10 +478,11 @@ def user_detail(user_id):
     return render_template("admin/user_detail.html", user=user, bookings=bookings)
 
 
-@admin_bp.route("/users/<int:user_id>/deactivate", methods=["POST"])
+@admin_bp.route("/users/<hashid:user_id>/deactivate", methods=["POST"])
 @login_required
 @role_required("admin")
 def user_deactivate(user_id):
+    # print(f"[DEBUG] hashid route {request.path}")
     user = db.session.get(User, user_id)
     if user is None:
         abort(404)

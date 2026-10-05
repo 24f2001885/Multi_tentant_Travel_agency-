@@ -4,6 +4,7 @@ from flask_login import current_user
 from flask_restful import Resource
 from marshmallow import Schema, fields
 
+from app.api.serializers import HashidField, decode_id
 from app.extensions import db
 from app.models import AuditLog, Booking, StaffProfile, Trek
 from app.services.trek_service import InvalidTransitionError, transition_status
@@ -14,7 +15,7 @@ def _error(code, message, status_code):
 
 
 class TrekSchema(Schema):
-    id = fields.Int()
+    id = HashidField()
     name = fields.Str()
     location = fields.Str()
     difficulty = fields.Str()
@@ -22,7 +23,7 @@ class TrekSchema(Schema):
     total_slots = fields.Int()
     available_slots = fields.Int()
     price = fields.Decimal(as_string=True)
-    assigned_staff_id = fields.Int(allow_none=True)
+    assigned_staff_id = HashidField(allow_none=True)
     status = fields.Str()
     start_date = fields.Date()
     end_date = fields.Date()
@@ -106,11 +107,16 @@ class TrekResource(Resource):
             before = TrekSchema().dump(trek)
             for field in (
                 "name", "location", "difficulty", "duration_days", "total_slots",
-                "available_slots", "price", "assigned_staff_id", "status",
+                "available_slots", "price", "status",
                 "start_date", "end_date",
             ):
                 if field in payload:
                     setattr(trek, field, payload[field])
+            if "assigned_staff_id" in payload:
+                try:
+                    trek.assigned_staff_id = decode_id(payload["assigned_staff_id"], kind="assigned_staff_id")
+                except ValueError as err:
+                    return _error("VALIDATION_ERROR", str(err), 422)
             db.session.commit()
             after = TrekSchema().dump(trek)
             db.session.add(AuditLog.record(
@@ -169,7 +175,11 @@ class TrekAssignStaffResource(Resource):
             return _error("NOT_FOUND", "Trek not found.", 404)
 
         payload = request.get_json(silent=True) or {}
-        staff_id = payload.get("staff_id")
+        raw_staff_id = payload.get("staff_id")
+        try:
+            staff_id = decode_id(raw_staff_id, kind="staff_id")
+        except ValueError as err:
+            return _error("VALIDATION_ERROR", str(err), 422)
         profile = StaffProfile.query.get(staff_id) if staff_id else None
         if profile is None or profile.approval_status != "approved":
             return _error("INVALID_STAFF", "Staff member must exist and be approved.", 422)

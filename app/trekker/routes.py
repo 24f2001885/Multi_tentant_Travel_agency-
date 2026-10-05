@@ -32,7 +32,7 @@ def dashboard():
     return render_template("trekker/browse.html", treks=treks)
 
 
-@trekker_bp.route("/treks/<int:trek_id>")
+@trekker_bp.route("/treks/<hashid:trek_id>")
 @login_required
 @role_required("trekker")
 def trek_detail(trek_id):
@@ -41,7 +41,7 @@ def trek_detail(trek_id):
     return render_template("trekker/trek_detail.html", trek=trek, can_book=can_book)
 
 
-@trekker_bp.route("/treks/<int:trek_id>/book", methods=["GET"])
+@trekker_bp.route("/treks/<hashid:trek_id>/book", methods=["GET"])
 @login_required
 @role_required("trekker")
 def booking_review(trek_id):
@@ -50,7 +50,7 @@ def booking_review(trek_id):
     return render_template("trekker/booking_review.html", trek=trek, form=form)
 
 
-@trekker_bp.route("/treks/<int:trek_id>/book", methods=["POST"])
+@trekker_bp.route("/treks/<hashid:trek_id>/book", methods=["POST"])
 @login_required
 @role_required("trekker")
 def book(trek_id):
@@ -86,7 +86,7 @@ def bookings_list():
     return render_template("trekker/bookings_list.html", bookings=bookings)
 
 
-@trekker_bp.route("/bookings/<int:booking_id>")
+@trekker_bp.route("/bookings/<hashid:booking_id>")
 @login_required
 @role_required("trekker")
 def booking_detail(booking_id):
@@ -96,7 +96,7 @@ def booking_detail(booking_id):
     return render_template("trekker/booking_detail.html", booking=booking)
 
 
-@trekker_bp.route("/bookings/<int:booking_id>/cancel", methods=["POST"])
+@trekker_bp.route("/bookings/<hashid:booking_id>/cancel", methods=["POST"])
 @login_required
 @role_required("trekker")
 def cancel_booking(booking_id):
@@ -194,7 +194,7 @@ def upload_profile_picture():
 
 # Payment Routes
 
-@trekker_bp.route("/treks/bookings/<int:booking_id>/payment")
+@trekker_bp.route("/treks/bookings/<hashid:booking_id>/payment")
 @login_required
 @role_required("trekker")
 def payment(booking_id):
@@ -215,7 +215,7 @@ def payment(booking_id):
     )
 
 
-@trekker_bp.route("/payment-result/<int:booking_id>")
+@trekker_bp.route("/payment-result/<hashid:booking_id>")
 @login_required
 @role_required("trekker")
 def payment_result(booking_id):

@@ -46,7 +46,7 @@ def dashboard():
     )
 
 
-@staff_bp.route("/treks/<int:trek_id>/manage")
+@staff_bp.route("/treks/<hashid:trek_id>/manage")
 @login_required
 @role_required("staff")
 @approved_staff_required
@@ -60,7 +60,7 @@ def trek_manage(trek_id):
     )
 
 
-@staff_bp.route("/treks/<int:trek_id>/update-slots", methods=["POST"])
+@staff_bp.route("/treks/<hashid:trek_id>/update-slots", methods=["POST"])
 @login_required
 @role_required("staff")
 @approved_staff_required
@@ -83,7 +83,7 @@ def update_slots(trek_id):
     return redirect(url_for("staff.trek_manage", trek_id=trek.id))
 
 
-@staff_bp.route("/treks/<int:trek_id>/transition", methods=["POST"])
+@staff_bp.route("/treks/<hashid:trek_id>/transition", methods=["POST"])
 @login_required
 @role_required("staff")
 @approved_staff_required
@@ -107,7 +107,7 @@ def transition(trek_id):
     return redirect(url_for("staff.trek_manage", trek_id=trek.id))
 
 
-@staff_bp.route("/treks/<int:trek_id>/participants")
+@staff_bp.route("/treks/<hashid:trek_id>/participants")
 @login_required
 @role_required("staff")
 @approved_staff_required

@@ -22,7 +22,8 @@ def _is_safe_referrer(referrer: str) -> bool:
     return not ref_host or ref_host == req_host
 
 
-@public_bp.route("/")
+@public_bp.route("/", endpoint="index")
+@public_bp.route("/", endpoint="landing")
 def index():
     """Tenant landing page for anonymous visitors, or dashboard redirect for authenticated users."""
     # print(f"[DEBUG] public route {request.path} org={getattr(g, 'organization_id', None)}")

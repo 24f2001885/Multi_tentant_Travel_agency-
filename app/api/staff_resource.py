@@ -6,6 +6,7 @@ from flask_login import current_user
 from flask_restful import Resource
 from marshmallow import Schema, fields
 
+from app.api.serializers import HashidField
 from app.auth.decorators import role_required
 from app.extensions import db
 from app.models import AuditLog, StaffProfile
@@ -17,11 +18,11 @@ def _error(code, message, status_code):
 
 
 class StaffProfileSchema(Schema):
-    id = fields.Int()
-    user_id = fields.Int()
+    id = HashidField()
+    user_id = HashidField()
     contact_details = fields.Str(allow_none=True)
     approval_status = fields.Str()
-    approved_by_admin_id = fields.Int(allow_none=True)
+    approved_by_admin_id = HashidField(allow_none=True)
     approved_at = fields.DateTime(allow_none=True)
 
 

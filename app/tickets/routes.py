@@ -53,11 +53,11 @@ def list_tickets():
     
     return render_template('list.html', tickets=tickets)
 
-@tickets_bp.route('/<int:id>', methods=['GET'])
+@tickets_bp.route('/<hashid:id>', methods=['GET'])
 @login_required
 @ticket_access_required
 def detail_ticket(id):
-    
+    # print(f"[DEBUG] hashid route {request.path}")
     respond_form = None
     if current_user.role in ('staff', 'admin') and g.ticket.response is None:
         respond_form = RespondTicketForm()
@@ -73,10 +73,11 @@ def detail_ticket(id):
         can_resolve=can_resolve
     )
 
-@tickets_bp.route('/<int:id>/respond', methods=['POST'])
+@tickets_bp.route('/<hashid:id>/respond', methods=['POST'])
 @login_required
 @ticket_access_required
 def respond_ticket(id):
+    # print(f"[DEBUG] hashid route {request.path}")
     if current_user.role not in ('staff', 'admin'):
         abort(403)
         
@@ -98,10 +99,11 @@ def respond_ticket(id):
         
     return redirect(url_for('tickets.detail_ticket', id=id))
 
-@tickets_bp.route('/<int:id>/resolve', methods=['POST'])
+@tickets_bp.route('/<hashid:id>/resolve', methods=['POST'])
 @login_required
 @ticket_access_required
 def resolve_ticket(id):
+    # print(f"[DEBUG] hashid route {request.path}")
     if current_user.id != g.ticket.user_id:
         abort(403)
         

@@ -5,6 +5,7 @@ from flask import abort
 from flask_login import current_user, login_required
 from flask_restful import Resource
 
+from app.api.serializers import encode_id
 from app.auth.decorators import role_required
 from app.models import Booking, StaffProfile, Trek, User
 from app.services import history_service
@@ -45,7 +46,7 @@ class StaffStatsResource(Resource):
                 Booking.trek_id == trek.id, Booking.status.in_(("pending", "booked"))
             ).count()
             assigned.append(
-                {"trek_id": trek.id, "name": trek.name, "participant_count": participant_count}
+                {"trek_id": encode_id(trek.id), "name": trek.name, "participant_count": participant_count}
             )
 
         return {"assigned_treks": assigned}, 200
@@ -71,8 +72,8 @@ class TrekkerStatsResource(Resource):
         return {
             "booking_history": [
                 {
-                    "id": b.id,
-                    "trek_id": b.trek_id,
+                    "id": encode_id(b.id),
+                    "trek_id": encode_id(b.trek_id),
                     "status": b.status,
                     "payment_status": b.payment_status,
                 }
