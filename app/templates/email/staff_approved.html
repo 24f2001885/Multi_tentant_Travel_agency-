@@ -1,0 +1,13 @@
+
+
+<!doctype html>
+<html>
+<body style="font-family: Arial, sans-serif; color: #14161A;">
+  <p>Hi {{ user.name }},</p>
+  <p>Good news — your Trek Staff account has been approved. You can now log in and access your dashboard.</p>
+  <p><a href="{{ url_for('auth.login', _external=True) }}">Log in to TMA</a></p>
+  {% if user.must_reset_password %}
+    <p>Since a temporary password was issued for your account, you'll be asked to set a new password the first time you log in.</p>
+  {% endif %}
+</body>
+</html>

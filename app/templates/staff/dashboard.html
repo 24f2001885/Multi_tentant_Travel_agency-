@@ -1,0 +1,78 @@
+{% extends "shared/base.html" %}
+{% block shell %}{% include "shared/sidebar_staff.html" %}{% endblock %}
+
+{% block content %}
+<div class="tma-topbar">
+  <h1>Dashboard</h1>
+</div>
+
+<div class="row g-3">
+  <div class="col-md-6">
+    <div class="tma-stat-card">
+      <div class="tma-stat-numeral">{{ stats.assigned_treks }}</div>
+      <div class="tma-stat-label">Assigned Treks</div>
+    </div>
+  </div>
+  <div class="col-md-6">
+    <div class="tma-stat-card">
+      <div class="tma-stat-numeral">{{ stats.total_participants }}</div>
+      <div class="tma-stat-label">Total Participants Across My Treks</div>
+    </div>
+  </div>
+</div>
+
+<!-- This table was missing entirely — it's the only place a Staff member
+     can reach trek_manage.html / participants.html, since neither route
+     has any other entry point (no admin-style "click a row" list view
+     exists for Staff). -->
+<div class="mt-4">
+  <h2 class="h5 mb-3">My Assigned Treks</h2>
+  {% if treks %}
+  <div class="table-responsive">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Trek</th><th>Location</th><th>Status</th><th>Slots</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for trek in treks %}
+        <tr>
+          <td>{{ trek.name }}</td>
+          <td>{{ trek.location }}</td>
+          <td>{{ trek.status }}</td>
+          <td>{{ trek.available_slots }}/{{ trek.total_slots }}</td>
+          <td>
+            <a href="{{ url_for('staff.trek_manage', trek_id=trek.id) }}" class="btn btn-sm tma-btn-primary">Manage</a>
+            <a href="{{ url_for('staff.participants', trek_id=trek.id) }}" class="btn btn-sm tma-btn-ghost">Participants</a>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <p class="text-muted">No treks assigned to you yet — check back once an Admin assigns one.</p>
+  {% endif %}
+</div>
+
+<div class="row g-3 mt-1">
+  <div class="col-12">
+    <div class="tma-chart-panel">
+      <canvas id="participantsChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+  new Chart(document.getElementById("participantsChart"), {
+    type: "bar",
+    data: {
+      labels: {{ chart_labels | tojson }},
+      datasets: [{ label: "Participants", data: {{ chart_values | tojson }} }]
+    },
+    options: { responsive: true, plugins: { legend: { display: false } } }
+  });
+</script>
+{% endblock %}

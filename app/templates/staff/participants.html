@@ -1,0 +1,35 @@
+
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+{% block shell %}{% include "shared/sidebar_staff.html" %}{% endblock %}
+
+{% block content %}
+<div class="tma-topbar">
+  <h1>Participants — {{ trek.name }}</h1>
+</div>
+
+{% if bookings %}
+<div class="table-responsive">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Trekker</th><th>Email</th><th>Booking Date</th><th>Status</th><th>Payment Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for booking in bookings %}
+      <tr>
+        <td>{{ booking.user.name }}</td>
+        <td>{{ booking.user.email }}</td>
+        <td>{{ booking.booking_date.strftime("%Y-%m-%d") }}</td>
+        <td>{{ status_badge(booking.status, "booking") }}</td>
+        <td>{{ status_badge(booking.payment_status, "payment_status_booking") }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% else %}
+<p class="text-muted">No participants yet.</p>
+{% endif %}
+{% endblock %}

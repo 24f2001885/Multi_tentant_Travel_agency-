@@ -1,0 +1,66 @@
+
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+{% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h1 class="h3 mb-0" style="font-family:'Bitter',serif;font-weight:700;">Treks</h1>
+  <a href="{{ url_for('admin.trek_new') }}" class="btn" style="background:#1F4FD8;color:#fff;">+ New Trek</a>
+</div>
+
+<form method="get" class="row g-2 bg-white border p-3" style="border-color:#E2E4E9;">
+  <div class="col-md-3">
+    <select name="difficulty" class="form-select form-select-sm">
+      <option value="">All difficulties</option>
+      {% for d in ['easy', 'moderate', 'hard'] %}
+      <option value="{{ d }}" {% if difficulty == d %}selected{% endif %}>{{ d|capitalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-3">
+    <select name="status" class="form-select form-select-sm">
+      <option value="">All statuses</option>
+      {% for s in ['pending', 'approved', 'open', 'closed', 'completed'] %}
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|capitalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="col-md-4">
+    <input type="text" name="search" class="form-control form-control-sm" placeholder="Search name or location" value="{{ search }}">
+  </div>
+  <div class="col-md-2">
+    <button type="submit" class="btn btn-sm w-100" style="background:#1F4FD8;color:#fff;">Filter</button>
+  </div>
+</form>
+
+<div class="table-responsive bg-white border" style="border-color:#E2E4E9;border-top:none;">
+  <table class="table mb-0 align-middle">
+    <thead style="background:#F7F7F8;">
+      <tr style="color:#6B7280;text-transform:uppercase;font-size:0.75rem;">
+        <th>Trek Name</th><th>Location</th><th>Difficulty</th><th>Slots</th><th>Status</th><th>Assigned Staff</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for trek in treks %}
+      <tr>
+        <td>{{ trek.name }}</td>
+        <td>{{ trek.location }}</td>
+        <td><span class="badge bg-light text-dark border">{{ trek.difficulty }}</span></td>
+        <td>{{ trek.available_slots }}/{{ trek.total_slots }}</td>
+        <td>{{ status_badge(trek.status, 'trek') }}</td>
+        <td>{{ trek.assigned_staff.user.name if trek.assigned_staff and trek.assigned_staff.user else '—' }}</td>
+        <td>
+          <a href="{{ url_for('admin.trek_edit', trek_id=trek.id) }}" class="btn btn-sm btn-outline-secondary" aria-label="Edit {{ trek.name }}">Edit</a>
+          <form method="post" action="{{ url_for('admin.trek_delete', trek_id=trek.id) }}" class="d-inline" onsubmit="return confirm('Delete {{ trek.name }}? This cannot be undone.');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete {{ trek.name }}">Delete</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="7" class="text-center text-muted py-4">No treks match these filters.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

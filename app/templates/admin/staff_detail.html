@@ -1,0 +1,40 @@
+
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+{% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4" style="font-family:'Bitter',serif;font-weight:700;">{{ staff.user.name }}</h1>
+
+<div class="row g-4">
+  <div class="col-md-4">
+    <div class="bg-white border rounded-3 p-4" style="border-color:#E2E4E9;">
+      <p><strong>Contact:</strong> {{ staff.contact_details or '—' }}</p>
+      <p><strong>Approval Status:</strong> {{ status_badge(staff.approval_status, 'staff_approval') }}</p>
+      {% if staff.approval_status != 'pending' and staff.approved_at %}
+      <p class="text-muted small mb-0">
+        Approved by {{ staff.approved_by_admin.name if staff.approved_by_admin else '—' }} on {{ staff.approved_at.strftime('%Y-%m-%d') }}
+      </p>
+      {% endif %}
+    </div>
+  </div>
+  <div class="col-md-8">
+    <div class="bg-white border rounded-3 p-3" style="border-color:#E2E4E9;">
+      <h2 class="h6 text-uppercase mb-3" style="color:#6B7280;">Assigned Treks</h2>
+      <table class="table table-sm mb-0">
+        <thead><tr><th>Name</th><th>Location</th><th>Status</th></tr></thead>
+        <tbody>
+          {% for trek in staff.treks %}
+          <tr>
+            <td><a href="{{ url_for('admin.trek_detail', trek_id=trek.id) }}">{{ trek.name }}</a></td>
+            <td>{{ trek.location }}</td>
+            <td>{{ status_badge(trek.status, 'trek') }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="3" class="text-muted text-center py-3">No treks assigned yet.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

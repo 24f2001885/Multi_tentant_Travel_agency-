@@ -1,0 +1,68 @@
+
+{% extends "shared/base.html" %}
+{% block title %}Register — TMA{% endblock %}
+{% block content %}
+<div class="d-flex justify-content-center align-items-center py-5">
+  <div class="card shadow-sm" style="width: 440px; max-width: 100%;">
+    <div class="card-body p-4">
+      <h1 class="h4 mb-4 text-center">Register</h1>
+      <form method="POST" action="{{ url_for('auth.register') }}" id="register-form">
+        {{ form.hidden_tag() }}
+        <div class="btn-group w-100 mb-3" role="group" aria-label="Role toggle">
+          {% for subfield in form.role %}
+            <input type="radio" class="btn-check" name="{{ form.role.name }}" id="role-{{ subfield.data }}"
+                   value="{{ subfield.data }}" autocomplete="off" {% if subfield.checked %}checked{% endif %}>
+            <label class="btn btn-outline-primary" for="role-{{ subfield.data }}">
+              {% if subfield.data == 'staff' %}I'm Trek Staff{% else %}I'm a Trekker{% endif %}
+            </label>
+          {% endfor %}
+        </div>
+        <div class="mb-3">
+          {{ form.name.label(class="form-label") }}
+          {{ form.name(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.email.label(class="form-label") }}
+          {{ form.email(class="form-control") }}
+        </div>
+        <div class="mb-3" id="contact-details-group">
+          {{ form.contact_details.label(class="form-label") }}
+          {{ form.contact_details(class="form-control") }}
+          <div class="form-text">Your account will need Admin approval before you can log in.</div>
+        </div>
+        <div class="mb-3">
+          {{ form.password.label(class="form-label") }}
+          {{ form.password(class="form-control") }}
+        </div>
+        <div class="mb-3">
+          {{ form.confirm_password.label(class="form-label") }}
+          {{ form.confirm_password(class="form-control") }}
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Register</button>
+        <p class="text-center small mt-3 mb-0">
+          Already have an account? <a href="{{ url_for('auth.login') }}">Log In</a>
+        </p>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  (function () {
+    var contactGroup = document.getElementById('contact-details-group');
+    var radios = document.querySelectorAll('input[name="role"]');
+
+    function toggleContactField() {
+      var selected = document.querySelector('input[name="role"]:checked');
+      contactGroup.style.display = (selected && selected.value === 'staff') ? 'block' : 'none';
+    }
+
+    radios.forEach(function (radio) {
+      radio.addEventListener('change', toggleContactField);
+    });
+    toggleContactField();
+  })();
+</script>
+{% endblock %}

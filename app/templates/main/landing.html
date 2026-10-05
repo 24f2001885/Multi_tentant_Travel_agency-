@@ -1,0 +1,54 @@
+{% extends "shared/base.html" %}
+
+{% block title %}TMA - Trekking Management Application{% endblock %}
+
+{% block shell %}
+  <!-- Includes your isolated public navbar so we don't accidentally load sidebars! -->
+  {% include "shared/navbar_public.html" %}
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<div class="container-fluid bg-light py-5 border-bottom">
+  <div class="container text-center py-5 my-md-4">
+    <h1 class="display-4 fw-bold mb-3" style="font-family: 'Bitter', serif; color: #111827;">Adventure Awaits</h1>
+    <p class="lead text-muted mx-auto mb-4" style="max-width: 600px;">
+      Discover, book, and track guided treks — from sign-up to summit. Experience nature with expert guides and seamless planning.
+    </p>
+    <a href="#open-treks" class="btn btn-primary btn-lg px-5 shadow-sm" style="background-color: #1F4FD8; border-color: #1F4FD8; border-radius: 8px;">Explore Treks</a>
+  </div>
+</div>
+
+<div id="open-treks" class="container py-5 mb-5">
+  
+  <!-- Section Header -->
+  <div class="mb-5 pb-4">
+    <h2 class="fw-bold" style="font-family: 'Bitter', serif; color: #111827; font-size: 2.5rem;">Currently Open Treks</h2>
+    <p class="text-muted fs-5 mb-0">Browse our hand-picked selection of upcoming adventures.</p>
+  </div>
+
+  <!-- Treks Grid -->
+  <div class="row g-4">
+    {% for trek in treks %}
+      <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+        <!-- Includes the smart card we built earlier -->
+        {% include "shared/_trek_card.html" %}
+      </div>
+    {% else %}
+      <!-- Empty State -->
+      <div class="col-12">
+        <div class="card border-0 bg-light text-center py-5 shadow-sm" style="border-radius: 12px;">
+            <div class="text-muted mb-3">
+                <svg width="64" height="64" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 21v-7.5a2.25 2.25 0 00-2.25-2.25h-1.5a2.25 2.25 0 00-2.25 2.25V21m4.5 0H21m-4.5 0H3m2.25-18.75l1.5 1.5m0 0l1.5-1.5m-1.5 1.5v11.25m-6-11.25l1.5 1.5m0 0l1.5-1.5m-1.5 1.5V21m15-18.75l1.5 1.5m0 0l1.5-1.5m-1.5 1.5V21"></path>
+                </svg>
+            </div>
+            <h4 class="text-dark font-weight-bold" style="font-family: 'Bitter', serif;">No treks available right now</h4>
+            <p class="text-muted mb-0">Please check back later for new and upcoming adventures!</p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+
+</div>
+{% endblock %}

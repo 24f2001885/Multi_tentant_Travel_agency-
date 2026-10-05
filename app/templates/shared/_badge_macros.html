@@ -1,0 +1,18 @@
+
+{% macro status_badge(value, domain) %}
+{% set colors = {
+  'trek': {'pending': ('#D97706','#FDF3E3'), 'approved': ('#0891B2','#E5F5F8'), 'open': ('#16A34A','#E7F6EC'), 'closed': ('#6B7280','#EEEFF1'), 'completed': ('#14161A','#EEEFF1')},
+  'booking': {'pending': ('#D97706','#FDF3E3'), 'booked': ('#16A34A','#E7F6EC'), 'cancelled': ('#DC2626','#FBE9E9'), 'completed': ('#14161A','#EEEFF1')},
+  'payment_status_booking': {'pending': ('#D97706','#FDF3E3'), 'paid': ('#16A34A','#E7F6EC'), 'failed': ('#DC2626','#FBE9E9'), 'refunded': ('#0891B2','#E5F5F8')},
+  'payment_status_txn': {'initiated': ('#6B7280','#EEEFF1'), 'success': ('#16A34A','#E7F6EC'), 'failed': ('#DC2626','#FBE9E9'), 'refunded': ('#0891B2','#E5F5F8')},
+  'staff_approval': {'pending': ('#D97706','#FDF3E3'), 'approved': ('#16A34A','#E7F6EC'), 'blacklisted': ('#DC2626','#FBE9E9')},
+  'ticket_status': {'open': ('#D97706','#FDF3E3'), 'answered': ('#0891B2','#E5F5F8'), 'resolved': ('#16A34A','#E7F6EC')},
+} %}
+{%- set pair = colors.get(domain, {}).get(value) -%}
+{%- if pair -%}
+  {%- set text_color, bg_color = pair -%}
+  <span style="display:inline-block;font-family:'Inter',sans-serif;font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.02em;padding:0.25rem 0.625rem;border-radius:6px;color:{{ text_color }};background-color:{{ bg_color }};">{{ value }}</span>
+{%- else -%}
+  <span style="display:inline-block;font-family:'Inter',sans-serif;font-weight:600;font-size:0.75rem;text-transform:uppercase;letter-spacing:0.02em;padding:0.25rem 0.625rem;border-radius:6px;color:#6B7280;background-color:#EEEFF1;">{{ value }}</span>
+{%- endif -%}
+{% endmacro %}

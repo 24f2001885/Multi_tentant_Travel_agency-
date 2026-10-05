@@ -1,0 +1,47 @@
+<nav class="navbar navbar-expand-md navbar-light bg-white border-bottom shadow-sm fixed-top">
+  <div class="container-fluid px-4">
+    <!-- Brand -->
+    <a class="navbar-brand fw-bold" href="{{ url_for('main.landing') }}" style="font-family: 'Bitter', serif; color: #111827;">
+      TMA
+    </a>
+
+    <!-- Mobile Hamburger Toggle -->
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#publicNavCollapse" aria-controls="publicNavCollapse" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <!-- Nav Links & Authentication -->
+    <div class="collapse navbar-collapse" id="publicNavCollapse">
+      <ul class="navbar-nav me-auto">
+        <!-- Future public links can go here -->
+      </ul>
+      
+      <div class="ms-auto d-flex flex-column flex-md-row align-items-md-center gap-3 mt-3 mt-md-0 pb-3 pb-md-0">
+        {% if current_user.is_authenticated %}
+          {% set dashboard_url = {
+            'admin': url_for('admin.dashboard'),
+            'staff': url_for('staff.dashboard'),
+            'trekker': url_for('trekker.dashboard'),
+          }[current_user.role] %}
+          
+          <a href="{{ dashboard_url }}" class="d-flex align-items-center text-decoration-none text-dark fw-medium" title="Go to Dashboard">
+            <span class="me-2">My Dashboard</span>
+            {% if current_user.has_profile_picture %}
+              <img class="avatar-circle shadow-sm" 
+                   src="{{ url_for('static', filename='uploads/profile_pics/' ~ current_user.profile_picture_filename) }}" 
+                   alt="{{ current_user.name }}'s profile picture"
+                   style="width: 32px; height: 32px; border: 1px solid #E5E7EB;">
+            {% else %}
+              <div class="avatar-circle shadow-sm" aria-hidden="true" style="width: 32px; height: 32px; font-size: 0.85rem; border: 1px solid #E5E7EB;">
+                {{ current_user.name[:1]|upper }}
+              </div>
+            {% endif %}
+          </a>
+        {% else %}
+          <a href="{{ url_for('auth.login') }}" class="text-dark fw-medium text-decoration-none">Log In</a>
+          <a href="{{ url_for('auth.register') }}" class="btn text-white shadow-sm px-4" style="background-color: #1F4FD8;">Sign Up</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</nav>

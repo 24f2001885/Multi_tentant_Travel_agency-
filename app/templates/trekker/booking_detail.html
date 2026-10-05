@@ -1,0 +1,70 @@
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+
+{% block title %}Booking Detail - TMA{% endblock %}
+
+{% block shell %}
+  {% include "shared/navbar_trekker.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 mb-5">
+  <div class="card shadow-sm border-0 mx-auto" style="max-width: 640px; border-radius: 12px; overflow: hidden;">
+    
+    <!-- Dynamic Trek Banner Image -->
+    <div class="position-relative bg-light" style="height: 200px;">
+      {% if booking.trek.thumbnail_filename %}
+        <img src="{{ url_for('static', filename='uploads/treks/' ~ booking.trek.thumbnail_filename) }}" 
+             alt="{{ booking.trek.name }}" 
+             class="w-100 h-100" 
+             style="object-fit: cover;">
+      {% else %}
+        <img src="{{ url_for('static', filename='img/placeholders/trek_placeholder.svg') }}" 
+             alt="{{ booking.trek.name }}" 
+             class="w-100 h-100" 
+             style="object-fit: cover;">
+      {% endif %}
+    </div>
+
+    <!-- Details Section -->
+    <div class="card-body p-4 p-md-5">
+      <div class="d-flex justify-content-between align-items-start align-items-md-center flex-column flex-md-row mb-4 gap-2">
+        <h2 class="fw-bold mb-0" style="font-family: 'Bitter', serif; color: #111827;">
+          {{ booking.trek.name }}
+        </h2>
+        <span class="text-muted small px-3 py-1 bg-light rounded border">
+          Booking ID: #{{ booking.id }}
+        </span>
+      </div>
+
+      <hr class="mb-4 text-muted opacity-25">
+
+      <dl class="row mb-4" style="font-size: 0.95rem;">
+        <dt class="col-sm-4 text-muted fw-normal mb-2 mb-sm-0">Dates</dt>
+        <dd class="col-sm-8 fw-medium text-dark">{{ booking.trek.start_date }} – {{ booking.trek.end_date }}</dd>
+        
+        <dt class="col-sm-4 text-muted fw-normal mb-2 mb-sm-0">Booking Date</dt>
+        <dd class="col-sm-8 fw-medium text-dark">{{ booking.booking_date.strftime("%Y-%m-%d") if booking.booking_date else 'N/A' }}</dd>
+        
+        <dt class="col-sm-4 text-muted fw-normal mb-2 mb-sm-0">Booking Status</dt>
+        <dd class="col-sm-8 mb-3 mb-sm-2">{{ status_badge(booking.status, "booking") }}</dd>
+        
+        <dt class="col-sm-4 text-muted fw-normal mb-2 mb-sm-0">Payment Status</dt>
+        <dd class="col-sm-8">{{ status_badge(booking.payment_status, "payment_status_booking") }}</dd>
+      </dl>
+
+      <!-- Cancel Action -->
+      {% if booking.status|lower in ["pending", "booked"] %}
+      <div class="mt-4 pt-4 border-top">
+        <form method="POST" action="{{ url_for('trekker.cancel_booking', booking_id=booking.id) }}" onsubmit="return confirm('Are you sure you want to cancel this booking?');">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          <button type="submit" class="btn btn-outline-danger w-100 py-2 fw-medium">
+            Cancel Booking
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

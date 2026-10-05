@@ -1,0 +1,44 @@
+ 
+{% extends "shared/base.html" %}
+
+{% block content %}
+<div class="tma-result-wrapper">
+  <div class="card tma-result-card text-center">
+    {% if state == "success" %}
+      <div class="tma-result-icon tma-result-icon-success">&#10003;</div>
+      <h1 class="h4">Booking Confirmed</h1>
+      <p class="text-muted">{{ booking.trek.name }} — &#8377;{{ "%.2f"|format(booking.trek.price) }}<br>Your slot is reserved.</p>
+      <a class="btn tma-btn-primary" href="{{ url_for('trekker.bookings_list') }}">View My Bookings</a>
+
+    {% elif state == "failed" %}
+      <div class="tma-result-icon tma-result-icon-danger">&#10007;</div>
+      <h1 class="h4">Payment Failed</h1>
+      <p class="text-muted">Your payment could not be completed.</p>
+      <a class="btn tma-btn-primary" href="{{ url_for('trekker.booking_review', trek_id=booking.trek_id) }}">Try Again</a>
+      <a class="btn tma-btn-ghost" href="{{ url_for('trekker.bookings_list') }}">Cancel</a>
+
+    {% elif state == "slot_lost" %}
+      <div class="tma-result-icon tma-result-icon-warning">!</div>
+      <h1 class="h4">Slot No Longer Available</h1>
+      <p class="text-muted">Payment received, but this trek's last slot was taken first — you have not been charged for a seat and a refund status will show on your booking.</p>
+      <a class="btn tma-btn-ghost" href="{{ url_for('trekker.bookings_list') }}">View My Bookings</a>
+
+    {% else %}
+      <div class="tma-result-icon tma-result-icon-neutral">&#8230;</div>
+      <h1 class="h4">Confirming Your Payment&hellip;</h1>
+      <p class="text-muted">This can take a few seconds. Refresh to check the latest status.</p>
+      <a class="btn tma-btn-ghost" href="{{ url_for('trekker.payment_result', booking_id=booking.id) }}">Refresh</a>
+    {% endif %}
+  </div>
+</div>
+
+<style>
+  .tma-result-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #F7F7F8; padding: 2rem; }
+  .tma-result-card { width: 420px; max-width: 100%; border: 1px solid #E2E4E9; border-radius: 10px; padding: 2rem 1.5rem; }
+  .tma-result-icon { width: 56px; height: 56px; line-height: 56px; border-radius: 50%; margin: 0 auto 1rem; font-size: 1.5rem; }
+  .tma-result-icon-success { background: #E7F6EC; color: #16A34A; }
+  .tma-result-icon-danger { background: #FBE9E9; color: #DC2626; }
+  .tma-result-icon-warning { background: #FDF3E3; color: #D97706; }
+  .tma-result-icon-neutral { background: #EEEFF1; color: #6B7280; }
+</style>
+{% endblock %}

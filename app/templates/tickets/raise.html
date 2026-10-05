@@ -1,0 +1,96 @@
+{% extends "shared/base.html" %}
+
+{% block shell %}
+    {% include "shared/navbar_trekker.html" %}
+{% endblock %}
+
+{% block content %}
+<!-- DEBUG: raise.html rendered user_id={{ current_user.id }} -->
+
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            
+            <div class="mb-4">
+                <a href="{{ url_for('tickets.list_tickets') }}" class="text-decoration-none text-secondary">
+                    &larr; Back to My Tickets
+                </a>
+            </div>
+
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h2 class="h4 mb-0 text-center">Raise a Support Ticket</h2>
+                </div>
+                <div class="card-body p-4">
+                    <form method="POST" action="{{ url_for('tickets.raise_ticket') }}">
+                        {{ form.hidden_tag() }}
+
+                        <!-- Ticket Type Toggle -->
+                        <div class="mb-4">
+                            {{ form.type.label(class="form-label fw-bold") }}
+                            {{ form.type(class="form-select" + (" is-invalid" if form.type.errors else ""), id="ticketTypeSelect") }}
+                            {% for error in form.type.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Queries are general questions; Problems relate to a specific booking.</div>
+                        </div>
+
+                        <!-- Conditional Booking Picker -->
+                        <div class="mb-4" id="bookingFieldGroup" style="display: none;">
+                            {{ form.booking_id.label(class="form-label fw-bold") }}
+                            {{ form.booking_id(class="form-select" + (" is-invalid" if form.booking_id.errors else "")) }}
+                            {% for error in form.booking_id.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Subject -->
+                        <div class="mb-4">
+                            {{ form.subject.label(class="form-label fw-bold") }}
+                            {{ form.subject(class="form-control" + (" is-invalid" if form.subject.errors else ""), placeholder="Brief summary of your request") }}
+                            {% for error in form.subject.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Message -->
+                        <div class="mb-4">
+                            {{ form.message.label(class="form-label fw-bold") }}
+                            {{ form.message(class="form-control" + (" is-invalid" if form.message.errors else ""), rows="5", placeholder="Please provide details...") }}
+                            {% for error in form.message.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Submit -->
+                        <div class="d-grid mt-4">
+                            <button type="submit" class="btn btn-primary btn-lg">Submit Ticket</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const typeSelect = document.getElementById('ticketTypeSelect');
+        const bookingGroup = document.getElementById('bookingFieldGroup');
+
+        function toggleBookingVisibility() {
+            if (typeSelect && typeSelect.value === 'problem') {
+                bookingGroup.style.display = 'block';
+            } else if (bookingGroup) {
+                bookingGroup.style.display = 'none';
+            }
+        }
+
+        if (typeSelect) {
+            toggleBookingVisibility();
+            typeSelect.addEventListener('change', toggleBookingVisibility);
+        }
+    });
+</script>
+{% endblock %}

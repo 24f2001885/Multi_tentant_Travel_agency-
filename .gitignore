@@ -1,0 +1,32 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Flask / SQLite
+instance/
+*.db
+*.sqlite3
+
+# Env / secrets
+.env
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node (frontend tooling, if any)
+node_modules/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# P7: user-uploaded profile pictures (never commit user content)
+app/static/uploads/profile_pics/*
+!app/static/uploads/profile_pics/.gitkeep

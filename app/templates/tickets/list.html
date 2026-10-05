@@ -1,0 +1,167 @@
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+
+{% block shell %}
+    {% if current_user.role == 'admin' %}
+        {% include "shared/sidebar_admin.html" %}
+    {% elif current_user.role == 'staff' %}
+        {% include "shared/sidebar_staff.html" %}
+    {% elif current_user.role == 'trekker' %}
+        {% include "shared/navbar_trekker.html" %}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- DEBUG: list.html rendered role={{ current_user.role }} count={{ tickets|length }} -->
+
+<div class="container-fluid py-4">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h3 mb-0">{% if current_user.role == 'trekker' %}My Tickets{% else %}Ticket Queue{% endif %}</h2>
+        {% if current_user.role == 'trekker' %}
+            <a href="{{ url_for('tickets.raise_ticket') }}" class="btn btn-primary">Raise Ticket</a>
+        {% endif %}
+    </div>
+
+    <!-- Filters -->
+    {% if current_user.role in ['admin', 'staff'] %}
+        <!-- Admin / Staff: Dense Filter Bar -->
+        <div class="card shadow-sm mb-4">
+            <div class="card-body py-2">
+                <form method="GET" action="{{ url_for('tickets.list_tickets') }}" class="row g-3 align-items-center">
+                    <div class="col-auto">
+                        <label for="statusFilter" class="visually-hidden">Status</label>
+                        <select name="status" id="statusFilter" class="form-select form-select-sm">
+                            <option value="">All Statuses</option>
+                            <option value="open" {% if request.args.get('status') == 'open' %}selected{% endif %}>Open</option>
+                            <option value="answered" {% if request.args.get('status') == 'answered' %}selected{% endif %}>Answered</option>
+                            <option value="resolved" {% if request.args.get('status') == 'resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <label for="typeFilter" class="visually-hidden">Type</label>
+                        <select name="type" id="typeFilter" class="form-select form-select-sm">
+                            <option value="">All Types</option>
+                            <option value="query" {% if request.args.get('type') == 'query' %}selected{% endif %}>Query</option>
+                            <option value="problem" {% if request.args.get('type') == 'problem' %}selected{% endif %}>Problem</option>
+                        </select>
+                    </div>
+                    <div class="col-auto">
+                        <button type="submit" class="btn btn-sm btn-secondary">Filter</button>
+                        <a href="{{ url_for('tickets.list_tickets') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% else %}
+        <!-- Trekker: Status Pill Filter Row -->
+        <div class="d-flex gap-2 mb-4 overflow-auto pb-2">
+            <a href="{{ url_for('tickets.list_tickets') }}" 
+               class="badge rounded-pill text-decoration-none px-3 py-2 {% if not request.args.get('status') %}bg-secondary text-white{% else %}bg-light text-dark border{% endif %}">
+               All
+            </a>
+            <a href="{{ url_for('tickets.list_tickets', status='open') }}" 
+               class="badge rounded-pill text-decoration-none px-3 py-2 {% if request.args.get('status') == 'open' %}bg-primary text-white{% else %}bg-light text-dark border{% endif %}">
+               Open
+            </a>
+            <a href="{{ url_for('tickets.list_tickets', status='answered') }}" 
+               class="badge rounded-pill text-decoration-none px-3 py-2 {% if request.args.get('status') == 'answered' %}bg-info text-white{% else %}bg-light text-dark border{% endif %}">
+               Answered
+            </a>
+            <a href="{{ url_for('tickets.list_tickets', status='resolved') }}" 
+               class="badge rounded-pill text-decoration-none px-3 py-2 {% if request.args.get('status') == 'resolved' %}bg-success text-white{% else %}bg-light text-dark border{% endif %}">
+               Resolved
+            </a>
+        </div>
+    {% endif %}
+
+    <!-- Content Listing -->
+    {% if current_user.role in ['admin', 'staff'] %}
+        <!-- Admin / Staff: Operational Table -->
+        <div class="card shadow-sm border-0">
+            <div class="table-responsive">
+                <!-- ADDED text-nowrap HERE to force horizontal scrolling on mobile -->
+                <table class="table table-hover table-striped align-middle mb-0 text-nowrap">
+                    <thead class="table-light">
+                        <tr>
+                            <th scope="col">Ticket ID</th>
+                            <th scope="col">Trekker</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Subject</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Created Date</th>
+                            <th scope="col" class="text-end">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ticket in tickets %}
+                        <tr>
+                            <td class="fw-bold">#{{ ticket.id }}</td>
+                            <td>{{ ticket.user.name if ticket.user else '—' }}</td>
+                            <td>
+                                {% if ticket.type == 'query' %}
+                                    <span class="badge border border-secondary text-secondary bg-transparent">Query</span>
+                                {% else %}
+                                    <span class="badge border border-primary text-primary bg-transparent">Problem</span>
+                                {% endif %}
+                            </td>
+                            <!-- Using a slightly wider truncate for desktop, text-nowrap handles mobile -->
+                            <td>{{ ticket.subject | truncate(45) }}</td>
+                            <td>{{ status_badge('ticket_status', ticket.status) }}</td>
+                            <td>{{ ticket.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                            <td class="text-end">
+                                <a href="{{ url_for('tickets.detail_ticket', id=ticket.id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">No tickets found matching your criteria.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    {% else %}
+        <!-- Trekker: Card / List-Row Pattern -->
+        <div class="row g-3">
+            {% for ticket in tickets %}
+            <div class="col-12 col-md-6 col-lg-4">
+                <a href="{{ url_for('tickets.detail_ticket', id=ticket.id) }}" class="text-decoration-none">
+                    <div class="card shadow-sm h-100 hover-shadow transition border-0">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <span class="text-muted small fw-bold">#{{ ticket.id }}</span>
+                                </div>
+                                {% if ticket.type == 'query' %}
+                                    <span class="badge border border-secondary text-secondary bg-transparent">Query</span>
+                                {% else %}
+                                    <span class="badge border border-primary text-primary bg-transparent">Problem</span>
+                                {% endif %}
+                            </div>
+                            <h5 class="card-title text-dark fs-6">{{ ticket.subject | truncate(55) }}</h5>
+                            <div class="d-flex justify-content-between align-items-end mt-3">
+                                <div class="text-muted small">
+                                    {{ ticket.created_at.strftime('%b %d, %Y') }}
+                                </div>
+                                <div class="d-flex align-items-center gap-2">
+                                    {{ status_badge('ticket_status', ticket.status) }}
+                                    <span class="text-muted">&rang;</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            {% else %}
+            <div class="col-12">
+                <div class="p-5 border rounded bg-light text-center text-muted border-0 shadow-sm">
+                    <p class="mb-0">You have no tickets matching this status.</p>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,58 @@
+
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+{% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3" style="font-family:'Bitter',serif;font-weight:700;">Staff</h1>
+
+<ul class="nav nav-pills mb-3">
+  {% for tab_value, tab_label in [('all','All'), ('pending','Pending Approval'), ('approved','Approved'), ('blacklisted','Blacklisted')] %}
+  <li class="nav-item">
+    <a class="nav-link {% if active_tab == tab_value %}active{% endif %}" href="{{ url_for('admin.staff_list', approval_status=tab_value) }}">
+      {{ tab_label }}
+      {% if tab_value == 'pending' and pending_count > 0 %}<span class="badge rounded-pill" style="background:#1F4FD8;">{{ pending_count }}</span>{% endif %}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+
+<div class="table-responsive bg-white border" style="border-color:#E2E4E9;">
+  <table class="table mb-0 align-middle">
+    <thead style="background:#F7F7F8;">
+      <tr style="color:#6B7280;text-transform:uppercase;font-size:0.75rem;">
+        <th>Name</th><th>Email</th><th>Contact</th><th>Approval Status</th><th>Assigned Treks</th><th>Actions</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for staff in staff_rows %}
+      <tr>
+        <td>{{ staff.user.name if staff.user else '—' }}</td>
+        <td>{{ staff.user.email if staff.user else '—' }}</td>
+        <td>{{ staff.contact_details or '—' }}</td>
+        <td>{{ status_badge(staff.approval_status, 'staff_approval') }}</td>
+        <td>{{ staff.assigned_treks|length }}</td>
+        <td>
+          <a href="{{ url_for('admin.staff_detail', staff_id=staff.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
+          {% if staff.approval_status == 'pending' %}
+          <form method="post" action="{{ url_for('admin.staff_action', staff_id=staff.id) }}" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="staff_id" value="{{ staff.id }}">
+            <input type="hidden" name="action" value="approve">
+            <button type="submit" class="btn btn-sm" style="background:#16A34A;color:#fff;">Approve</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.staff_action', staff_id=staff.id) }}" class="d-inline" onsubmit="return confirm('Blacklist {{ staff.user.name }}?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="staff_id" value="{{ staff.id }}">
+            <input type="hidden" name="action" value="blacklist">
+            <button type="submit" class="btn btn-sm btn-outline-danger">Blacklist</button>
+          </form>
+          {% endif %}
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-4">No staff in this view.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

@@ -1,0 +1,17 @@
+services:
+  web:
+    build: .
+    ports: 
+      - "5000:5000"
+    env_file: .env
+    volumes:
+      - .:/app
+      - ./instance:/app/instance
+    depends_on: 
+      - mailhog
+
+  mailhog:
+    image: mailhog/mailhog
+    ports: 
+      - "8025:8025"
+      - "1025:1025"

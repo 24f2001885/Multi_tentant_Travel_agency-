@@ -1,0 +1,11 @@
+
+
+<!doctype html>
+<html>
+<body style="font-family: Arial, sans-serif; color: #14161A;">
+  <p>Hi {{ user.name }},</p>
+  <p>We received a request to reset your Trekking Management Application password. Click the link below to choose a new password:</p>
+  <p><a href="{{ url_for('auth.reset_password', token=raw_token, _external=True) }}">Reset your password</a></p>
+  <p>This link expires in {{ config.RESET_TOKEN_EXPIRY_MINUTES }} minutes. If you didn't request this, you can safely ignore this email.</p>
+</body>
+</html>

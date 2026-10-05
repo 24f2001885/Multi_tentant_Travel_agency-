@@ -1,0 +1,17 @@
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+{% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-4" style="font-family:'Bitter',serif;font-weight:700;">Booking #{{ booking.id }}</h1>
+
+<div class="bg-white border rounded-3 p-4" style="border-color:#E2E4E9;">
+  <div class="row g-3">
+    <div class="col-md-6"><strong>Trekker:</strong> {{ booking.user.name }} ({{ booking.user.email }})</div>
+    <div class="col-md-6"><strong>Trek:</strong> {{ booking.trek.name }} ({{ booking.trek.start_date }} – {{ booking.trek.end_date }})</div>
+    <div class="col-md-6"><strong>Booking Date:</strong> {{ booking.booking_date.strftime('%Y-%m-%d %H:%M') }}</div>
+    <div class="col-md-6"><strong>Status:</strong> {{ status_badge(booking.status, 'booking') }}</div>
+    <div class="col-md-6"><strong>Payment Status:</strong> {{ status_badge(booking.payment_status, 'payment_status_booking') }}</div>
+    <div class="col-md-6"><a href="{{ url_for('admin.payments_list', booking_id=booking.id) }}">View related payments</a></div>
+  </div>
+</div>
+{% endblock %}

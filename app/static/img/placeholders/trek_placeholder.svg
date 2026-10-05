@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 225" role="img" aria-label="Trek image placeholder">
+  <rect width="400" height="225" fill="#F4F5EE"/>
+  <circle cx="322" cy="52" r="22" fill="#E7EDF2"/>
+  <g fill="none" stroke="#DADFD9" stroke-width="1">
+    <path d="M-10 60 Q100 30 210 60 T430 60"/>
+    <path d="M-10 90 Q100 62 210 90 T430 90"/>
+  </g>
+  <polygon points="0,225 80,95 130,150 190,70 210,95 260,60 330,140 400,100 400,225" fill="#B9C2B8"/>
+  <polygon points="60,225 190,70 210,95 260,60 300,120 330,225" fill="#8E9A8B"/>
+  <polygon points="180,225 210,95 240,150 270,225" fill="#5E6B5A"/>
+  <path d="M190,70 L200,84 L205,78 L210,95 L217,86 L222,90 L230,80" fill="none" stroke="#F4F5EE" stroke-width="2" stroke-linejoin="round"/>
+  <path d="M270,80 L280,120" stroke="#AE5430" stroke-width="3" stroke-linecap="round"/>
+</svg>

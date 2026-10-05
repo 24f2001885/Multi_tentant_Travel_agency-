@@ -1,0 +1,75 @@
+
+{% extends "shared/base.html" %}
+{% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
+
+{% block content %}
+<!-- DEBUG: reports.html rendered panel_count={{ panels|length if panels is defined else 2 }} -->
+
+<h1 class="h3 mb-4" style="font-family:'Bitter',serif;font-weight:700;">Reports &amp; Charts</h1>
+
+<!-- Grid of Chart.js panels: 2-up desktop / 1-up mobile with 1.5rem gap (g-4) -->
+<div class="row g-4">
+  <div class="col-lg-6">
+    <div class="p-3 bg-white border rounded-3" style="border-color:#E2E4E9;">
+      <h2 class="h6 mb-3" style="font-family:'Bitter',serif;">Bookings over time</h2>
+      <canvas id="reportsBookingsChart"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="p-3 bg-white border rounded-3" style="border-color:#E2E4E9;">
+      <h2 class="h6 mb-3" style="font-family:'Bitter',serif;">Treks by status</h2>
+      <canvas id="reportsStatusChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Embed Jinja Data safely in JSON script tags so VS Code JS Linter doesn't throw syntax errors -->
+<script id="bookings-data" type="application/json">{{ bookings_over_time | tojson }}</script>
+<script id="treks-data" type="application/json">{{ treks_by_status | tojson }}</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+const bookingsOverTime = JSON.parse(document.getElementById('bookings-data').textContent);
+const treksByStatus = JSON.parse(document.getElementById('treks-data').textContent);
+
+// Hex colors matching shared/_badge_macros.html status badges
+const STATUS_COLORS = { 
+  pending: '#D97706', 
+  approved: '#0891B2', 
+  open: '#16A34A', 
+  closed: '#6B7280', 
+  completed: '#14161A' 
+};
+
+// Bookings line chart
+new Chart(document.getElementById('reportsBookingsChart'), {
+  type: 'line',
+  data: { 
+    labels: bookingsOverTime.labels, 
+    datasets: [{ 
+      label: 'Bookings', 
+      data: bookingsOverTime.data, 
+      borderColor: '#1F4FD8', 
+      tension: 0.3 
+    }] 
+  },
+  options: { 
+    plugins: { 
+      legend: { display: false } 
+    } 
+  }
+});
+
+// Treks by status donut chart
+new Chart(document.getElementById('reportsStatusChart'), {
+  type: 'doughnut',
+  data: { 
+    labels: Object.keys(treksByStatus), 
+    datasets: [{ 
+      data: Object.values(treksByStatus), 
+      backgroundColor: Object.keys(treksByStatus).map(s => STATUS_COLORS[s.toLowerCase()] || '#6B7280') 
+    }] 
+  }
+});
+</script>
+{% endblock %}

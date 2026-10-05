@@ -1,0 +1,68 @@
+<div class="card h-100 tma-trek-card shadow-sm" style="border: 1px solid #E5E7EB; border-radius: 12px; overflow: hidden; background: #fff;">
+  
+  <!-- Image Header -->
+  <div class="position-relative bg-light">
+    <!-- Dynamic Image Logic -->
+    {% if trek.thumbnail_filename %}
+      <img src="{{ url_for('static', filename='uploads/treks/' ~ trek.thumbnail_filename) }}" 
+           alt="{{ trek.name }}" 
+           class="card-img-top" 
+           style="height: 220px; object-fit: cover; width: 100%;">
+    {% else %}
+      <img src="{{ url_for('static', filename='img/placeholders/trek_placeholder.svg') }}" 
+           alt="{{ trek.name }}" 
+           class="card-img-top" 
+           style="height: 220px; object-fit: cover; width: 100%;">
+    {% endif %}
+    
+    <!-- Status Badge -->
+    <div class="position-absolute top-0 start-0 m-3">
+      <span class="badge {% if trek.status == 'open' %}bg-success{% elif trek.status == 'full' %}bg-danger{% else %}bg-secondary{% endif %} shadow-sm" 
+            style="letter-spacing: 0.05em; text-transform: uppercase; font-size: 0.7rem; padding: 0.5em 0.75em;">
+        {{ trek.status }}
+      </span>
+    </div>
+
+    <!-- Location Badge -->
+    <div class="position-absolute bottom-0 end-0 m-3">
+      <span class="badge bg-dark text-white shadow" style="font-size: 0.75rem; font-weight: 500; padding: 0.5em 0.8em; border-radius: 4px;">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="currentColor" class="bi bi-geo-alt-fill me-1 mb-1" viewBox="0 0 16 16" style="color: #9CA3AF;">
+          <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10zm0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6z"/>
+        </svg>
+        {{ trek.location | title }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Card Body -->
+  <div class="card-body p-4 d-flex flex-column">
+    <h4 class="fw-bold mb-3" style="font-family: 'Bitter', serif; color: #111827; font-size: 1.35rem;">
+      {{ trek.name }}
+    </h4>
+    
+    <!-- Details Grid -->
+    <div class="mb-4" style="font-size: 0.85rem; color: #4B5563;">
+      <div class="mb-1">
+        <span style="color: #9CA3AF; letter-spacing: 0.05em;">DIFFICULTY:</span> 
+        <strong class="text-dark">{{ trek.difficulty | upper }}</strong>
+      </div>
+      <div class="mb-1">
+        <span style="color: #9CA3AF; letter-spacing: 0.05em;">PRICE:</span> 
+        <strong class="text-dark">₹{{ "%.2f"|format(trek.price) }}</strong>
+      </div>
+      <div class="mb-1">
+        <span style="color: #9CA3AF; letter-spacing: 0.05em;">AVAILABILITY:</span> 
+        <strong class="text-dark">{{ trek.available_slots }} Slots Left</strong>
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <div class="mt-auto">
+      <!-- Fixed Smart Routing Logic directly inside the href -->
+      <a href="{% if current_user.is_authenticated %}{% if current_user.role == 'admin' %}{{ url_for('admin.trek_detail', trek_id=trek.id) }}{% elif current_user.role == 'staff' %}{{ url_for('staff.trek_manage', trek_id=trek.id) }}{% else %}{{ url_for('trekker.trek_detail', trek_id=trek.id) }}{% endif %}{% else %}{{ url_for('auth.login', next=url_for('trekker.trek_detail', trek_id=trek.id)) }}{% endif %}" 
+         class="btn w-100 py-2 tma-trek-card-btn text-center d-block text-decoration-none">
+        View Trek Details
+      </a>
+    </div>
+  </div>
+</div>

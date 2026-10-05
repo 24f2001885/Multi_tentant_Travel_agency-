@@ -1,0 +1,61 @@
+{% extends "shared/base.html" %}
+{% block shell %}{% include "shared/navbar_trekker.html" %}{% endblock %}
+
+{% block content %}
+<div class="container pb-5">
+  <div style="max-width: 500px; margin: 0 auto;">
+    <h1 class="mb-4" style="font-family: 'Bitter', serif; font-weight: 700; color: #111827;">My Profile</h1>
+
+    <!-- Profile Picture Upload Widget -->
+    <div class="d-flex align-items-center gap-4 mb-4 p-4 bg-white border rounded shadow-sm">
+      {% if current_user.has_profile_picture %}
+        <img src="{{ url_for('static', filename='uploads/profile_pics/' ~ current_user.profile_picture_filename) }}" 
+             alt="Profile" class="avatar-circle-lg flex-shrink-0" style="width: 80px; height: 80px;">
+      {% else %}
+        <div class="avatar-circle-lg flex-shrink-0" style="width: 80px; height: 80px; font-size: 2rem;">
+          {{ current_user.name[:1] | upper if current_user.name else 'U' }}
+        </div>
+      {% endif %}
+
+      <form method="POST" action="{{ url_for('trekker.upload_profile_picture') }}" enctype="multipart/form-data" class="flex-grow-1">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <label class="form-label fw-bold text-muted mb-2" style="font-size: 0.85rem;">UPDATE PICTURE</label>
+        <div class="input-group input-group-sm">
+          <input type="file" name="picture" class="form-control" accept=".jpg,.jpeg" required>
+          <button type="submit" class="btn text-white" style="background-color: #1F4FD8;">Upload</button>
+        </div>
+        <div class="form-text mt-1">JPG format only.</div>
+      </form>
+    </div>
+
+    <!-- Standard Details Form -->
+    <form method="POST" class="bg-white p-4 border rounded shadow-sm">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+      <div class="mb-3">
+        <label class="form-label text-muted">Name</label>
+        <input type="text" name="name" class="form-control" value="{{ current_user.name }}"/>
+      </div>
+
+      <div class="mb-4">
+        <label class="form-label text-muted">Email</label>
+        <input type="text" class="form-control bg-light text-muted" value="{{ current_user.email }}" disabled/>
+      </div>
+
+      <h4 class="mb-3 mt-4" style="font-family: 'Inter', sans-serif; font-size: 1.1rem; color: #4B5563;">Change Password</h4>
+      
+      <div class="mb-3">
+        <label class="form-label text-muted">Current Password</label>
+        <input type="password" name="current_password" class="form-control"/>
+      </div>
+      
+      <div class="mb-4">
+        <label class="form-label text-muted">New Password</label>
+        <input type="password" name="new_password" class="form-control"/>
+      </div>
+
+      <button type="submit" class="btn text-white w-100 py-2" style="background-color: #111827;">Save Profile</button>
+    </form>
+  </div>
+</div>
+{% endblock %}

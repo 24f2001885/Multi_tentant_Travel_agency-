@@ -1,0 +1,108 @@
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+
+{% block shell %}
+    {% if current_user.role == 'admin' %}
+        {% include "shared/sidebar_admin.html" %}
+    {% elif current_user.role == 'staff' %}
+        {% include "shared/sidebar_staff.html" %}
+    {% elif current_user.role == 'trekker' %}
+        {% include "shared/navbar_trekker.html" %}
+    {% endif %}
+{% endblock %}
+
+{% block content %}
+<!-- DEBUG: detail.html rendered ticket_id={{ ticket.id }} viewer_role={{ current_user.role }} -->
+
+<div class="container-fluid py-4 max-w-75">
+    <div class="mb-3">
+        <a href="{{ url_for('tickets.list_tickets') }}" class="text-decoration-none text-secondary">
+            &larr; Back to Tickets
+        </a>
+    </div>
+
+    <!-- Ticket Metadata Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom">
+        <div>
+            <h2 class="h4 mb-1">
+                Ticket #{{ ticket.id }}
+                {% if ticket.type == 'query' %}
+                    <span class="badge border border-secondary text-secondary bg-transparent align-middle ms-2 fs-6">Query</span>
+                {% else %}
+                    <span class="badge border border-primary text-primary bg-transparent align-middle ms-2 fs-6">Problem</span>
+                {% endif %}
+            </h2>
+            <div class="text-muted small">
+                Raised by <strong>{{ ticket.user.name if ticket.user else 'Unknown' }}</strong> on {{ ticket.created_at.strftime('%b %d, %Y at %H:%M') }}
+                {% if ticket.booking_id %}
+                    &bull; Booking Ref: <a href="#">#{{ ticket.booking_id }}</a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-2 mt-md-0 d-flex align-items-center gap-3">
+            {{ status_badge('ticket_status', ticket.status) }}
+            
+            <!-- Trekker "Mark Resolved" Action -->
+            {% if can_resolve %}
+                <form method="POST" action="{{ url_for('tickets.resolve_ticket', id=ticket.id) }}" class="m-0 p-0">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-success btn-sm">Mark Resolved</button>
+                </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Original Message Quote Block -->
+    <div class="p-3 mb-4 bg-light border-start border-3 border-secondary rounded" style="background-color: var(--tma-app-bg, #f8f9fa) !important; border-left-color: var(--tma-border, #dee2e6) !important; padding: 1rem;">
+        <h5 class="mb-3 text-dark">{{ ticket.subject }}</h5>
+        <div class="text-body text-break" style="white-space: pre-wrap;">{{ ticket.message }}</div>
+    </div>
+
+    <!-- Single Response Block (If Responded) -->
+    {% if ticket.response %}
+        <div class="card border-0 mb-4 bg-primary bg-opacity-10">
+            <div class="card-body p-4">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="fw-bold text-primary">Support Response</div>
+                    <div class="text-muted small ms-auto">
+                        {% if ticket.responded_at %}
+                            {{ ticket.responded_at.strftime('%b %d, %Y at %H:%M') }}
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="text-body text-break" style="white-space: pre-wrap;">{{ ticket.response }}</div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Respond Ticket Form (Staff/Admin ONLY, when no response exists) -->
+    {% if form and current_user.role in ['staff', 'admin'] and not ticket.response %}
+        <div class="card shadow-sm mt-5">
+            <div class="card-header bg-white py-3">
+                <h5 class="mb-0 fs-5">Submit Response</h5>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="{{ url_for('tickets.respond_ticket', id=ticket.id) }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="mb-3">
+                        {{ form.response.label(class="form-label visually-hidden") }}
+                        {{ form.response(class="form-control" + (" is-invalid" if form.response.errors else ""), rows="5", placeholder="Draft your response to the trekker here...") }}
+                        {% for error in form.response.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                        <div class="form-text text-muted mt-2">
+                            <i class="bi bi-info-circle me-1"></i> Note: Tickets support a single response. This action cannot be edited later.
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary">Send Response</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}

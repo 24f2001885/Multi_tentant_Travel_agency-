@@ -1,0 +1,48 @@
+{% extends "shared/base.html" %}
+{% block shell %}{% include "shared/navbar_trekker.html" %}{% endblock %}
+
+{% block content %}
+<div class="container py-4 mb-5">
+  
+  <!-- Header & Filter Section -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom">
+    <h2 class="mb-3 mb-md-0" style="font-family: 'Bitter', serif; font-weight: 700; color: #111827;">
+      Upcoming Treks
+    </h2>
+    
+    <form method="GET" action="{{ url_for('trekker.dashboard') }}" class="d-flex gap-2">
+      <select name="difficulty" class="form-select bg-light border-0 shadow-sm" style="min-width: 140px;">
+        <option value="">Any Difficulty</option>
+        <option value="easy" {% if request.args.get('difficulty') == 'easy' %}selected{% endif %}>Easy</option>
+        <option value="moderate" {% if request.args.get('difficulty') == 'moderate' %}selected{% endif %}>Moderate</option>
+        <option value="hard" {% if request.args.get('difficulty') == 'hard' %}selected{% endif %}>Hard</option>
+      </select>
+      
+      <input type="text" name="location" class="form-control bg-light border-0 shadow-sm" 
+             placeholder="Location" value="{{ request.args.get('location', '') }}">
+             
+      <button type="submit" class="btn text-white px-4 shadow-sm" style="background-color: #111827;">
+        Filter
+      </button>
+    </form>
+  </div>
+
+  <!-- Trek Card Grid -->
+  <!-- 'row-cols-1' (mobile: 1 column), 'row-cols-md-2' (tablet: 2 columns), 'row-cols-lg-3' (desktop: 3 columns) -->
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for trek in treks %}
+      <div class="col">
+        <!-- This dynamically pulls in the beautiful image card component you just built -->
+        {% include 'shared/_trek_card.html' %}
+      </div>
+    {% else %}
+      <!-- Empty State / No Results -->
+      <div class="col-12 text-center py-5">
+        <h5 class="text-muted fw-normal">No treks match your current filter.</h5>
+        <a href="{{ url_for('trekker.dashboard') }}" class="btn btn-outline-dark mt-3">Clear Filters</a>
+      </div>
+    {% endfor %}
+  </div>
+  
+</div>
+{% endblock %}

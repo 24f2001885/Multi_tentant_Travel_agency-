@@ -1,0 +1,44 @@
+
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+{% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
+{% block content %}
+<h1 class="h3 mb-3" style="font-family:'Bitter',serif;font-weight:700;">Payments</h1>
+
+<form method="get" class="row g-2 mb-3">
+  <div class="col-md-3">
+    <select name="status" class="form-select form-select-sm">
+      <option value="">All statuses</option>
+      {% for s in ['initiated', 'success', 'failed', 'refunded'] %}
+      <option value="{{ s }}" {% if status == s %}selected{% endif %}>{{ s|capitalize }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% if booking_id %}<input type="hidden" name="booking_id" value="{{ booking_id }}">{% endif %}
+  <div class="col-md-2"><button type="submit" class="btn btn-sm w-100" style="background:#1F4FD8;color:#fff;">Filter</button></div>
+</form>
+
+<div class="table-responsive bg-white border" style="border-color:#E2E4E9;">
+  <table class="table mb-0 align-middle">
+    <thead style="background:#F7F7F8;">
+      <tr style="color:#6B7280;text-transform:uppercase;font-size:0.75rem;">
+        <th>Payment ID</th><th>Booking ID</th><th>Amount</th><th>Transaction ID</th><th>Status</th><th>Payment Date</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for payment in payments %}
+      <tr>
+        <td><a href="{{ url_for('admin.payment_detail', payment_id=payment.id) }}">#{{ payment.id }}</a></td>
+        <td><a href="{{ url_for('admin.booking_detail', booking_id=payment.booking_id) }}">#{{ payment.booking_id }}</a></td>
+        <td>{{ payment.currency }} {{ '%.2f'|format(payment.amount) }}</td>
+        <td>{{ payment.transaction_id or '—' }}</td>
+        <td>{{ status_badge(payment.status, 'payment_status_txn') }}</td>
+        <td>{{ payment.payment_date.strftime('%Y-%m-%d') if payment.payment_date else '—' }}</td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="text-center text-muted py-4">No payments match this filter.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

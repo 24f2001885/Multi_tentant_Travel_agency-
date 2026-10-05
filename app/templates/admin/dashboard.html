@@ -1,0 +1,119 @@
+
+{% extends "shared/base.html" %}
+{% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
+
+{% block content %}
+<!-- DEBUG: dashboard.html rendered stats={{ stats }} -->
+<h1 class="h3 mb-4" style="font-family:'Bitter',serif;font-weight:700;">Dashboard</h1>
+
+
+<div class="row g-3 mb-4">
+  {% set stat_items = [
+    ('Total Treks', stats.total_treks, 'bi-compass', '#E0E7FF', '#3730A3'),
+    ('Total Users', stats.total_users, 'bi-people', '#DCFCE7', '#166534'),
+    ('Total Staff', stats.total_staff, 'bi-person-badge', '#FEF3C7', '#92400E'),
+    ('Total Bookings', stats.total_bookings, 'bi-journal-check', '#F3E8FF', '#6B21A8')
+  ] %}
+  {% for label, value, icon, bg_color, text_color in stat_items %}
+  <div class="col-6 col-lg-3">
+    <div class="p-3 bg-white border rounded-3" style="border-color:#E2E4E9;">
+      <div class="d-flex justify-content-between align-items-start">
+        <div>
+          <div style="font-family:'Bitter',serif;font-weight:700;font-size:2rem;line-height:1.2;color:#14161A;">{{ value }}</div>
+          <div class="mt-1" style="font-family:'Inter',sans-serif;font-size:0.875rem;color:#6B7280;">{{ label }}</div>
+        </div>
+       <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" 
+            style="width: 28px; height: 28px; 
+            background-color: {{ bg_color }}; color: {{ text_color }};"
+            aria-hidden="true">
+            <i class="bi {{ icon }}" style="font-size: 14px; line-height: 1;"></i>
+         </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+
+
+<div class="row g-3">
+  <div class="col-lg-7">
+    <div class="p-3 bg-white border rounded-3" style="border-color:#E2E4E9;">
+      <h2 class="h6 mb-3" style="font-family:'Bitter',serif;">Bookings over time</h2>
+      <canvas id="bookingsOverTimeChart"></canvas>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="p-3 bg-white border rounded-3" style="border-color:#E2E4E9;">
+      <h2 class="h6 mb-3" style="font-family:'Bitter',serif;">Treks by status</h2>
+      <canvas id="treksByStatusChart"></canvas>
+    </div>
+  </div>
+</div>
+
+
+<script id="dash-bookings-data" type="application/json">{{ bookings_over_time | tojson }}</script>
+<script id="dash-treks-data" type="application/json">{{ treks_by_status | tojson }}</script>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+  const bookingsDataEl = document.getElementById('dash-bookings-data');
+  const treksDataEl = document.getElementById('dash-treks-data');
+
+  const bookingsOverTime = JSON.parse(bookingsDataEl ? bookingsDataEl.textContent : '{}');
+  const treksByStatus = JSON.parse(treksDataEl ? treksDataEl.textContent : '{}');
+
+
+  const STATUS_COLORS = { 
+    pending: '#D97706', 
+    approved: '#0891B2', 
+    open: '#16A34A', 
+    closed: '#6B7280', 
+    completed: '#14161A' 
+  };
+
+  //  Bookings Over Time Line Chart
+  const bookingsCanvas = document.getElementById('bookingsOverTimeChart');
+  if (bookingsCanvas && bookingsOverTime) {
+    new Chart(bookingsCanvas, {
+      type: 'line',
+      data: { 
+        labels: bookingsOverTime.labels || [], 
+        datasets: [{ 
+          label: 'Bookings', 
+          data: bookingsOverTime.data || [], 
+          borderColor: '#1F4FD8', 
+          tension: 0.3 
+        }] 
+      },
+      options: { 
+        responsive: true,
+        plugins: { 
+          legend: { display: false } 
+        } 
+      }
+    });
+  }
+
+  //Treks By Status Donut Chart
+  const treksCanvas = document.getElementById('treksByStatusChart');
+  if (treksCanvas && treksByStatus) {
+    const statusKeys = Object.keys(treksByStatus);
+    new Chart(treksCanvas, {
+      type: 'doughnut',
+      data: { 
+        labels: statusKeys, 
+        datasets: [{ 
+          data: Object.values(treksByStatus), 
+          backgroundColor: statusKeys.map(s => STATUS_COLORS[s.toLowerCase()] || '#6B7280') 
+        }] 
+      },
+      options: {
+        responsive: true
+      }
+    });
+  }
+});
+</script>
+{% endblock %}

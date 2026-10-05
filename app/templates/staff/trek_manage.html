@@ -1,0 +1,48 @@
+
+{% extends "shared/base.html" %}
+{% block shell %}{% include "shared/sidebar_staff.html" %}{% endblock %}
+
+{% block content %}
+<div class="tma-topbar">
+  <h1>{{ trek.name }}</h1>
+</div>
+
+<div class="tma-card">
+  <dl class="row">
+    <dt class="col-sm-3 text-muted">Location</dt><dd class="col-sm-9">{{ trek.location }}</dd>
+    <dt class="col-sm-3 text-muted">Difficulty</dt><dd class="col-sm-9">{{ trek.difficulty }}</dd>
+    <dt class="col-sm-3 text-muted">Dates</dt>
+    <dd class="col-sm-9">{{ trek.start_date }} – {{ trek.end_date }}</dd>
+  </dl>
+</div>
+
+<div class="tma-card mt-3">
+  <h3>Slots</h3>
+  <form method="POST" action="{{ url_for('staff.update_slots', trek_id=trek.id) }}">
+    {{ form.csrf_token }}
+    <div class="mb-2">
+      {{ form.available_slots.label }}
+      {{ form.available_slots(class_="form-control", max=trek.total_slots, min=0) }}
+      <small class="text-muted">Max {{ trek.total_slots }}</small>
+    </div>
+    <button type="submit" class="btn tma-btn-primary">Save Slots</button>
+  </form>
+</div>
+
+<div class="tma-card mt-3">
+  <h3>Status: {{ trek.status }}</h3>
+  {% for next_status in legal_transitions %}
+    <form method="POST" action="{{ url_for('staff.transition', trek_id=trek.id) }}" class="d-inline">
+      {{ form.csrf_token }}
+      <input type="hidden" name="new_status" value="{{ next_status }}"/>
+      <button type="submit" class="btn tma-btn-ghost">Mark {{ next_status|capitalize }}</button>
+    </form>
+  {% endfor %}
+</div>
+
+<div class="mt-3">
+  <a href="{{ url_for('staff.participants', trek_id=trek.id) }}" class="btn tma-btn-ghost">
+    View Participants
+  </a>
+</div>
+{% endblock %}
