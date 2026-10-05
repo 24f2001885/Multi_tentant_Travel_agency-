@@ -10,9 +10,11 @@ WORKDIR /app
 
 # System packages: build-essential covers any C-extension wheels without a
 # prebuilt slim-image wheel; sqlite3 CLI is handy for debugging inside the
-# container (the app itself talks to SQLite only through SQLAlchemy).
+# container; pango, harfbuzz, and dejavu fonts are required by WeasyPrint (P9).
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends build-essential sqlite3 \
+    && apt-get install -y --no-install-recommends \
+        build-essential sqlite3 \
+        libpango-1.0-0 libpangoft2-1.0-0 libharfbuzz-subset0 fonts-dejavu-core \
     && rm -rf /var/lib/apt/lists/*
 
 # Application dependencies (TDR §14)
