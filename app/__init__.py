@@ -167,6 +167,18 @@ def create_app(config_object=None) -> Flask:
             return ""
         return id_codec.encode(val)
 
+    @app.template_global("has_capability")
+    def has_capability(key: str) -> bool:
+        from flask_login import current_user
+        from app.services.rbac_service import PROTECTED_CAPABILITY_KEYS
+        if not current_user or not getattr(current_user, "is_authenticated", False):
+            return False
+        org = getattr(g, "organization", None)
+        if org and current_user.id == org.tenant_admin_user_id:
+            return key not in PROTECTED_CAPABILITY_KEYS
+        caps = session.get("capability_keys") or []
+        return key in caps
+
     # 7. Blueprints Registration (public_bp MUST be registered LAST)
     from app.platform import platform_bp
     app.register_blueprint(platform_bp)
@@ -195,11 +207,94 @@ def create_app(config_object=None) -> Flask:
     # # print(f"[DEBUG] create_app v2: db={app.config.get('DATABASE_URL','')[:12]} converters={list(app.url_map.converters)}")
 
     # 8. CLI Commands
+    @app.cli.command("seed-platform-admin")
+    def seed_platform_admin():
+        """Idempotently seeds the Platform Admin account from environment variables."""
+        from app.models.platform_admin import PlatformAdmin
+        from app.tenancy.scoping import tenant_bypass
+
+        name = os.environ.get("PLATFORM_ADMIN_NAME")
+        email = os.environ.get("PLATFORM_ADMIN_EMAIL")
+        password = os.environ.get("PLATFORM_ADMIN_PASSWORD")
+
+        if not name or not email or not password:
+            raise click.ClickException(
+                "PLATFORM_ADMIN_NAME, PLATFORM_ADMIN_EMAIL, and PLATFORM_ADMIN_PASSWORD must all be set."
+            )
+
+        clean_email = email.lower().strip()
+        with tenant_bypass():
+            existing = PlatformAdmin.query.filter_by(email=clean_email).first()
+            if existing:
+                click.echo(f"Platform Admin '{clean_email}' already exists (id={existing.id}). Skipping.")
+                return
+
+            admin = PlatformAdmin(
+                name=name.strip(),
+                email=clean_email,
+                is_active=True,
+            )
+            admin.set_password(password)
+            db.session.add(admin)
+            db.session.commit()
+            click.echo(f"Seeded Platform Admin: {admin.email} (id={admin.id})")
+
+    @app.cli.command("create-tenant")
+    @click.option("--name", required=True, help="Organization name")
+    @click.option("--subdomain", required=True, help="Subdomain prefix")
+    @click.option("--admin-email", required=True, help="Tenant admin email")
+    @click.option("--admin-name", default="Admin", help="Tenant admin name")
+    def create_tenant(name, subdomain, admin_email, admin_name):
+        """Provisions a new tenant organization and initial administrator."""
+        from app.models.platform_admin import PlatformAdmin
+        from app.services import tenancy_service
+        from app.tenancy.scoping import tenant_bypass
+
+        with tenant_bypass():
+            creator = PlatformAdmin.query.first()
+            if not creator:
+                raise click.ClickException("No Platform Admin found. Run 'flask seed-platform-admin' first.")
+
+            try:
+                org, admin_user, temp_password = tenancy_service.create_organization(
+                    name=name,
+                    subdomain=subdomain,
+                    tenant_admin_email=admin_email,
+                    tenant_admin_name=admin_name,
+                    platform_admin=creator,
+                )
+                click.echo(f"Tenant '{org.name}' created successfully (id={org.id}).")
+                click.echo(f"Primary Domain: {subdomain}.{os.environ.get('BASE_DOMAIN', 'localhost')}")
+                click.echo(f"Tenant Admin: {admin_user.email}")
+                click.echo(f"Temporary Password (shown once): {temp_password}")
+            except ValueError as err:
+                raise click.ClickException(str(err))
+
+    @app.cli.command("seed-rbac")
+    def seed_rbac():
+        """Seeds the global capability catalog, starter roles, and backfills legacy staff."""
+        from app.models.organization import Organization
+        from app.services import rbac_service
+        from app.tenancy.scoping import tenant_bypass
+
+        with tenant_bypass():
+            catalog_count = rbac_service.seed_catalog()
+            click.echo(f"Seeded global capability catalog ({catalog_count} new entries checked).")
+
+            orgs = Organization.query.all()
+            for org in orgs:
+                rbac_service.seed_starter_roles(org)
+
+            backfill_count = rbac_service.backfill_staff_roles()
+            click.echo(f"Seeded starter roles across {len(orgs)} organization(s).")
+            click.echo(f"Backfilled {backfill_count} legacy staff profile(s) with 'Trek Coordinator' role.")
+
     @app.cli.command("seed-tenant-zero")
     def seed_tenant_zero():
         """Idempotently seeds Tenant Zero organization and its primary subdomain."""
         from app.models.organization import Organization
         from app.models.domain import Domain
+        from app.models.platform_admin import PlatformAdmin
         from app.tenancy.scoping import tenant_bypass
 
         name = os.environ.get("TENANT_ZERO_NAME", "Summit Expeditions")
@@ -211,6 +306,16 @@ def create_app(config_object=None) -> Flask:
             existing_domain = db.session.execute(
                 select(Domain).where(Domain.domain_name == full_domain)
             ).scalar_one_or_none()
+
+            creator = PlatformAdmin.query.first()
+            if not creator:
+                p_email = os.environ.get("PLATFORM_ADMIN_EMAIL", "owner@platform.local").lower().strip()
+                p_name = os.environ.get("PLATFORM_ADMIN_NAME", "Platform Owner")
+                p_pass = os.environ.get("PLATFORM_ADMIN_PASSWORD", "change-me-platform-password")
+                creator = PlatformAdmin(name=p_name, email=p_email, is_active=True)
+                creator.set_password(p_pass)
+                db.session.add(creator)
+                db.session.flush()
 
             if existing_domain:
                 click.echo(
@@ -226,11 +331,15 @@ def create_app(config_object=None) -> Flask:
                 org = Organization(
                     name=name,
                     status="active",
+                    created_by_platform_admin_id=creator.id,
                 )
                 db.session.add(org)
                 db.session.flush()
             else:
                 org = existing_org
+                if not org.created_by_platform_admin_id:
+                    org.created_by_platform_admin_id = creator.id
+                    db.session.flush()
 
             domain = Domain(
                 organization_id=org.id,
