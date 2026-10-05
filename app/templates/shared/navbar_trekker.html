@@ -1,48 +1,71 @@
-<!-- This style block safely overrides the Flex layout only for Trekker views -->
+<!-- DEBUG: navbar_trekker.html auth={{ current_user.is_authenticated if current_user else False }} -->
 <style>
   .tma-app-container { flex-direction: column !important; height: auto; }
-  .tma-main-content { overflow-y: visible; height: auto; padding-top: 2rem; }
+  .tma-main-content { overflow-y: visible; height: auto; padding-top: 1.5rem; }
 </style>
 
 <nav class="navbar navbar-expand-md navbar-light bg-white border-bottom shadow-sm sticky-top">
   <div class="container-fluid px-4">
     <!-- Brand -->
-    <a class="navbar-brand fw-bold" style="font-family: 'Bitter', serif; color: #111827;" href="{{ url_for('trekker.dashboard') }}">TMA</a>
-    
+    <a class="navbar-brand fw-bold d-flex align-items-center" style="font-family: 'Bitter', serif; color: #111827;" href="{{ url_for('public.index') }}">
+      {% if current_org and current_org.logo_url %}
+        <img src="{{ current_org.logo_url }}" alt="{{ current_org.name }}" class="me-2" style="max-height: 32px;">
+      {% endif %}
+      <span>{{ current_org.name if current_org and current_org.name else 'TMA Platform' }}</span>
+    </a>
+
     <!-- Mobile Hamburger Toggle -->
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#trekkerNav" aria-controls="trekkerNav" aria-expanded="false" aria-label="Toggle navigation">
       <span class="navbar-toggler-icon"></span>
     </button>
-    
-    <!-- Nav Links & Profile -->
+
+    <!-- Nav Links -->
     <div class="collapse navbar-collapse" id="trekkerNav">
       <ul class="navbar-nav me-auto mb-2 mb-md-0 mt-2 mt-md-0">
-        <li class="nav-item"><a class="nav-link text-dark" href="{{ url_for('trekker.dashboard') }}">Browse Treks</a></li>
-        <li class="nav-item"><a class="nav-link text-dark" href="{{ url_for('trekker.bookings_list') }}">My Bookings</a></li>
-        <li class="nav-item"><a class="nav-link text-dark" href="{{ url_for('tickets.list_tickets') }}">Tickets</a></li>
+        <li class="nav-item">
+          <a class="nav-link text-dark" href="{{ url_for('public.browse') }}">Browse Treks</a>
+        </li>
+        {% if current_user.is_authenticated and current_user.role == 'trekker' %}
+          <li class="nav-item">
+            <a class="nav-link text-dark" href="{{ url_for('trekker.bookings_list') }}">My Bookings</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link text-dark" href="{{ url_for('tickets.list_tickets') }}">Tickets</a>
+          </li>
+        {% endif %}
       </ul>
-      
+
+      <!-- Right Hand Actions -->
       <ul class="navbar-nav ms-auto align-items-center border-top border-md-0 pt-2 pt-md-0 mt-2 mt-md-0">
-        <!-- Profile Avatar & Link -->
-        <li class="nav-item me-0 me-md-4 mb-3 mb-md-0 w-100 w-md-auto">
-          <a class="nav-link text-dark d-flex align-items-center p-0" href="{{ url_for('trekker.profile') }}">
-            {% if current_user.has_profile_picture %}
-              <img src="{{ url_for('static', filename='uploads/profile_pics/' ~ current_user.profile_picture_filename) }}" alt="Profile" class="avatar-circle me-2" style="width: 32px; height: 32px; border: 1px solid #E5E7EB;">
-            {% else %}
-              <div class="avatar-circle me-2" style="width: 32px; height: 32px; font-size: 0.85rem; border: 1px solid #E5E7EB;">
-                {{ current_user.name[:1] | upper if current_user.name else 'U' }}
-              </div>
-            {% endif %}
-            <span class="fw-medium">{{ current_user.name }}</span>
-          </a>
-        </li>
-        <!-- Logout -->
-        <li class="nav-item w-100 w-md-auto">
-          <form method="POST" action="{{ url_for('auth.logout') }}" class="m-0">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-outline-dark w-100">Log Out</button>
-          </form>
-        </li>
+        {% if current_user.is_authenticated %}
+          <!-- Logged In User Profile -->
+          <li class="nav-item me-0 me-md-3 mb-2 mb-md-0 w-100 w-md-auto">
+            <a class="nav-link text-dark d-flex align-items-center p-0" href="{{ url_for('trekker.profile') if current_user.role == 'trekker' else (url_for('admin.profile') if current_user.role == 'admin' else url_for('staff.profile')) }}">
+              {% if current_user.has_profile_picture %}
+                <img src="{{ url_for('static', filename='uploads/profile_pics/' ~ current_user.profile_picture_filename) }}" alt="Profile" class="avatar-circle me-2" style="width: 32px; height: 32px; border-radius: 50%; object-fit: cover; border: 1px solid #E5E7EB;">
+              {% else %}
+                <div class="avatar-circle me-2 d-flex align-items-center justify-content-center bg-light text-dark fw-bold" style="width: 32px; height: 32px; border-radius: 50%; font-size: 0.85rem; border: 1px solid #E5E7EB;">
+                  {{ current_user.name[:1] | upper if current_user.name else 'U' }}
+                </div>
+              {% endif %}
+              <span class="fw-medium">{{ current_user.name }}</span>
+            </a>
+          </li>
+          <li class="nav-item w-100 w-md-auto">
+            <form method="POST" action="{{ url_for('auth.logout') }}" class="m-0">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-outline-dark w-100">Log Out</button>
+            </form>
+          </li>
+        {% else %}
+          <!-- Anonymous Visitor: Log In & Register -->
+          <li class="nav-item me-md-2 mb-2 mb-md-0 w-100 w-md-auto">
+            <a href="{{ url_for('auth.login') }}" class="btn btn-sm btn-outline-secondary w-100">Log In</a>
+          </li>
+          <li class="nav-item w-100 w-md-auto">
+            <a href="{{ url_for('auth.register') }}" class="btn btn-sm btn-primary w-100">Register</a>
+          </li>
+        {% endif %}
       </ul>
     </div>
   </div>

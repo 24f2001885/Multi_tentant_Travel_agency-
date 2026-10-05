@@ -102,10 +102,21 @@
             </div>
 
             <!-- Booking Action -->
+            <!-- DEBUG: trek_detail.html anonymous={{ not current_user.is_authenticated }} -->
             {% if trek.status == 'open' and trek.available_slots > 0 %}
-              <a href="{{ url_for('trekker.booking_review', trek_id=trek.id) }}" class="btn w-100 py-3 text-white shadow-sm" style="background-color: #1F4FD8; font-weight: 600; font-size: 1.05rem; border-radius: 8px;">
-                Book Now
-              </a>
+              {% if current_user.is_authenticated %}
+                {% if current_user.role == 'trekker' %}
+                  <a href="{{ url_for('trekker.booking_review', trek_id=trek.id) }}" class="btn w-100 py-3 text-white shadow-sm" style="background-color: #1F4FD8; font-weight: 600; font-size: 1.05rem; border-radius: 8px;">
+                    Book Now
+                  </a>
+                {% else %}
+                  <div class="alert alert-light border text-center small mb-0">Logged in as {{ current_user.role|capitalize }}. Trekkers can book trips.</div>
+                {% endif %}
+              {% else %}
+                <a href="{{ url_for('auth.login', next=url_for('trekker.booking_review', trek_id=trek.id)) }}" class="btn w-100 py-3 text-white shadow-sm" style="background-color: #1F4FD8; font-weight: 600; font-size: 1.05rem; border-radius: 8px;">
+                  Log In to Book
+                </a>
+              {% endif %}
             {% else %}
               <button class="btn btn-secondary w-100 py-3 fw-bold" style="border-radius: 8px;" disabled>
                 Currently Unavailable

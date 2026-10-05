@@ -1,0 +1,32 @@
+{% extends "shared/base.html" %}
+{% block title %}{{ title }} — {{ current_org.name if current_org and current_org.name else 'TMA' }}{% endblock %}
+
+{% block content %}
+<!-- DEBUG: legal.html rendered kind={{ kind }} -->
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-8">
+      <div class="card shadow-sm border-0 p-4 p-md-5">
+        <h1 class="h3 mb-4">{{ title }}</h1>
+        <hr class="mb-4">
+
+        {% set content_text = current_org.legal_terms_text if kind == 'terms' else current_org.legal_privacy_text %}
+        {% if content_text and content_text.strip() %}
+          <div class="legal-body text-secondary" style="white-space: pre-line; line-height: 1.7;">
+            {{ content_text }}
+          </div>
+        {% else %}
+          <div class="alert alert-light border text-muted">
+            <i class="bi bi-info-circle me-2"></i>
+            {{ title }} have not yet been provided by this organization.
+          </div>
+        {% endif %}
+
+        <div class="mt-4 pt-3 border-top text-muted small">
+          Last updated: {{ current_org.name if current_org and current_org.name else 'TMA Platform' }}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
