@@ -1,20 +1,31 @@
-
-from sqlalchemy import text
+"""
+Booking lifecycle service (TDR v2 §3.1).
+Uses PostgreSQL row-level locking (SELECT ... FOR UPDATE) for concurrency safety.
+"""
 
 from app.extensions import db
 from app.models import Booking, Trek
 
+
 class TrekUnavailableError(Exception):
     """Trek is not `open` or has no available slots."""
+    pass
+
 
 class DuplicateActiveBookingError(Exception):
     """User already has a pending/booked row for this trek."""
+    pass
+
 
 def initiate_booking(user_id: int, trek_id: int) -> Booking:
-    
-    db.session.execute(text("BEGIN IMMEDIATE"))
+    """
+    Initiates a booking under PostgreSQL row-level locking on the trek row.
+    Guarantees no race condition on available slots.
+    """
+    # 1. Row-level lock on the specific trek
+    trek = Trek.query.with_for_update().filter_by(id=trek_id).first()
+    # print(f"[DEBUG] initiate_booking locked trek_id={trek_id} slots={getattr(trek, 'available_slots', None)}")
 
-    trek = Trek.query.get(trek_id)
     if trek is None or trek.status != "open" or trek.available_slots < 1:
         db.session.rollback()
         raise TrekUnavailableError(f"Trek {trek_id} is not open or has no available slots.")
