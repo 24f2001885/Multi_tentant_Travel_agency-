@@ -3,7 +3,7 @@ Business logic for footer call requests (TDR v2 §4.5; PDR v2 §5.13).
 Framework-agnostic.
 """
 
-from typing import List, Optional
+from typing import Any, List, Optional
 from app.extensions import db
 from app.models.call_request import CallRequest
 

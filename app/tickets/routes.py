@@ -43,9 +43,9 @@ def raise_ticket():
     return render_template('raise.html', form=form)
 
 @tickets_bp.route('/', methods=['GET'])
+@tickets_bp.route('', methods=['GET'])
 @login_required
 def list_tickets():
-   
     status = request.args.get('status')
     type_ = request.args.get('type')
     
