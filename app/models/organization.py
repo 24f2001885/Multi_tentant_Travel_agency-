@@ -44,7 +44,8 @@ class Organization(db.Model):
     )
     created_by_platform_admin_id = db.Column(
         sa.UUID(as_uuid=True),
-        nullable=True,
+        db.ForeignKey("platform_admins.id", name="fk_org_created_by_platform_admin"),
+        nullable=False,
     )
     created_at = db.Column(
         db.DateTime(timezone=True),
@@ -53,6 +54,11 @@ class Organization(db.Model):
     )
 
     # Relationships
+    tenant_admin = db.relationship(
+        "User",
+        foreign_keys=[tenant_admin_user_id],
+        viewonly=True,
+    )
     domains = db.relationship(
         "Domain",
         backref="organization",
@@ -62,6 +68,7 @@ class Organization(db.Model):
 
     def branding(self) -> Dict[str, Any]:
         """Returns the branding tokens and contact details for UI rendering."""
+        # print(f"[DEBUG] org {self.id} created_by={self.created_by_platform_admin_id}")
         # print(f"[DEBUG] organization {self.id} name={self.name} status={self.status}")
         return {
             "name": self.name,

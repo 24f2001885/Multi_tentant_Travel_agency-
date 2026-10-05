@@ -10,7 +10,7 @@ from werkzeug.security import generate_password_hash
 
 from app import create_app
 from app.extensions import db
-from app.models import Organization, Domain, User, Trek, Booking, StaffProfile
+from app.models import Organization, Domain, User, Trek, Booking, StaffProfile, PlatformAdmin
 from app.tenancy.scoping import tenant_bypass, tenant_context
 
 
@@ -81,15 +81,36 @@ def clean_db_session(app):
 
 
 from sqlalchemy.orm import make_transient
+import uuid
+
 
 @pytest.fixture
-def org_a(app):
+def platform_admin(app):
+    """Fixture providing a Platform Admin."""
+    with app.app_context(), tenant_bypass():
+        db.session.expire_on_commit = False
+        admin = PlatformAdmin(
+            id=uuid.uuid4(),
+            name="Platform Owner",
+            email="owner@platform.local",
+            is_active=True,
+        )
+        admin.set_password("change-me-platform-password")
+        db.session.add(admin)
+        db.session.commit()
+        make_transient(admin)
+        return admin
+
+
+@pytest.fixture
+def org_a(app, platform_admin):
     """Fixture providing Tenant A organization with domain a.localhost."""
     with app.app_context(), tenant_bypass():
         db.session.expire_on_commit = False
         org = Organization(
             name="Organization A",
             status="active",
+            created_by_platform_admin_id=platform_admin.id,
         )
         db.session.add(org)
         db.session.flush()
@@ -111,13 +132,14 @@ def org_a(app):
 
 
 @pytest.fixture
-def org_b(app):
+def org_b(app, platform_admin):
     """Fixture providing Tenant B organization with domain b.localhost."""
     with app.app_context(), tenant_bypass():
         db.session.expire_on_commit = False
         org = Organization(
             name="Organization B",
             status="active",
+            created_by_platform_admin_id=platform_admin.id,
         )
         db.session.add(org)
         db.session.flush()
