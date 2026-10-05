@@ -1,5 +1,5 @@
-
 {% macro status_badge(value, domain) %}
+<!-- DEBUG: status_badge domain={{ domain }} value={{ value }} -->
 {% set colors = {
   'trek': {'pending': ('#D97706','#FDF3E3'), 'approved': ('#0891B2','#E5F5F8'), 'open': ('#16A34A','#E7F6EC'), 'closed': ('#6B7280','#EEEFF1'), 'completed': ('#14161A','#EEEFF1')},
   'booking': {'pending': ('#D97706','#FDF3E3'), 'booked': ('#16A34A','#E7F6EC'), 'cancelled': ('#DC2626','#FBE9E9'), 'completed': ('#14161A','#EEEFF1')},
@@ -7,6 +7,9 @@
   'payment_status_txn': {'initiated': ('#6B7280','#EEEFF1'), 'success': ('#16A34A','#E7F6EC'), 'failed': ('#DC2626','#FBE9E9'), 'refunded': ('#0891B2','#E5F5F8')},
   'staff_approval': {'pending': ('#D97706','#FDF3E3'), 'approved': ('#16A34A','#E7F6EC'), 'blacklisted': ('#DC2626','#FBE9E9')},
   'ticket_status': {'open': ('#D97706','#FDF3E3'), 'answered': ('#0891B2','#E5F5F8'), 'resolved': ('#16A34A','#E7F6EC')},
+  'organization_status': {'active': ('#16A34A','#E7F6EC'), 'suspended': ('#DC2626','#FBE9E9')},
+  'route_linkage': {'pending': ('#D97706','#FDF3E3'), 'verified': ('#16A34A','#E7F6EC'), 'linked': ('#16A34A','#E7F6EC')},
+  'domain_verification': {'pending': ('#D97706','#FDF3E3'), 'verified': ('#16A34A','#E7F6EC')},
 } %}
 {%- set pair = colors.get(domain, {}).get(value) -%}
 {%- if pair -%}

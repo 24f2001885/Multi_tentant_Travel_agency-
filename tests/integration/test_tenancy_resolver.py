@@ -72,12 +72,20 @@ def test_port_stripping_resolves_tenant(client_a):
     assert resp.status_code == 200
 
 
-def test_platform_admin_host_skips_tenancy(app):
-    """Requests to PLATFORM_ADMIN_HOST bypass tenant resolution without 404."""
+def test_platform_admin_host_skips_tenancy(app, org_a):
+    """Requests to PLATFORM_ADMIN_HOST bypass tenant resolution for /platform/* without 404."""
     client = app.test_client()
-    resp = client.get("/api/auth/login", headers={"Host": "platform.localhost"})
-    # Resolver allows request through; route handles method or payload
-    assert resp.status_code != 404
+    resp = client.get("/platform/login", headers={"Host": "platform.localhost"})
+    # Resolver allows platform requests through to platform routes
+    assert resp.status_code == 200
+
+    # Cross-plane boundary: tenant routes on platform host return 404
+    resp_tenant_on_platform = client.get("/admin/dashboard", headers={"Host": "platform.localhost"})
+    assert resp_tenant_on_platform.status_code == 404
+
+    # Cross-plane boundary: platform routes on tenant host return 404
+    resp_platform_on_tenant = client.get("/platform/login", headers={"Host": "a.localhost"})
+    assert resp_platform_on_tenant.status_code == 404
 
 
 def test_webhook_path_exempt_from_tenant_resolution(app):

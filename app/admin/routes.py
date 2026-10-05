@@ -2,9 +2,10 @@
 import json
 import os
 import time
+import uuid
 from datetime import datetime, timedelta, UTC
 
-from flask import render_template, redirect, url_for, request, flash, abort, current_app
+from flask import render_template, redirect, url_for, request, flash, abort, current_app, g
 from flask_login import login_required, current_user
 from sqlalchemy import select, func, or_
 from werkzeug.security import check_password_hash
@@ -14,8 +15,8 @@ from app.admin import admin_bp
 from app.admin.forms import TrekForm, StaffActionForm, UserSearchForm
 from app.auth.decorators import role_required
 from app.extensions import db
-from app.models import User, StaffProfile, Trek, Booking, Payment, AuditLog
-from app.services import trek_service, auth_service, notification_service, history_service, id_codec
+from app.models import User, StaffProfile, Trek, Booking, Payment, AuditLog, Role
+from app.services import trek_service, auth_service, notification_service, history_service, id_codec, rbac_service
 
 PER_PAGE_DEFAULT = 20
 PER_PAGE_MAX = 100
@@ -394,9 +395,14 @@ def staff_list():
     pending_count = db.session.scalar(
         select(func.count(StaffProfile.id)).where(StaffProfile.approval_status == "pending")
     ) or 0
+    roles = Role.query.filter_by(organization_id=g.organization_id).order_by(Role.name.asc()).all()
 
     return render_template(
-        "admin/staff_list.html", staff_rows=staff_rows, active_tab=tab, pending_count=pending_count
+        "admin/staff_list.html",
+        staff_rows=staff_rows,
+        active_tab=tab,
+        pending_count=pending_count,
+        roles=roles,
     )
 
 
@@ -408,7 +414,46 @@ def staff_detail(staff_id):
     staff = db.session.get(StaffProfile, staff_id)
     if staff is None:
         abort(404)
-    return render_template("admin/staff_detail.html", staff=staff)
+    roles = Role.query.filter_by(organization_id=g.organization_id).order_by(Role.name.asc()).all()
+    return render_template("admin/staff_detail.html", staff=staff, roles=roles)
+
+
+@admin_bp.route("/staff/<hashid:staff_id>/approve", methods=["POST"])
+@login_required
+@role_required("admin")
+def staff_approve(staff_id):
+    staff = db.session.get(StaffProfile, staff_id)
+    if staff is None:
+        abort(404)
+
+    role_id_str = request.form.get("role_id", "").strip()
+    # print(f"[DEBUG] staff approve staff_id={staff_id} role_id={role_id_str}")
+    if not role_id_str:
+        flash("A role must be assigned when approving staff.", "danger")
+        return redirect(url_for("admin.staff_list"))
+
+    try:
+        role_uuid = uuid.UUID(role_id_str)
+    except (ValueError, TypeError):
+        flash("Invalid role identifier provided.", "danger")
+        return redirect(url_for("admin.staff_list"))
+
+    role = Role.query.filter_by(id=role_uuid, organization_id=g.organization_id).first()
+    if not role:
+        flash("The selected role does not belong to this organization.", "danger")
+        return redirect(url_for("admin.staff_list"))
+
+    staff.approval_status = "approved"
+    staff.approved_by_admin_id = current_user.id
+    staff.approved_at = datetime.now(UTC)
+    auth_service.issue_staff_default_password(staff.user)
+    rbac_service.assign_role(current_user, staff, role)
+    notification_service.send_staff_approved_email(staff.user)
+    db.session.add(AuditLog.record(current_user.id, "staff.approve", "staff_profile", staff.id))
+    db.session.commit()
+
+    flash(f"Approved {staff.user.name} as Trek Staff with role '{role.name}'.", "success")
+    return redirect(url_for("admin.staff_list"))
 
 
 @admin_bp.route("/staff/<hashid:staff_id>/action", methods=["POST"])
@@ -426,13 +471,31 @@ def staff_action(staff_id):
         abort(404)
 
     if form.action.data == "approve":
+        role_id_str = request.form.get("role_id", "").strip()
+        # print(f"[DEBUG] staff approve staff_id={staff_id} role_id={role_id_str}")
+        if not role_id_str:
+            flash("A role must be assigned when approving staff.", "danger")
+            return redirect(url_for("admin.staff_list"))
+
+        try:
+            role_uuid = uuid.UUID(role_id_str)
+        except (ValueError, TypeError):
+            flash("Invalid role identifier provided.", "danger")
+            return redirect(url_for("admin.staff_list"))
+
+        role = Role.query.filter_by(id=role_uuid, organization_id=g.organization_id).first()
+        if not role:
+            flash("The selected role does not belong to this organization.", "danger")
+            return redirect(url_for("admin.staff_list"))
+
         staff.approval_status = "approved"
         staff.approved_by_admin_id = current_user.id
         staff.approved_at = datetime.now(UTC)
         auth_service.issue_staff_default_password(staff.user)
+        rbac_service.assign_role(current_user, staff, role)
         notification_service.send_staff_approved_email(staff.user)
         db.session.add(AuditLog.record(current_user.id, "staff.approve", "staff_profile", staff.id))
-        flash(f"Approved {staff.user.name} as Trek Staff.", "success")
+        flash(f"Approved {staff.user.name} as Trek Staff with role '{role.name}'.", "success")
     else:
         staff.approval_status = "blacklisted"
         staff.user.is_active = False

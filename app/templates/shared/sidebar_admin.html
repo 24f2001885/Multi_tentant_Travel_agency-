@@ -57,6 +57,12 @@
                     Staff
                 </a>
             </li>
+            <!-- DEBUG: sidebar_admin.html roles link rendered -->
+            <li>
+                <a href="{{ url_for('admin.roles_list') }}" class="nav-link {% if 'role' in request.endpoint %}active{% else %}text-white{% endif %}">
+                    Roles & Capabilities
+                </a>
+            </li>
             <li>
                 <a href="{{ url_for('admin.users_list') }}" class="nav-link {% if 'users' in request.endpoint %}active{% else %}text-white{% endif %}">
                     Users

@@ -30,10 +30,18 @@ def resolve_tenant():
     # 2. Normalize host: lowercase and strip port
     host = request.host.split(":")[0].strip().lower()
 
-    # 3. Skip resolution for Platform Admin host
+    # 3. Platform boundary enforcement (P8)
     platform_admin_host = os.environ.get("PLATFORM_ADMIN_HOST", "platform.localhost").split(":")[0].strip().lower()
     if host == platform_admin_host:
-        return
+        # print(f"[DEBUG] boundary host={host} path={request.path}")
+        if request.path.startswith("/platform") or request.path.startswith("/static"):
+            return
+        abort(404)
+
+    # Tenant host: /platform/* routes return 404
+    if request.path.startswith("/platform"):
+        # print(f"[DEBUG] boundary host={host} path={request.path}")
+        abort(404)
 
     # 4. Skip resolution for exempt paths (payment webhooks)
     if request.path in EXEMPT_PATHS:

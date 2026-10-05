@@ -1,6 +1,6 @@
 
 
-from flask import render_template, redirect, url_for, flash, request, g, abort
+from flask import render_template, redirect, url_for, flash, request, g, abort, session
 from flask_login import login_required, current_user
 from app import db
 from app.tickets import tickets_bp
@@ -46,6 +46,12 @@ def raise_ticket():
 @tickets_bp.route('', methods=['GET'])
 @login_required
 def list_tickets():
+    # print(f"[DEBUG] tickets cap check role={current_user.role} caps={session.get('capability_keys')}")
+    if current_user.role == 'staff':
+        caps = session.get("capability_keys") or []
+        if 'tickets.view' not in caps:
+            abort(403)
+
     status = request.args.get('status')
     type_ = request.args.get('type')
     
@@ -57,10 +63,20 @@ def list_tickets():
 @login_required
 @ticket_access_required
 def detail_ticket(id):
-    # print(f"[DEBUG] hashid route {request.path}")
+    # print(f"[DEBUG] tickets cap check role={current_user.role} caps={session.get('capability_keys')}")
+    if current_user.role == 'staff':
+        caps = session.get("capability_keys") or []
+        if 'tickets.view' not in caps:
+            abort(403)
+
     respond_form = None
-    if current_user.role in ('staff', 'admin') and g.ticket.response is None:
-        respond_form = RespondTicketForm()
+    if current_user.role == 'admin':
+        if g.ticket.response is None:
+            respond_form = RespondTicketForm()
+    elif current_user.role == 'staff':
+        caps = session.get("capability_keys") or []
+        if 'tickets.respond' in caps and g.ticket.response is None:
+            respond_form = RespondTicketForm()
         
     can_resolve = False
     if current_user.id == g.ticket.user_id and g.ticket.status == 'answered':
@@ -77,9 +93,14 @@ def detail_ticket(id):
 @login_required
 @ticket_access_required
 def respond_ticket(id):
-    # print(f"[DEBUG] hashid route {request.path}")
+    # print(f"[DEBUG] tickets cap check role={current_user.role} caps={session.get('capability_keys')}")
     if current_user.role not in ('staff', 'admin'):
         abort(403)
+
+    if current_user.role == 'staff':
+        caps = session.get("capability_keys") or []
+        if 'tickets.respond' not in caps:
+            abort(403)
         
     form = RespondTicketForm()
     if form.validate_on_submit():

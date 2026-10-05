@@ -7,7 +7,7 @@ from flask_login import current_user, login_required
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
 
-from app.auth.decorators import approved_staff_required, role_required, staff_owns_trek
+from app.auth.decorators import approved_staff_required, requires_capability, role_required, staff_owns_trek
 from app.extensions import db
 from app.models import Booking, User
 from app.services.trek_service import ALLOWED_TRANSITIONS, InvalidTransitionError, transition_status
@@ -50,8 +50,10 @@ def dashboard():
 @login_required
 @role_required("staff")
 @approved_staff_required
+@requires_capability("treks.manage_assigned")
 @staff_owns_trek
 def trek_manage(trek_id):
+    # print(f"[DEBUG] staff route {request.path} caps={session.get('capability_keys')}")
     trek = g.trek
     form = TrekSlotStatusForm(available_slots=trek.available_slots)
     legal_transitions = sorted(ALLOWED_TRANSITIONS.get("staff", {}).get(trek.status, set()))
@@ -64,6 +66,7 @@ def trek_manage(trek_id):
 @login_required
 @role_required("staff")
 @approved_staff_required
+@requires_capability("treks.manage_assigned")
 @staff_owns_trek
 def update_slots(trek_id):
     trek = g.trek
@@ -87,6 +90,7 @@ def update_slots(trek_id):
 @login_required
 @role_required("staff")
 @approved_staff_required
+@requires_capability("treks.manage_assigned")
 @staff_owns_trek
 def transition(trek_id):
     trek = g.trek
@@ -111,8 +115,10 @@ def transition(trek_id):
 @login_required
 @role_required("staff")
 @approved_staff_required
+@requires_capability("participants.view")
 @staff_owns_trek
 def participants(trek_id):
+    # print(f"[DEBUG] staff route {request.path} caps={session.get('capability_keys')}")
     trek = g.trek
     all_bookings = history_service.get_booking_history(current_user)
     

@@ -17,7 +17,7 @@ from app.auth.forms import (
     ResetPasswordForm,
 )
 from app.extensions import db, limiter, login_manager
-from app.services import auth_service
+from app.services import auth_service, rbac_service
 from app.services.auth_service import (
     DuplicateEmailError,
     InvalidMobileError,
@@ -120,6 +120,13 @@ def login():
 
         login_user(user)
 
+        # Snapshot capabilities at login time (PDR v2 §5.3)
+        if user.role == "staff":
+            session["capability_keys"] = rbac_service.get_capability_keys(user)
+        else:
+            session["capability_keys"] = []
+        # print(f"[DEBUG] login snapshot user={user.id} keys={session.get('capability_keys')}")
+
         # 1. Pending approval staff checkpoint
         if (
             user.role == "staff"
@@ -174,6 +181,7 @@ def complete_account():
 @login_required
 def logout():
     """Logs out the active user session and redirects to the login page."""
+    session.pop("capability_keys", None)
     logout_user()
     return redirect(url_for("auth.login"))
 

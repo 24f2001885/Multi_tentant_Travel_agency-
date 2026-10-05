@@ -1,8 +1,13 @@
 
 from functools import wraps
 
-from flask import abort, g, redirect, url_for
+from flask import abort, g, redirect, session, url_for
 from flask_login import current_user
+
+from app.services.rbac_service import CAPABILITY_CATALOG, PROTECTED_CAPABILITY_KEYS
+
+ALL_KNOWN_CAPABILITIES = {item[0] for item in CAPABILITY_CATALOG}
+
 
 def role_required(*roles):
     """Redirects anonymous users to login; aborts 403 for the wrong role."""
@@ -86,6 +91,68 @@ def ticket_access_required(view):
             abort(403)
 
         g.ticket = ticket
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def requires_capability(key: str):
+    """
+    Ensures the caller has the required capability.
+    Tenant Admin (current_user.id == g.organization.tenant_admin_user_id) passes any
+    NON-protected key.
+    Staff passes only if key is in session['capability_keys'].
+    Anyone else abort(403).
+    Unknown keys raise at import/decoration time.
+    """
+    if key not in ALL_KNOWN_CAPABILITIES:
+        raise ValueError(f"Unknown capability '{key}' registered in decorator.")
+
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            if not current_user.is_authenticated:
+                return redirect(url_for("auth.login"))
+
+            org = getattr(g, "organization", None)
+            if not org:
+                abort(403)
+
+            is_tenant_admin = (current_user.id == org.tenant_admin_user_id)
+            if is_tenant_admin:
+                if key in PROTECTED_CAPABILITY_KEYS:
+                    abort(403)
+                # print(f"[DEBUG] capability check user={current_user.id} key={key} snapshot={session.get('capability_keys')}")
+                return view(*args, **kwargs)
+
+            if current_user.role == "staff":
+                snapshot = session.get("capability_keys") or []
+                # print(f"[DEBUG] capability check user={current_user.id} key={key} snapshot={snapshot}")
+                if key in snapshot:
+                    return view(*args, **kwargs)
+
+            abort(403)
+
+        return wrapped
+
+    return decorator
+
+
+def protected_capability_required(view):
+    """
+    Protected capability gate: passes ONLY when
+    current_user.id == g.organization.tenant_admin_user_id; otherwise abort(403).
+    It must NOT query roles, role_capabilities, or capabilities.
+    """
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login"))
+
+        org = getattr(g, "organization", None)
+        if not org or current_user.id != org.tenant_admin_user_id:
+            abort(403)
+
         return view(*args, **kwargs)
 
     return wrapped

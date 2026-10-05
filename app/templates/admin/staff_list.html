@@ -1,8 +1,8 @@
-
 {% extends "shared/base.html" %}
 {% from "shared/_badge_macros.html" import status_badge %}
 {% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
 {% block content %}
+<!-- DEBUG: staff_list.html roles={{ roles|length }} -->
 <h1 class="h3 mb-3" style="font-family:'Bitter',serif;font-weight:700;">Staff</h1>
 
 <ul class="nav nav-pills mb-3">
@@ -20,7 +20,7 @@
   <table class="table mb-0 align-middle">
     <thead style="background:#F7F7F8;">
       <tr style="color:#6B7280;text-transform:uppercase;font-size:0.75rem;">
-        <th>Name</th><th>Email</th><th>Contact</th><th>Approval Status</th><th>Assigned Treks</th><th>Actions</th>
+        <th>Name</th><th>Email</th><th>Role</th><th>Contact</th><th>Approval Status</th><th>Assigned Treks</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
@@ -28,29 +28,42 @@
       <tr>
         <td>{{ staff.user.name if staff.user else '—' }}</td>
         <td>{{ staff.user.email if staff.user else '—' }}</td>
+        <td>
+          {% if staff.role %}
+            <span class="badge bg-light text-dark border">{{ staff.role.name }}</span>
+          {% else %}
+            <span class="text-muted">—</span>
+          {% endif %}
+        </td>
         <td>{{ staff.contact_details or '—' }}</td>
         <td>{{ status_badge(staff.approval_status, 'staff_approval') }}</td>
-        <td>{{ staff.assigned_treks|length }}</td>
+        <td>{{ staff.treks|length if staff.treks is defined else 0 }}</td>
         <td>
-          <a href="{{ url_for('admin.staff_detail', staff_id=staff.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
-          {% if staff.approval_status == 'pending' %}
-          <form method="post" action="{{ url_for('admin.staff_action', staff_id=staff.id) }}" class="d-inline">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="staff_id" value="{{ staff.id }}">
-            <input type="hidden" name="action" value="approve">
-            <button type="submit" class="btn btn-sm" style="background:#16A34A;color:#fff;">Approve</button>
-          </form>
-          <form method="post" action="{{ url_for('admin.staff_action', staff_id=staff.id) }}" class="d-inline" onsubmit="return confirm('Blacklist {{ staff.user.name }}?');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <input type="hidden" name="staff_id" value="{{ staff.id }}">
-            <input type="hidden" name="action" value="blacklist">
-            <button type="submit" class="btn btn-sm btn-outline-danger">Blacklist</button>
-          </form>
-          {% endif %}
+          <div class="d-flex gap-1 align-items-center">
+            <a href="{{ url_for('admin.staff_detail', staff_id=staff.id) }}" class="btn btn-sm btn-outline-secondary">View</a>
+            {% if staff.approval_status == 'pending' %}
+            <form method="post" action="{{ url_for('admin.staff_approve', staff_id=staff.id) }}" class="d-inline-flex gap-1 align-items-center">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <select name="role_id" class="form-select form-select-sm" style="width: 140px;" required>
+                <option value="" disabled selected>Assign Role...</option>
+                {% for r in roles %}
+                  <option value="{{ r.id }}">{{ r.name }}</option>
+                {% endfor %}
+              </select>
+              <button type="submit" class="btn btn-sm" style="background:#16A34A;color:#fff;">Approve</button>
+            </form>
+            <form method="post" action="{{ url_for('admin.staff_action', staff_id=staff.id) }}" class="d-inline" onsubmit="return confirm('Blacklist {{ staff.user.name }}?');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <input type="hidden" name="staff_id" value="{{ staff.id }}">
+              <input type="hidden" name="action" value="blacklist">
+              <button type="submit" class="btn btn-sm btn-outline-danger">Blacklist</button>
+            </form>
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="6" class="text-center text-muted py-4">No staff in this view.</td></tr>
+      <tr><td colspan="7" class="text-center text-muted py-4">No staff in this view.</td></tr>
       {% endfor %}
     </tbody>
   </table>

@@ -2,77 +2,135 @@
 {% block shell %}{% include "shared/sidebar_staff.html" %}{% endblock %}
 
 {% block content %}
-<div class="tma-topbar">
-  <h1>Dashboard</h1>
+<!-- DEBUG: staff/dashboard.html caps={{ session.get('capability_keys') }} -->
+<div class="tma-topbar mb-4">
+  <h1 class="h3 fw-bold">Staff Dashboard</h1>
+  <p class="text-muted mb-0">Welcome back, {{ current_user.name }}.</p>
 </div>
 
-<div class="row g-3">
-  <div class="col-md-6">
-    <div class="tma-stat-card">
-      <div class="tma-stat-numeral">{{ stats.assigned_treks }}</div>
-      <div class="tma-stat-label">Assigned Treks</div>
-    </div>
-  </div>
-  <div class="col-md-6">
-    <div class="tma-stat-card">
-      <div class="tma-stat-numeral">{{ stats.total_participants }}</div>
-      <div class="tma-stat-label">Total Participants Across My Treks</div>
-    </div>
-  </div>
-</div>
+{% set can_manage = has_capability('treks.manage_assigned') %}
+{% set can_view_participants = has_capability('participants.view') %}
+{% set can_view_payments = has_capability('payments.view_assigned') %}
+{% set can_view_reports = has_capability('reports.view') %}
+{% set has_any_perm = can_manage or can_view_participants or can_view_payments or can_view_reports %}
 
-<!-- This table was missing entirely — it's the only place a Staff member
-     can reach trek_manage.html / participants.html, since neither route
-     has any other entry point (no admin-style "click a row" list view
-     exists for Staff). -->
-<div class="mt-4">
-  <h2 class="h5 mb-3">My Assigned Treks</h2>
-  {% if treks %}
-  <div class="table-responsive">
-    <table class="table">
-      <thead>
-        <tr>
-          <th>Trek</th><th>Location</th><th>Status</th><th>Slots</th><th>Actions</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for trek in treks %}
-        <tr>
-          <td>{{ trek.name }}</td>
-          <td>{{ trek.location }}</td>
-          <td>{{ trek.status }}</td>
-          <td>{{ trek.available_slots }}/{{ trek.total_slots }}</td>
-          <td>
-            <a href="{{ url_for('staff.trek_manage', trek_id=trek.id) }}" class="btn btn-sm tma-btn-primary">Manage</a>
-            <a href="{{ url_for('staff.participants', trek_id=trek.id) }}" class="btn btn-sm tma-btn-ghost">Participants</a>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
+{% if not has_any_perm %}
+  <div class="card p-5 text-center bg-light border-dashed my-4">
+    <div class="mb-3">
+      <i class="bi bi-shield-slash fs-1 text-secondary"></i>
+    </div>
+    <h4 class="fw-semibold text-dark">No permissions assigned yet</h4>
+    <p class="text-muted mb-0">Contact your organization administrator to configure role capabilities for your account.</p>
   </div>
-  {% else %}
-  <p class="text-muted">No treks assigned to you yet — check back once an Admin assigns one.</p>
+{% else %}
+
+  <!-- Stat Cards -->
+  <div class="row g-3 mb-4">
+    {% if can_manage %}
+      <div class="col-md-6 col-lg-4">
+        <div class="tma-stat-card card p-3 shadow-sm border-0">
+          <div class="tma-stat-numeral fs-2 fw-bold text-primary">{{ stats.assigned_treks }}</div>
+          <div class="tma-stat-label text-muted small text-uppercase fw-semibold">Assigned Treks</div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if can_view_participants %}
+      <div class="col-md-6 col-lg-4">
+        <div class="tma-stat-card card p-3 shadow-sm border-0">
+          <div class="tma-stat-numeral fs-2 fw-bold text-success">{{ stats.total_participants }}</div>
+          <div class="tma-stat-label text-muted small text-uppercase fw-semibold">Total Participants</div>
+        </div>
+      </div>
+    {% endif %}
+
+    {% if can_view_payments %}
+      <div class="col-md-6 col-lg-4">
+        <div class="tma-stat-card card p-3 shadow-sm border-0">
+          <div class="tma-stat-numeral fs-2 fw-bold text-info">Active</div>
+          <div class="tma-stat-label text-muted small text-uppercase fw-semibold">Payment Status Access</div>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Assigned Treks Table -->
+  {% if can_manage or can_view_participants %}
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-white py-3">
+        <h5 class="fw-semibold mb-0">My Assigned Treks</h5>
+      </div>
+      <div class="card-body p-0">
+        {% if treks %}
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th class="ps-3">Trek</th><th>Location</th><th>Status</th><th>Slots</th><th class="text-end pe-3">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for trek in treks %}
+              <tr>
+                <td class="ps-3 fw-medium">{{ trek.name }}</td>
+                <td>{{ trek.location }}</td>
+                <td>
+                  <span class="badge bg-secondary-subtle text-secondary">{{ trek.status }}</span>
+                </td>
+                <td>{{ trek.available_slots }}/{{ trek.total_slots }}</td>
+                <td class="text-end pe-3">
+                  <div class="btn-group btn-group-sm">
+                    {% if can_manage %}
+                      <a href="{{ url_for('staff.trek_manage', trek_id=trek.id) }}" class="btn btn-outline-primary">Manage</a>
+                    {% endif %}
+                    {% if can_view_participants %}
+                      <a href="{{ url_for('staff.participants', trek_id=trek.id) }}" class="btn btn-outline-secondary">Participants</a>
+                    {% endif %}
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="p-4 text-center text-muted">
+          No treks assigned to you yet — check back once an Admin assigns one.
+        </div>
+        {% endif %}
+      </div>
+    </div>
   {% endif %}
-</div>
 
-<div class="row g-3 mt-1">
-  <div class="col-12">
-    <div class="tma-chart-panel">
-      <canvas id="participantsChart"></canvas>
+  <!-- Reports Chart -->
+  {% if can_view_reports %}
+    <div class="card shadow-sm border-0 mb-4">
+      <div class="card-header bg-white py-3">
+        <h5 class="fw-semibold mb-0">Participants Distribution</h5>
+      </div>
+      <div class="card-body">
+        <div class="tma-chart-panel" style="position: relative; height: 300px;">
+          <canvas id="participantsChart"></canvas>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
-<script>
-  new Chart(document.getElementById("participantsChart"), {
-    type: "bar",
-    data: {
-      labels: {{ chart_labels | tojson }},
-      datasets: [{ label: "Participants", data: {{ chart_values | tojson }} }]
-    },
-    options: { responsive: true, plugins: { legend: { display: false } } }
-  });
-</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+    <script>
+      new Chart(document.getElementById("participantsChart"), {
+        type: "bar",
+        data: {
+          labels: {{ chart_labels | tojson }},
+          datasets: [{ label: "Participants", data: {{ chart_values | tojson }}, backgroundColor: "#1F4FD8" }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } }
+        }
+      });
+    </script>
+  {% endif %}
+
+{% endif %}
 {% endblock %}

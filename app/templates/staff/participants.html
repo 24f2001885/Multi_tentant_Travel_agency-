@@ -1,4 +1,3 @@
-
 {% extends "shared/base.html" %}
 {% from "shared/_badge_macros.html" import status_badge %}
 {% block shell %}{% include "shared/sidebar_staff.html" %}{% endblock %}
@@ -13,7 +12,10 @@
   <table class="table">
     <thead>
       <tr>
-        <th>Trekker</th><th>Email</th><th>Booking Date</th><th>Status</th><th>Payment Status</th>
+        <th>Trekker</th><th>Email</th><th>Booking Date</th><th>Status</th>
+        {% if has_capability('payments.view_assigned') %}
+          <th>Payment Status</th>
+        {% endif %}
       </tr>
     </thead>
     <tbody>
@@ -23,7 +25,9 @@
         <td>{{ booking.user.email }}</td>
         <td>{{ booking.booking_date.strftime("%Y-%m-%d") }}</td>
         <td>{{ status_badge(booking.status, "booking") }}</td>
-        <td>{{ status_badge(booking.payment_status, "payment_status_booking") }}</td>
+        {% if has_capability('payments.view_assigned') %}
+          <td>{{ status_badge(booking.payment_status, "payment_status_booking") }}</td>
+        {% endif %}
       </tr>
       {% endfor %}
     </tbody>
