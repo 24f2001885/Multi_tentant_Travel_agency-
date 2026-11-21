@@ -1,0 +1,94 @@
+<!-- THEME: glacier_obsidian (Custom Navigation Bar) -->
+<nav class="navbar navbar-expand-md sticky-top shadow-sm py-3" style="background: rgba(11, 19, 43, 0.88); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); border-bottom: 1px solid rgba(0, 245, 212, 0.18);">
+  <div class="container-fluid px-4">
+    <!-- Brand Mark -->
+    <a class="navbar-brand fw-extrabold d-flex align-items-center gap-2" href="{{ url_for('public.index') }}" style="color: #F8FAFC; letter-spacing: -0.03em;">
+      <div class="d-inline-flex align-items-center justify-content-center rounded-3" style="width: 36px; height: 36px; background: linear-gradient(135deg, rgba(0, 245, 212, 0.2) 0%, rgba(0, 119, 182, 0.3) 100%); border: 1px solid rgba(0, 245, 212, 0.4);">
+        <i class="bi bi-triangle-half" style="color: #00F5D4; font-size: 1.15rem; transform: rotate(180deg);"></i>
+      </div>
+      <div>
+        <span class="fs-5 fw-bold" style="color: #F8FAFC;">{{ current_org.name if current_org and current_org.name else 'Apex Altitude' }}</span>
+        <span class="d-block text-uppercase apex-mono" style="font-size: 0.62rem; color: #00F5D4; letter-spacing: 0.12em; line-height: 1;">Alpine Telemetry</span>
+      </div>
+    </a>
+
+    <!-- Mobile Hamburger Toggle -->
+    <button class="navbar-toggler border-0 text-white" type="button" data-bs-toggle="collapse" data-bs-target="#trekkerNav" aria-controls="trekkerNav" aria-expanded="false" aria-label="Toggle navigation">
+      <i class="bi bi-list fs-2" style="color: #00F5D4;"></i>
+    </button>
+
+    <!-- Nav Links -->
+    <div class="collapse navbar-collapse" id="trekkerNav">
+      <ul class="navbar-nav me-auto mb-2 mb-md-0 mt-2 mt-md-0 ms-md-4 gap-md-2">
+        <li class="nav-item">
+          <a class="nav-link px-3 py-1 rounded-2 text-white-50 hover-white fw-medium" href="{{ url_for('public.browse') }}">
+            <i class="bi bi-compass me-1 text-cyan"></i>Browse Routes
+          </a>
+        </li>
+        {% if current_user.is_authenticated and current_user.role == 'trekker' %}
+          <li class="nav-item">
+            <a class="nav-link px-3 py-1 rounded-2 text-white-50 hover-white fw-medium" href="{{ url_for('trekker.bookings_list') }}">
+              <i class="bi bi-journal-bookmark me-1"></i>My Expeditions
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link px-3 py-1 rounded-2 text-white-50 hover-white fw-medium" href="{{ url_for('tickets.list_tickets') }}">
+              <i class="bi bi-chat-left-dots me-1"></i>Field Comms
+            </a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link px-3 py-1 rounded-2 text-white-50 hover-white fw-medium" href="{{ url_for('trekker.notification_preferences') }}">
+              <i class="bi bi-bell me-1"></i>Dispatch Alerts
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+
+      <!-- Right Hand Actions -->
+      <ul class="navbar-nav ms-auto align-items-center pt-2 pt-md-0 mt-2 mt-md-0 gap-2">
+        {% if current_user.is_authenticated %}
+          <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center p-1 rounded-pill" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false" style="border: 1px solid rgba(0, 245, 212, 0.3); background: rgba(15, 23, 42, 0.6);">
+              <img src="{{ current_user.avatar_url }}" alt="{{ current_user.name }}" class="rounded-circle me-2" style="width: 30px; height: 30px; object-fit: cover; border: 1px solid #00F5D4;" onerror="this.src='/static/img/default_avatar.svg'">
+              <span class="fw-semibold text-white me-2 small">{{ current_user.name.split()[0] if current_user.name else 'Mountaineer' }}</span>
+            </a>
+            <ul class="dropdown-menu dropdown-menu-end shadow-lg" style="background: #0E1626; border: 1px solid rgba(0, 245, 212, 0.25);">
+              <li>
+                <a class="dropdown-item text-white py-2" href="{{ url_for('trekker.profile') if current_user.role == 'trekker' else (url_for('admin.profile') if current_user.role == 'admin' else url_for('staff.profile')) }}">
+                  <i class="bi bi-person-badge me-2 text-cyan"></i>Profile & Clearance
+                </a>
+              </li>
+              {% if current_user.role in ['admin', 'staff'] %}
+                <li>
+                  <a class="dropdown-item text-warning py-2" href="{{ url_for('admin.dashboard') if current_user.role == 'admin' else url_for('staff.dashboard') }}">
+                    <i class="bi bi-speedometer2 me-2"></i>Mission Control
+                  </a>
+                </li>
+              {% endif %}
+              <li><hr class="dropdown-divider border-secondary opacity-25"></li>
+              <li>
+                <a class="dropdown-item text-danger py-2" href="{{ url_for('auth.logout') }}">
+                  <i class="bi bi-box-arrow-right me-2"></i>Sign Out
+                </a>
+              </li>
+            </ul>
+          </li>
+        {% else %}
+          <li class="nav-item">
+            <a class="nav-link text-white-50 px-3 py-1" href="{{ url_for('auth.login') }}">Member Sign In</a>
+          </li>
+          <li class="nav-item">
+            <a class="btn btn-sm btn-apex-primary px-3 py-1" href="{{ url_for('auth.register') }}">
+              <i class="bi bi-person-plus me-1"></i>Register Dossier
+            </a>
+          </li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<style>
+  .hover-white:hover { color: #FFFFFF !important; }
+  .text-cyan { color: #00F5D4 !important; }
+</style>

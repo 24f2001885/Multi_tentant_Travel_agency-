@@ -1,0 +1,81 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ current_org.name or 'Alpine Adventures' }} — Modern Alpine Theme{% endblock %}
+
+{% block shell %}
+  {% include "shared/navbar_public.html" %}
+{% endblock %}
+
+{% block content %}
+<!-- THEME: modern_alpine (Tenant Custom UI Override) -->
+<!-- Modern Alpine Hero Section -->
+<div class="container-fluid py-5 text-white" style="background: linear-gradient(135deg, #064e3b 0%, #0f172a 100%); border-bottom: 2px solid #10b981;">
+  <div class="container py-5 my-md-4">
+    <div class="row align-items-center">
+      <div class="col-lg-8 text-center text-lg-start">
+        <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-success bg-opacity-25 border border-success-subtle text-success-emphasis mb-3">
+          <i class="bi bi-shield-check text-emerald"></i>
+          <span class="small fw-semibold text-white">Custom Theme: Modern Alpine</span>
+        </div>
+        <h1 class="display-3 fw-extrabold mb-3" style="font-family: 'Inter', sans-serif; letter-spacing: -1px;">
+          Conquer Peaks With <span style="color: #34d399;">{{ current_org.name or 'Us' }}</span>
+        </h1>
+        <p class="lead opacity-90 mb-4" style="max-width: 650px; font-weight: 300;">
+          Experience breathtaking summits, professionally certified expedition leaders, and tailored alpine itineraries designed for adventurers who demand excellence.
+        </p>
+        <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-3">
+          <a href="#open-treks" class="btn btn-success btn-lg px-4 shadow" style="background-color: #10b981; border: none; font-weight: 600;">
+            <i class="bi bi-compass me-2"></i>Explore Expeditions
+          </a>
+          <a href="#why-choose-us" class="btn btn-outline-light btn-lg px-4">
+            Our Standards
+          </a>
+        </div>
+      </div>
+      <div class="col-lg-4 d-none d-lg-block text-center">
+        <div class="p-4 rounded-4 shadow-lg" style="background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.15);">
+          <div class="h2 fw-bold text-success mb-1">100%</div>
+          <div class="text-uppercase small tracking-wide opacity-75 mb-3">Safety & Certification Track Record</div>
+          <div class="h2 fw-bold text-info mb-1">24/7</div>
+          <div class="text-uppercase small tracking-wide opacity-75 mb-3">Expedition Basecamp Comms</div>
+          <div class="h2 fw-bold text-warning mb-1">Top Tier</div>
+          <div class="text-uppercase small tracking-wide opacity-75">Alpine Gear & Medical First-Response</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="open-treks" class="container py-5 mb-5">
+  <!-- Section Header -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-5 pb-3 border-bottom">
+    <div>
+      <span class="text-uppercase small fw-bold text-success tracking-wide">Featured Itineraries</span>
+      <h2 class="fw-bold mt-1 mb-0" style="color: #0f172a; font-size: 2.25rem;">Upcoming Guided Treks</h2>
+    </div>
+    <div class="text-muted mt-2 mt-md-0 small">
+      Showing verified expeditions organized by {{ current_org.name or 'the host' }}
+    </div>
+  </div>
+
+  <!-- Treks Grid -->
+  <div class="row g-4">
+    {% for trek in treks %}
+      <div class="col-12 col-md-6 col-lg-4 col-xl-3">
+        {% include "shared/_trek_card.html" %}
+      </div>
+    {% else %}
+      <!-- Empty State -->
+      <div class="col-12">
+        <div class="card border-0 text-center py-5 shadow-sm" style="background: #f8fafc; border-radius: 16px;">
+          <div class="text-muted mb-3">
+            <i class="bi bi-mountain" style="font-size: 3rem; color: #10b981;"></i>
+          </div>
+          <h4 class="text-dark fw-bold">No upcoming expeditions scheduled</h4>
+          <p class="text-muted mb-0">New seasonal alpine routes are being curated. Check back shortly!</p>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

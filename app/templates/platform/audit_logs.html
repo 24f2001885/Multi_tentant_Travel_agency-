@@ -1,0 +1,57 @@
+{% extends "platform/base_platform.html" %}
+
+{% block title %}Cross-Tenant Audit Trail — Platform Console{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="fw-bold mb-1">Cross-Tenant Audit Trail</h2>
+    <p class="text-muted mb-0">Immutable log of superadministrator access, exports, and tenant management actions.</p>
+  </div>
+</div>
+
+<div class="alert alert-warning border-warning d-flex align-items-center mb-4" role="alert">
+  <i class="bi bi-shield-lock-fill fs-4 me-3 text-warning"></i>
+  <div>
+    <strong>Meta-Audit Notice:</strong> All accesses to this screen and all cross-tenant inspection actions are recorded in the system audit log and cannot be purged.
+  </div>
+</div>
+
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white py-3">
+    <h5 class="fw-semibold mb-0">Recent Platform Access Events</h5>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Timestamp</th>
+          <th>Superadmin</th>
+          <th>Action</th>
+          <th>Target Tenant</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+          <tr>
+            <td class="ps-3">{{ log.created_at.strftime('%b %d, %Y %H:%M:%S UTC') }}</td>
+            <td class="fw-semibold">{{ log.platform_admin.name if log.platform_admin else log.platform_admin_id }}</td>
+            <td><code>{{ log.action }}</code></td>
+            <td>
+              {% if log.organization %}
+                {{ log.organization.name }}
+              {% else %}
+                <span class="text-muted">Global / All</span>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="4" class="text-center py-4 text-muted">No cross-tenant audit entries recorded yet.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

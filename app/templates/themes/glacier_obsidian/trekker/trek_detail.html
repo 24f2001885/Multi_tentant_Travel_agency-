@@ -1,0 +1,336 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ trek.name }} — {{ current_org.name or 'Apex Altitude Expeditions' }}{% endblock %}
+
+{% block shell %}
+  {% include "shared/navbar_trekker.html" %}
+{% endblock %}
+
+{% block content %}
+<!-- THEME: glacier_obsidian (Trek Detail Dossier, Itinerary Events, Pointers & Reviews) -->
+<div class="container py-4 mb-5">
+  
+  <!-- Main Expedition Card -->
+  <div class="apex-card overflow-hidden mx-auto shadow-lg" style="max-width: 1050px; border-color: rgba(0, 245, 212, 0.25);">
+    
+    <!-- Hero Banner Image -->
+    <div class="position-relative" style="height: 380px; background: #0E1626;">
+      {% if trek.thumbnail_filename %}
+        <img src="{{ url_for('static', filename='uploads/treks/' ~ trek.thumbnail_filename) }}" 
+             alt="{{ trek.name }}" 
+             class="w-100 h-100" 
+             style="object-fit: cover;">
+      {% else %}
+        <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="background: linear-gradient(135deg, #070D1E 0%, #0E1E38 100%);">
+          <i class="bi bi-triangle-half text-cyan" style="font-size: 4rem; transform: rotate(180deg); opacity: 0.8;"></i>
+          <span class="apex-mono text-cyan fw-bold mt-2">APEX HIGH-ALTITUDE ROUTE</span>
+        </div>
+      {% endif %}
+      
+      <!-- Gradient Overlay for Contrast -->
+      <div class="position-absolute bottom-0 start-0 end-0 p-4" style="background: linear-gradient(0deg, rgba(7, 13, 30, 0.95) 0%, rgba(7, 13, 30, 0.4) 70%, transparent 100%);">
+        <div class="d-flex align-items-center gap-2 mb-2">
+          <span class="badge apex-badge-cyan px-3 py-1 shadow-sm">
+            <i class="bi bi-geo-alt-fill me-1"></i>{{ trek.location | title }}
+          </span>
+          <span class="badge apex-badge-solar px-3 py-1 text-uppercase">
+            {{ trek.difficulty }} Grade
+          </span>
+          {% if avg_rating > 0 %}
+            <span class="badge bg-dark text-warning border border-warning border-opacity-25 px-2 py-1">
+              &#9733; {{ avg_rating }} ({{ review_count }})
+            </span>
+          {% endif %}
+        </div>
+        <h1 class="display-5 fw-extrabold text-white mb-0" style="letter-spacing: -0.02em;">
+          {{ trek.name }}
+        </h1>
+      </div>
+    </div>
+
+    <!-- Details, Itinerary & Booking Section -->
+    <div class="card-body p-4 p-md-5">
+      <div class="row g-5">
+        
+        <!-- Left Column: Route Dossier & Multi-Day Itinerary -->
+        <div class="col-lg-7 col-xl-8">
+          
+          <!-- Key Route Telemetry -->
+          <div class="d-flex flex-wrap gap-4 mb-4 pb-4 border-bottom border-secondary border-opacity-25">
+            <div>
+              <span class="apex-mono small text-cyan d-block mb-1 text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.05em;">Technical Grade</span>
+              <span class="fw-bold text-white fs-5 text-uppercase">{{ trek.difficulty }}</span>
+            </div>
+            <div class="border-start border-secondary border-opacity-25 ps-4">
+              <span class="apex-mono small text-cyan d-block mb-1 text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.05em;">Expedition Duration</span>
+              <span class="fw-bold text-white fs-5">
+                {% if trek.start_date and trek.end_date %}
+                  {{ (trek.end_date - trek.start_date).days + 1 }} Days
+                {% else %}
+                  {{ trek.duration_days or 5 }} Days
+                {% endif %}
+              </span>
+            </div>
+            <div class="border-start border-secondary border-opacity-25 ps-4">
+              <span class="apex-mono small text-cyan d-block mb-1 text-uppercase" style="font-size: 0.72rem; letter-spacing: 0.05em;">Expedition Window</span>
+              <span class="fw-bold text-white fs-5">
+                {{ trek.start_date.strftime('%b %d') if trek.start_date else 'Scheduled' }} - 
+                {{ trek.end_date.strftime('%b %d, %Y') if trek.end_date else 'Dates' }}
+              </span>
+            </div>
+          </div>
+          
+          <!-- Route Description -->
+          <h4 class="fw-bold mb-3 text-white">Route Overview &amp; Terrain</h4>
+          <p class="text-white-50 mb-5" style="line-height: 1.8; font-size: 1.05rem; white-space: pre-line;">
+            {% if trek.description %}
+              {{ trek.description }}
+            {% else %}
+              The {{ trek.name }} is an alpine expedition located in {{ trek.location | title }}. Engineered for adventurers seeking untamed high-altitude terrain, jagged ridge crossings, and glacial ascents with certified mountain guides.
+            {% endif %}
+          </p>
+
+          <!-- Day-by-Day Expedition Itinerary (Dynamic Layout Picker) -->
+          {% if trek.itinerary_layout == 'timeline' and (not current_org or current_org.has_feature('advanced_itineraries')) %}
+            {% include "shared/itinerary_layouts/_timeline.html" %}
+          {% elif trek.itinerary_layout == 'magazine' and (not current_org or current_org.has_feature('advanced_itineraries')) %}
+            {% include "shared/itinerary_layouts/_magazine.html" %}
+          {% else %}
+            {% include "shared/itinerary_layouts/_accordion.html" %}
+          {% endif %}
+
+          <!-- Trail Memories & Explorer Reviews Section (Below Itinerary) -->
+          <div class="pt-4 border-top border-secondary border-opacity-25" id="reviews">
+            
+            <!-- Section Header -->
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+              <div>
+                <span class="apex-mono small text-cyan fw-bold text-uppercase">Expedition Archives</span>
+                <h4 class="fw-bold mb-0 text-white">Photos from the Trail &amp; Explorer Reviews</h4>
+              </div>
+              {% if avg_rating > 0 %}
+                <div class="d-flex align-items-center gap-2">
+                  <span class="text-warning fs-5">{% for star in range(avg_rating|int) %}&#9733;{% endfor %}</span>
+                  <span class="fw-bold text-white fs-5 apex-mono">{{ avg_rating }}</span>
+                  <span class="text-white-50 small">({{ review_count }} verified)</span>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Photo Gallery Carousel/Grid -->
+            {% if trek.media and trek.media|length > 0 %}
+              <div class="mb-4 apex-card p-3">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                  <span class="apex-mono small text-white fw-bold"><i class="bi bi-camera text-cyan me-1"></i>Expedition Visual Dispatches</span>
+                  <span class="apex-mono small text-white-50" style="font-size: 0.72rem;">{{ trek.media|length }} Dispatches</span>
+                </div>
+                <div class="row g-2">
+                  {% for m in trek.media %}
+                    <div class="col-4 col-md-3">
+                      <div class="position-relative rounded-3 overflow-hidden shadow-sm" style="height: 100px; border: 1px solid rgba(0, 245, 212, 0.2);">
+                        <img src="/media/{{ m.id }}" alt="{{ m.caption or 'Trail Photo' }}" class="w-100 h-100" style="object-fit: cover;">
+                        {% if m.caption %}
+                          <div class="position-absolute bottom-0 start-0 end-0 p-1 text-truncate text-white text-center" style="font-size: 0.65rem; background: rgba(7, 13, 30, 0.75);">
+                            {{ m.caption }}
+                          </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Interactive Post / Review Card -->
+            <div class="apex-card mb-4" style="border-color: rgba(0, 245, 212, 0.35);">
+              <div class="card-header p-3 d-flex justify-content-between align-items-center" style="background: rgba(14, 22, 38, 0.85); border-bottom: 1px solid rgba(0, 245, 212, 0.2);">
+                <div class="fw-bold text-white d-flex align-items-center gap-2">
+                  <i class="bi bi-cloud-arrow-up text-cyan"></i>
+                  <span>Share Your Experience &amp; Trip Photos</span>
+                </div>
+                {% if current_user.is_authenticated and current_user.role in ('admin', 'staff') %}
+                  <span class="badge apex-badge-cyan">Guide Dispatch</span>
+                {% elif can_review %}
+                  <span class="badge apex-badge-cyan">Verified Mountaineer</span>
+                {% endif %}
+              </div>
+              <div class="card-body p-4">
+                {% if can_review %}
+                  <form method="POST" action="{{ url_for('public.submit_trek_review', id=trek.id) }}" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    
+                    <div class="row g-3 mb-3">
+                      <div class="col-md-4">
+                        <label class="form-label small fw-bold text-white apex-mono">Expedition Rating</label>
+                        <select name="rating" class="form-select form-select-sm" required>
+                          <option value="5" {{ 'selected' if existing_user_review and existing_user_review.rating == 5 else '' }}>&#9733;&#9733;&#9733;&#9733;&#9733; (5 - Exceptional)</option>
+                          <option value="4" {{ 'selected' if existing_user_review and existing_user_review.rating == 4 else '' }}>&#9733;&#9733;&#9733;&#9733;&#9734; (4 - Very Good)</option>
+                          <option value="3" {{ 'selected' if existing_user_review and existing_user_review.rating == 3 else '' }}>&#9733;&#9733;&#9733;&#9734;&#9734; (3 - Average)</option>
+                          <option value="2" {{ 'selected' if existing_user_review and existing_user_review.rating == 2 else '' }}>&#9733;&#9733;&#9734;&#9734;&#9734; (2 - Below Expectations)</option>
+                          <option value="1" {{ 'selected' if existing_user_review and existing_user_review.rating == 1 else '' }}>&#9733;&#9734;&#9734;&#9734;&#9734; (1 - Poor)</option>
+                        </select>
+                      </div>
+                      <div class="col-md-8">
+                        <label class="form-label small fw-bold text-white apex-mono">Attach Trip Photo (Optional)</label>
+                        <input type="file" name="photo" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp">
+                        <div class="form-text text-white-50" style="font-size: 0.72rem;">Max 5 MB (JPG, PNG, WEBP). Sanitized of all EXIF metadata.</div>
+                      </div>
+                    </div>
+
+                    <div class="mb-3">
+                      <label class="form-label small fw-bold text-white apex-mono">Comments &amp; Trip Highlights</label>
+                      <textarea name="comment" class="form-control form-control-sm" rows="3" placeholder="Share your experience: summit conditions, trail guides, gear effectiveness, and highlights...">{{ existing_user_review.comment if existing_user_review and existing_user_review.comment else '' }}</textarea>
+                    </div>
+
+                    <button type="submit" class="btn btn-sm btn-apex-primary px-3">
+                      <i class="bi bi-send me-1"></i>Publish Expedition Review
+                    </button>
+                  </form>
+                {% elif not current_user.is_authenticated %}
+                  <div class="text-center py-3">
+                    <p class="text-white-50 mb-2 small">Went on this expedition? Log in with your verified booking account to share photos and reviews.</p>
+                    <a href="{{ url_for('auth.login', next=request.path ~ '#reviews') }}" class="btn btn-sm btn-apex-primary px-4">
+                      <i class="bi bi-box-arrow-in-right me-1"></i>Log In to Post
+                    </a>
+                  </div>
+                {% else %}
+                  <div class="text-white-50 small">
+                    <i class="bi bi-info-circle text-cyan me-1"></i>
+                    Reviews and trail memories are reserved for verified mountaineers who booked this route.
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Reviews List -->
+            {% if reviews %}
+              <div class="d-flex flex-column gap-3 mb-3">
+                {% for r in reviews %}
+                  <div class="apex-card p-3">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <img src="{{ r.user.avatar_url if r.user else '/static/img/default_avatar.svg' }}" 
+                             alt="{{ r.user.name.split()[0] if r.user and r.user.name else 'Mountaineer' }}" 
+                             class="rounded-circle" 
+                             style="width: 32px; height: 32px; object-fit: cover; border: 1px solid #00F5D4;"
+                             onerror="this.src='/static/img/default_avatar.svg'">
+                        <div>
+                          <div class="fw-bold text-white lh-sm" style="font-size: 0.9rem;">
+                            {{ r.user.name.split()[0] if r.user and r.user.name else 'Mountaineer' }}
+                            {% if r.user and r.user.role in ('admin', 'staff') %}
+                              <span class="badge apex-badge-cyan ms-1" style="font-size: 0.65rem;">Guide / Organizer</span>
+                            {% else %}
+                              <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 ms-1" style="font-size: 0.65rem;">Verified Mountaineer</span>
+                            {% endif %}
+                          </div>
+                          <small class="apex-mono text-white-50" style="font-size: 0.72rem;">{{ r.created_at.strftime('%d %b %Y') if r.created_at else '' }}</small>
+                        </div>
+                      </div>
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="text-warning small">{% for star in range(r.rating) %}&#9733;{% endfor %}</span>
+                        {% if current_user.is_authenticated and (current_user.id == r.user_id or current_user.role in ('admin', 'staff')) %}
+                          <form method="POST" action="{{ url_for('public.delete_trek_review', id=trek.id, review_id=r.id) }}" class="d-inline" onsubmit="return confirm('Remove this review?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-link text-danger p-0" title="Delete Review" style="font-size: 0.8rem;">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </form>
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    {% if r.comment %}
+                      <p class="small text-white-50 mb-2" style="line-height: 1.6; white-space: pre-line;">{{ r.comment }}</p>
+                    {% endif %}
+
+                    {% if r.image_url %}
+                      <div class="mt-2">
+                        <img src="{{ r.image_url }}" alt="Trip photo shared by trekker" class="rounded-3 shadow-sm" style="max-height: 220px; max-width: 100%; object-fit: cover; border: 1px solid rgba(0, 245, 212, 0.25);">
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+            {% else %}
+              <div class="apex-card p-4 text-center text-white-50 small">
+                <i class="bi bi-chat-heart text-cyan fs-4 d-block mb-2"></i>
+                No reviews or trail photos posted yet. Be the first explorer to share your memories!
+              </div>
+            {% endif %}
+
+          </div>
+
+        </div>
+
+        <!-- Right Column: Booking Sidebar -->
+        <div class="col-lg-5 col-xl-4">
+          <div class="apex-card p-4 position-sticky shadow-lg" style="top: 90px; border-color: rgba(0, 245, 212, 0.35);">
+            <div class="text-uppercase apex-mono text-cyan small fw-bold mb-1">Expedition Clearance</div>
+            <div class="h2 fw-extrabold text-white mb-2 apex-mono">
+              ₹{{ "%.2f"|format(trek.price) }}
+              <span class="fs-6 text-white-50 fw-normal">/ member</span>
+            </div>
+            
+            <hr class="border-secondary border-opacity-25 my-3">
+
+            <!-- Slot Status Indicator -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
+              <span class="apex-mono small text-white-50">STATUS:</span>
+              <span class="badge apex-mono text-uppercase px-2 py-1 {% if trek.status == 'open' %}apex-badge-cyan{% else %}apex-badge-solar{% endif %}">
+                {{ trek.status }}
+              </span>
+            </div>
+
+            <div class="d-flex align-items-center justify-content-between mb-4">
+              <span class="apex-mono small text-white-50">AVAILABILITY:</span>
+              <span class="fw-bold {% if trek.available_slots <= 3 %}text-danger{% else %}text-white{% endif %} apex-mono">
+                {{ trek.available_slots }} Slots Remaining
+              </span>
+            </div>
+
+            <!-- Booking Action Button -->
+            {% if trek.status == 'open' and trek.available_slots > 0 %}
+              {% if current_user.is_authenticated %}
+                {% if current_user.role == 'trekker' %}
+                  <a href="{{ url_for('trekker.booking_review', trek_id=trek.id) }}" 
+                     class="btn btn-apex-primary w-100 py-3 fw-bold mb-3 d-block text-center text-decoration-none shadow">
+                    <i class="bi bi-shield-check me-2"></i>Reserve Expedition Slot
+                  </a>
+                {% else %}
+                  <div class="alert alert-dark border text-center small mb-3">Logged in as {{ current_user.role|capitalize }}. Trekkers can reserve slots.</div>
+                {% endif %}
+              {% else %}
+                <a href="{{ url_for('auth.login', next=url_for('trekker.booking_review', trek_id=trek.id)) }}" 
+                   class="btn btn-apex-primary w-100 py-3 fw-bold mb-3 d-block text-center text-decoration-none shadow">
+                  <i class="bi bi-shield-check me-2"></i>Log In to Reserve Slot
+                </a>
+              {% endif %}
+            {% elif trek.status == 'full' or trek.available_slots == 0 %}
+              <button class="btn btn-outline-warning w-100 py-3 fw-bold mb-3" disabled>
+                <i class="bi bi-slash-circle me-1"></i>Expedition Sold Out
+              </button>
+            {% else %}
+              <button class="btn btn-outline-secondary w-100 py-3 fw-bold mb-3" disabled>
+                <i class="bi bi-lock me-1"></i>Expedition Completed
+              </button>
+            {% endif %}
+
+            <div class="p-3 rounded-3" style="background: rgba(14, 22, 38, 0.85); border: 1px solid rgba(255, 255, 255, 0.08);">
+              <div class="d-flex align-items-center gap-2 mb-2">
+                <i class="bi bi-patch-check-fill text-cyan"></i>
+                <span class="small fw-bold text-white">Apex Guarantee</span>
+              </div>
+              <p class="text-white-50 mb-0" style="font-size: 0.76rem; line-height: 1.5;">
+                Full refund or route credit guaranteed in case of severe weather closure or basecamp advisory cancellation.
+              </p>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}

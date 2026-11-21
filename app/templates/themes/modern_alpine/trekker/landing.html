@@ -1,0 +1,104 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ current_org.name or 'Alpine Adventures' }} — Modern Alpine Theme{% endblock %}
+
+{% block content %}
+<!-- THEME: modern_alpine (Tenant Custom UI Override for trekker/landing.html) -->
+<!-- Modern Alpine Hero Section -->
+<div class="container-fluid py-5 text-white" style="background: linear-gradient(135deg, #064e3b 0%, #0f172a 100%); border-bottom: 2px solid #10b981;">
+  <div class="container py-5 my-md-4">
+    <div class="row align-items-center">
+      <div class="col-lg-8 text-center text-lg-start">
+        <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill bg-success bg-opacity-25 border border-success-subtle text-success-emphasis mb-3">
+          <i class="bi bi-shield-check text-emerald"></i>
+          <span class="small fw-semibold text-white">Custom Theme: Modern Alpine</span>
+        </div>
+        <h1 class="display-3 fw-bold mb-3" style="font-family: 'Inter', sans-serif; letter-spacing: -1px;">
+          Conquer Peaks With <span style="color: #34d399;">{{ current_org.name or 'Alpine Adventures' }}</span>
+        </h1>
+        <p class="lead opacity-90 mb-4" style="max-width: 650px; font-weight: 300;">
+          Experience breathtaking summits, professionally certified expedition leaders, and tailored alpine itineraries designed for adventurers who demand excellence.
+        </p>
+        <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-3">
+          {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-success btn-lg px-4 shadow" style="background-color: #10b981; border: none; font-weight: 600;">
+              <i class="bi bi-person-plus me-2"></i>Join Expeditions
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg px-4">
+              Member Sign In
+            </a>
+          {% else %}
+            <a href="{{ url_for('public.browse') }}" class="btn btn-success btn-lg px-4 shadow" style="background-color: #10b981; border: none; font-weight: 600;">
+              <i class="bi bi-compass me-2"></i>Explore All Treks
+            </a>
+          {% endif %}
+        </div>
+      </div>
+      <div class="col-lg-4 d-none d-lg-block text-center">
+        <div class="p-4 rounded-4 shadow-lg" style="background: rgba(255, 255, 255, 0.08); backdrop-filter: blur(12px); border: 1px solid rgba(255, 255, 255, 0.15);">
+          <div class="h2 fw-bold text-success mb-1">100%</div>
+          <div class="text-uppercase small tracking-wide opacity-75 mb-3">Safety & Certification Track Record</div>
+          <div class="h2 fw-bold text-info mb-1">24/7</div>
+          <div class="text-uppercase small tracking-wide opacity-75 mb-3">Expedition Basecamp Comms</div>
+          <div class="h2 fw-bold text-warning mb-1">Top Tier</div>
+          <div class="text-uppercase small tracking-wide opacity-75">Alpine Gear & First-Response Team</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container py-5 mb-5">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom">
+    <div>
+      <span class="text-uppercase small fw-bold text-success tracking-wide">Featured Expeditions</span>
+      <h2 class="fw-bold mt-1 mb-0" style="color: #0f172a; font-size: 2rem;">Upcoming Guided Routes</h2>
+    </div>
+    <div class="mt-3 mt-md-0">
+      <a href="{{ url_for('public.browse') }}" class="btn btn-sm btn-outline-success">Browse All Treks &rarr;</a>
+    </div>
+  </div>
+
+  {% if featured_treks and featured_treks|length > 0 %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+      {% for trek in featured_treks %}
+        <div class="col">
+          <div class="card h-100 shadow-sm border-0" style="border-radius: 12px; overflow: hidden;">
+            {% if trek.thumbnail_filename %}
+              <img src="{{ url_for('static', filename='uploads/thumbnails/' + trek.thumbnail_filename) }}" class="card-img-top" alt="{{ trek.name }}" style="height: 200px; object-fit: cover;">
+            {% else %}
+              <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 200px;">
+                <i class="bi bi-mountain fs-1"></i>
+              </div>
+            {% endif %}
+            <div class="card-body d-flex flex-column">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <h5 class="card-title mb-0 fw-bold">{{ trek.name }}</h5>
+                <span class="badge bg-success-subtle text-success text-capitalize">{{ trek.difficulty }}</span>
+              </div>
+              <p class="card-text text-muted small mb-2">
+                <i class="bi bi-geo-alt"></i> {{ trek.location }} &bull; {{ trek.duration_days }} days
+              </p>
+              <p class="card-text text-truncate flex-grow-1 small text-secondary">
+                {{ trek.description or 'Experience this incredible alpine adventure.' }}
+              </p>
+              <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top">
+                <div class="fw-bold text-dark">₹{{ trek.base_price }}</div>
+                <a href="{{ url_for('trekker.trek_detail', id=trek.id) }}" class="btn btn-sm btn-outline-success">View Details</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card border-0 text-center py-5 shadow-sm" style="background: #f8fafc; border-radius: 16px;">
+      <div class="text-muted mb-3">
+        <i class="bi bi-mountain" style="font-size: 3rem; color: #10b981;"></i>
+      </div>
+      <h4 class="text-dark fw-bold">No upcoming expeditions scheduled</h4>
+      <p class="text-muted mb-0">New seasonal alpine routes are being curated. Check back shortly!</p>
+    </div>
+  {% endif %}
+</div>
+{% endblock %}

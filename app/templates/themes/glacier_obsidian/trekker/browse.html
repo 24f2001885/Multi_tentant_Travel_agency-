@@ -1,0 +1,63 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Active Expedition Routes — {{ current_org.name or 'Apex Altitude Expeditions' }}{% endblock %}
+
+{% block content %}
+<!-- THEME: glacier_obsidian (Custom Route Discovery & Search) -->
+<div class="container py-4 mb-5">
+  
+  <!-- Header & Filter Section -->
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+    <div>
+      <span class="apex-mono small text-cyan fw-bold text-uppercase">Route Directory</span>
+      <h2 class="mb-0 text-white fw-bold">Active Expedition Routes</h2>
+    </div>
+    
+    <form method="GET" action="{{ url_for('public.browse') }}" class="d-flex flex-wrap gap-2 mt-3 mt-md-0">
+      <select name="difficulty" class="form-select border-0 shadow-sm" style="min-width: 150px; background-color: rgba(15, 23, 42, 0.95); color: #fff;">
+        <option value="">Any Technical Grade</option>
+        <option value="easy" {% if request.args.get('difficulty') == 'easy' %}selected{% endif %}>Easy (Valley)</option>
+        <option value="moderate" {% if request.args.get('difficulty') == 'moderate' %}selected{% endif %}>Moderate (Alpine)</option>
+        <option value="hard" {% if request.args.get('difficulty') == 'hard' %}selected{% endif %}>Hard (Pass Cross)</option>
+        <option value="strenuous" {% if request.args.get('difficulty') == 'strenuous' %}selected{% endif %}>Strenuous (Summit)</option>
+      </select>
+      
+      <input type="text" name="location" class="form-control border-0 shadow-sm" 
+             placeholder="Search Mountain Region..." value="{{ request.args.get('location', '') }}"
+             style="min-width: 180px; background-color: rgba(15, 23, 42, 0.95); color: #fff;">
+             
+      <button type="submit" class="btn btn-apex-primary px-3 shadow-sm">
+        <i class="bi bi-funnel me-1"></i>Filter
+      </button>
+
+      {% if request.args.get('difficulty') or request.args.get('location') %}
+        <a href="{{ url_for('public.browse') }}" class="btn btn-outline-secondary px-3">
+          <i class="bi bi-x-circle me-1"></i>Reset
+        </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- Trek Card Grid -->
+  <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+    {% for trek in treks %}
+      <div class="col">
+        {% include 'shared/_trek_card.html' %}
+      </div>
+    {% else %}
+      <!-- Empty State -->
+      <div class="col-12 text-center py-5">
+        <div class="apex-card py-5 px-4 max-w-md mx-auto" style="max-width: 500px;">
+          <i class="bi bi-compass text-cyan" style="font-size: 3rem;"></i>
+          <h5 class="text-white fw-bold mt-3">No Expeditions Found</h5>
+          <p class="text-white-50 small mb-3">No active high-altitude routes currently match your search filters.</p>
+          <a href="{{ url_for('public.browse') }}" class="btn btn-sm btn-apex-primary">
+            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset Route Filters
+          </a>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+  
+</div>
+{% endblock %}

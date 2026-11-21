@@ -1,0 +1,164 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ current_org.name or 'Apex Altitude Expeditions' }} — Glacier & Obsidian Theme{% endblock %}
+
+{% block content %}
+<!-- THEME: glacier_obsidian (Custom Landing Page Override) -->
+
+<!-- High-Altitude Glacier Hero Section -->
+<div class="container-fluid py-5 position-relative overflow-hidden" style="background: linear-gradient(180deg, #070D1E 0%, #0B162C 60%, #070D1E 100%); border-bottom: 1px solid rgba(0, 245, 212, 0.2);">
+  <!-- Ambient Glow Effects -->
+  <div class="position-absolute top-0 start-50 translate-middle-x" style="width: 800px; height: 350px; background: radial-gradient(circle, rgba(0, 245, 212, 0.12) 0%, transparent 70%); filter: blur(50px); pointer-events: none;"></div>
+
+  <div class="container py-5 my-md-4 position-relative">
+    <div class="row align-items-center g-5">
+      
+      <!-- Hero Copy -->
+      <div class="col-lg-8 text-center text-lg-start">
+        <div class="d-inline-flex align-items-center gap-2 px-3 py-1 rounded-pill apex-badge-cyan mb-3 shadow-sm">
+          <i class="bi bi-snow text-cyan"></i>
+          <span class="apex-mono small fw-bold">CUSTOM THEME: GLACIER &amp; OBSIDIAN</span>
+          <span class="badge bg-dark text-cyan ms-1">TENANT B</span>
+        </div>
+        
+        <h1 class="display-3 fw-extrabold mb-3 text-white" style="letter-spacing: -0.03em; line-height: 1.15;">
+          Conquer The Extreme With <span style="background: linear-gradient(135deg, #00F5D4 0%, #00B4D8 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">{{ current_org.name or 'Apex Altitude Expeditions' }}</span>
+        </h1>
+        
+        <p class="lead text-white-50 mb-4 fw-light" style="max-width: 680px; font-size: 1.2rem; line-height: 1.7;">
+          Autonomous glacial crossings, technical summit ascents, and high-altitude alpine routes orchestrated with military precision and 24/7 satellite telemetry.
+        </p>
+
+        <!-- CTA Action Buttons -->
+        <div class="d-flex flex-wrap justify-content-center justify-content-lg-start gap-3">
+          {% if not current_user.is_authenticated %}
+            <a href="{{ url_for('auth.register') }}" class="btn btn-apex-primary btn-lg px-4 shadow">
+              <i class="bi bi-person-plus-fill me-2"></i>Join Expeditions
+            </a>
+            <a href="{{ url_for('public.browse') }}" class="btn btn-apex-outline btn-lg px-4">
+              <i class="bi bi-compass me-2"></i>Browse Routes
+            </a>
+            <a href="{{ url_for('auth.login') }}" class="btn btn-outline-light btn-lg px-4">
+              Member Sign In
+            </a>
+          {% else %}
+            <a href="{{ url_for('public.browse') }}" class="btn btn-apex-primary btn-lg px-4 shadow">
+              <i class="bi bi-compass me-2"></i>Explore Active Routes
+            </a>
+            <a href="{{ url_for('trekker.bookings_list') }}" class="btn btn-apex-outline btn-lg px-4">
+              <i class="bi bi-journal-bookmark me-2"></i>My Bookings
+            </a>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Telemetry Status Card (Glacier Glassmorphism) -->
+      <div class="col-lg-4 text-center">
+        <div class="p-4 rounded-4 shadow-lg apex-card text-start position-relative">
+          <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom border-secondary border-opacity-25">
+            <span class="apex-mono text-cyan small fw-bold"><i class="bi bi-radar me-1"></i>BASECAMP TELEMETRY</span>
+            <span class="badge bg-success bg-opacity-25 text-success border border-success border-opacity-25 small">LIVE</span>
+          </div>
+          
+          <div class="mb-3">
+            <div class="h2 fw-bold text-white mb-0 apex-mono">8,848<span class="text-cyan small fs-6">m</span></div>
+            <div class="text-uppercase small apex-mono text-white-50">Peak Altitude Operational Envelope</div>
+          </div>
+          
+          <div class="mb-3">
+            <div class="h3 fw-bold text-cyan mb-0 apex-mono">100%</div>
+            <div class="text-uppercase small apex-mono text-white-50">Oxygen &amp; Evacuation Protocol Redundancy</div>
+          </div>
+
+          <div>
+            <div class="h3 fw-bold text-warning mb-0 apex-mono">24/7</div>
+            <div class="text-uppercase small apex-mono text-white-50">Garmin inReach Satellite Comms</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Featured Expeditions Section -->
+<div class="container py-5 my-3">
+  <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-end mb-4 pb-3 border-bottom border-secondary border-opacity-25">
+    <div>
+      <span class="text-uppercase small fw-bold text-cyan apex-mono tracking-wide">Technical Dossier</span>
+      <h2 class="fw-bold mt-1 mb-0 text-white" style="font-size: 2.2rem;">Featured Expedition Routes</h2>
+    </div>
+    <div class="mt-3 mt-md-0">
+      <a href="{{ url_for('public.browse') }}" class="btn btn-sm btn-apex-outline">
+        Browse All Routes <i class="bi bi-arrow-right ms-1"></i>
+      </a>
+    </div>
+  </div>
+
+  <!-- Featured Treks Grid -->
+  {% if featured_treks and featured_treks|length > 0 %}
+    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+      {% for trek in featured_treks %}
+        <div class="col">
+          {% include 'shared/_trek_card.html' %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <!-- Empty State -->
+    <div class="apex-card text-center py-5 shadow-sm">
+      <div class="text-muted mb-3">
+        <i class="bi bi-snow text-cyan" style="font-size: 3.5rem;"></i>
+      </div>
+      <h4 class="text-white fw-bold">No Active Expeditions Currently Scheduled</h4>
+      <p class="text-white-50 mb-0">Seasonal high-altitude expeditions are being formulated by our mountain guides. Check back shortly!</p>
+    </div>
+  {% endif %}
+</div>
+
+<!-- Expedition Pillars / Why Apex -->
+<div class="container py-5 mb-5 border-top border-secondary border-opacity-25">
+  <div class="text-center mb-5">
+    <span class="apex-mono small text-cyan fw-bold text-uppercase">The Apex Standard</span>
+    <h2 class="fw-bold text-white mt-1">Engineered for High-Altitude Survival &amp; Success</h2>
+  </div>
+
+  <div class="row g-4">
+    <div class="col-md-4">
+      <div class="apex-card p-4 h-100">
+        <div class="d-inline-flex p-3 rounded-3 mb-3" style="background: rgba(0, 245, 212, 0.15); border: 1px solid rgba(0, 245, 212, 0.3);">
+          <i class="bi bi-shield-shaded text-cyan fs-3"></i>
+        </div>
+        <h5 class="fw-bold text-white mb-2">Aero-Medical Evacuation</h5>
+        <p class="text-white-50 small mb-0" style="line-height: 1.7;">
+          Every route includes integrated emergency heli-evacuation coverage, Gamow hyperbaric bags, and expedition leaders certified in Wilderness Advanced First Aid (WAFA).
+        </p>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="apex-card p-4 h-100">
+        <div class="d-inline-flex p-3 rounded-3 mb-3" style="background: rgba(0, 119, 182, 0.2); border: 1px solid rgba(0, 119, 182, 0.4);">
+          <i class="bi bi-broadcast-pin text-info fs-3"></i>
+        </div>
+        <h5 class="fw-bold text-white mb-2">Satellite Beacon Relay</h5>
+        <p class="text-white-50 small mb-0" style="line-height: 1.7;">
+          Uninterrupted bidirectional satellite telemetry via Iridium constellation enables real-time weather radar updates and instantaneous basecamp check-ins.
+        </p>
+      </div>
+    </div>
+
+    <div class="col-md-4">
+      <div class="apex-card p-4 h-100">
+        <div class="d-inline-flex p-3 rounded-3 mb-3" style="background: rgba(255, 107, 53, 0.18); border: 1px solid rgba(255, 107, 53, 0.35);">
+          <i class="bi bi-thermometer-snow text-warning fs-3"></i>
+        </div>
+        <h5 class="fw-bold text-white mb-2">Sub-Zero Alpine Gear</h5>
+        <p class="text-white-50 small mb-0" style="line-height: 1.7;">
+          Four-season geodesic tents, 800-fill down sleeping systems rated to -25°C, and technical crampon &amp; harness setups inspected after every expedition.
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+{% extends "platform/base_platform.html" %}
+
+{% block title %}Backups &amp; Disaster Recovery — Platform Console{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="fw-bold mb-1">Backups &amp; Disaster Recovery</h2>
+    <p class="text-muted mb-0">Platform-wide disaster recovery snapshots and targeted tenant exports.</p>
+  </div>
+</div>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    {% for category, message in messages %}
+      <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+        {{ message }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+      </div>
+    {% endfor %}
+  {% endif %}
+{% endwith %}
+
+<!-- Trigger Backup Card -->
+<div class="card mb-4 border-0 shadow-sm">
+  <div class="card-header bg-white py-3">
+    <h5 class="fw-semibold mb-0">Create New Backup Archive</h5>
+  </div>
+  <div class="card-body">
+    <form method="POST" action="{{ url_for('platform.trigger_backup') }}" class="row g-3 align-items-end">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="col-md-6">
+        <label class="form-label fw-bold">Select Scope</label>
+        <select name="target" class="form-select" required>
+          <option value="all">Full Platform (All Tenants &amp; Organizations)</option>
+          <optgroup label="Targeted Single Tenant">
+            {% for org in orgs %}
+              <option value="{{ org.id }}">{{ org.name }}</option>
+            {% endfor %}
+          </optgroup>
+        </select>
+        <div class="form-text">Full platform backups capture schemas and all organizations. Targeted exports isolate one tenant.</div>
+      </div>
+      <div class="col-md-6">
+        <button type="submit" class="btn btn-primary px-4">
+          <i class="bi bi-cloud-arrow-down me-1"></i> Trigger Backup Archive
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Backups Table -->
+<div class="card border-0 shadow-sm">
+  <div class="card-header bg-white py-3">
+    <h5 class="fw-semibold mb-0">Available Archive Snapshots</h5>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Backup ID</th>
+          <th>Type / Scope</th>
+          <th>Tenant Target</th>
+          <th>Size</th>
+          <th>Created At</th>
+          <th>Expires At</th>
+          <th>Status</th>
+          <th class="text-end pe-3">Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for b in backups %}
+          <tr>
+            <td class="ps-3"><code>{{ b.id|string|truncate(12, True, '...') }}</code></td>
+            <td>
+              {% if b.backup_type == 'full_platform' %}
+                <span class="badge bg-purple text-white" style="background-color: #6f42c1;">Full Platform</span>
+              {% else %}
+                <span class="badge bg-secondary">Tenant Export</span>
+              {% endif %}
+            </td>
+            <td>
+              {{ b.organization.name if b.organization else 'Entire Platform' }}
+            </td>
+            <td>
+              {% if b.file_size_bytes %}
+                {{ (b.file_size_bytes / 1024)|round(1) }} KB
+              {% else %}
+                -
+              {% endif %}
+            </td>
+            <td>{{ b.created_at.strftime('%b %d, %Y %H:%M UTC') }}</td>
+            <td>{{ b.expires_at.strftime('%b %d, %Y') }}</td>
+            <td>
+              {% if b.status == 'completed' %}
+                <span class="badge bg-success bg-opacity-10 text-success border border-success">Completed</span>
+              {% else %}
+                <span class="badge bg-warning bg-opacity-10 text-warning border border-warning">{{ b.status }}</span>
+              {% endif %}
+            </td>
+            <td class="text-end pe-3">
+              {% if b.status == 'completed' %}
+                <a href="{{ url_for('platform.download_backup', id=b.id) }}" class="btn btn-sm btn-outline-primary">
+                  <i class="bi bi-download me-1"></i> Download
+                </a>
+              {% endif %}
+            </td>
+          </tr>
+        {% else %}
+          <tr>
+            <td colspan="8" class="text-center py-4 text-muted">
+              No backups created yet. Trigger a backup using the form above.
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

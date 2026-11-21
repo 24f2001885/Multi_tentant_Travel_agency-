@@ -1,0 +1,80 @@
+<!-- THEME: glacier_obsidian (_trek_card.html component) -->
+<div class="card h-100 apex-card shadow-sm overflow-hidden d-flex flex-column" style="border: 1px solid rgba(0, 245, 212, 0.18);">
+  
+  <!-- Image Header with Telemetry Badges -->
+  <div class="position-relative" style="height: 220px; background: #0E1626;">
+    {% if trek.media and trek.media|length > 0 %}
+      <img src="/media/{{ trek.media[0].id }}" 
+           alt="{{ trek.media[0].caption or trek.name }}" 
+           class="w-100 h-100" 
+           style="object-fit: cover;">
+    {% elif trek.thumbnail_filename %}
+      <img src="{{ url_for('static', filename='uploads/treks/' ~ trek.thumbnail_filename) }}" 
+           alt="{{ trek.name }}" 
+           class="w-100 h-100" 
+           style="object-fit: cover;">
+    {% else %}
+      <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center" style="background: linear-gradient(135deg, #070D1E 0%, #16213E 100%);">
+        <i class="bi bi-snow text-cyan" style="font-size: 2.8rem; opacity: 0.85;"></i>
+        <span class="apex-mono small text-white-50 mt-1">APEX GLACIAL ROUTE</span>
+      </div>
+    {% endif %}
+    
+    <!-- Status Badge -->
+    <div class="position-absolute top-0 start-0 m-3">
+      <span class="badge apex-mono px-2 py-1 shadow" 
+            style="{% if trek.status == 'open' %}background: rgba(0, 245, 212, 0.2); color: #00F5D4; border: 1px solid #00F5D4;{% elif trek.status == 'full' %}background: rgba(255, 107, 53, 0.25); color: #FF6B35; border: 1px solid #FF6B35;{% else %}background: rgba(148, 163, 184, 0.2); color: #CBD5E1; border: 1px solid #64748B;{% endif %} font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase;">
+        {{ trek.status }}
+      </span>
+    </div>
+
+    <!-- Location Badge -->
+    <div class="position-absolute bottom-0 end-0 m-3">
+      <span class="badge shadow" style="background: rgba(11, 19, 43, 0.85); backdrop-filter: blur(8px); color: #F8FAFC; border: 1px solid rgba(255, 255, 255, 0.15); font-size: 0.75rem;">
+        <i class="bi bi-geo-alt-fill text-cyan me-1"></i>{{ trek.location | title }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Card Body -->
+  <div class="card-body p-4 d-flex flex-column">
+    <h4 class="fw-bold mb-2 text-white" style="font-size: 1.25rem;">
+      {{ trek.name }}
+    </h4>
+
+    {% if trek.reviews and trek.reviews|length > 0 %}
+      <div class="mb-2 d-flex align-items-center gap-1">
+        <span class="text-warning small">&#9733; {{ (trek.reviews|sum(attribute='rating') / trek.reviews|length)|round(1) }}</span>
+        <span class="apex-mono text-white-50 small" style="font-size: 0.72rem;">({{ trek.reviews|length }} reviews)</span>
+      </div>
+    {% endif %}
+    
+    <!-- Specs Grid -->
+    <div class="mb-4 pt-2 border-top border-secondary border-opacity-25" style="font-size: 0.82rem;">
+      <div class="d-flex justify-content-between mb-1">
+        <span class="apex-mono text-white-50" style="letter-spacing: 0.05em;">DIFFICULTY:</span> 
+        <span class="fw-bold text-uppercase {% if trek.difficulty in ['hard', 'strenuous'] %}text-danger{% elif trek.difficulty == 'moderate' %}text-warning{% else %}text-cyan{% endif %}">{{ trek.difficulty }}</span>
+      </div>
+      <div class="d-flex justify-content-between mb-1">
+        <span class="apex-mono text-white-50" style="letter-spacing: 0.05em;">DURATION:</span> 
+        <span class="fw-semibold text-white">{{ trek.duration_days }} Days</span>
+      </div>
+      <div class="d-flex justify-content-between mb-1">
+        <span class="apex-mono text-white-50" style="letter-spacing: 0.05em;">EXPEDITION FEE:</span> 
+        <span class="fw-bold text-cyan">₹{{ "%.2f"|format(trek.price) }}</span>
+      </div>
+      <div class="d-flex justify-content-between">
+        <span class="apex-mono text-white-50" style="letter-spacing: 0.05em;">SLOTS LEFT:</span> 
+        <span class="fw-semibold {% if trek.available_slots <= 3 %}text-danger{% else %}text-white{% endif %}">{{ trek.available_slots }} Available</span>
+      </div>
+    </div>
+
+    <!-- Action Button -->
+    <div class="mt-auto">
+      <a href="{% if current_user.is_authenticated %}{% if current_user.role == 'admin' %}{{ url_for('admin.trek_detail', trek_id=trek.id) }}{% elif current_user.role == 'staff' %}{{ url_for('staff.trek_manage', trek_id=trek.id) }}{% else %}{{ url_for('trekker.trek_detail', trek_id=trek.id) }}{% endif %}{% else %}{{ url_for('public.trek_detail', id=trek.id) }}{% endif %}" 
+         class="btn btn-apex-primary w-100 py-2 d-block text-center text-decoration-none">
+        <i class="bi bi-binoculars me-1"></i>Explore Route Dossier
+      </a>
+    </div>
+  </div>
+</div>

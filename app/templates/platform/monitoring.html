@@ -1,0 +1,356 @@
+{% extends "platform/base_platform.html" %}
+
+{% block title %}Monitoring &amp; Health — Platform Console{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+  <div>
+    <h2 class="fw-bold mb-1">System &amp; Business Monitoring</h2>
+    <p class="text-muted mb-0">Aggregate business metrics, tenant load, and infrastructure health.</p>
+  </div>
+  <div>
+    <span class="badge bg-success bg-opacity-10 text-success border border-success p-2">
+      <i class="bi bi-activity me-1"></i> System Operational
+    </span>
+  </div>
+</div>
+
+<!-- Business Load Stat Cards -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="card p-3 h-100 border-start border-4 border-primary">
+      <div class="text-muted small text-uppercase fw-semibold">Gross Merchandise Value</div>
+      <div class="fs-3 fw-bold text-dark mt-2">₹{{ "{:,.2f}".format(business.gross_merchandise_value) }}</div>
+      <div class="text-muted small mt-1">Confirmed booking volume</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 h-100 border-start border-4 border-success">
+      <div class="text-muted small text-uppercase fw-semibold">Platform Commission (Est.)</div>
+      <div class="fs-3 fw-bold text-success mt-2">₹{{ "{:,.2f}".format(business.estimated_commission) }}</div>
+      <div class="text-muted small mt-1">At {{ business.commission_rate_percent }}% take-rate</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 h-100 border-start border-4 border-info">
+      <div class="text-muted small text-uppercase fw-semibold">Total Global Users</div>
+      <div class="fs-3 fw-bold text-info mt-2">{{ business.total_users }}</div>
+      <div class="text-muted small mt-1">Across {{ business.total_organizations }} tenants</div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="card p-3 h-100 border-start border-4 border-warning">
+      <div class="text-muted small text-uppercase fw-semibold">Active Expeditions</div>
+      <div class="fs-3 fw-bold text-warning mt-2">{{ business.total_treks }}</div>
+      <div class="text-muted small mt-1">Trek inventory catalog</div>
+    </div>
+  </div>
+</div>
+
+<!-- System Resources: RAM, Disk Pressure, CPU & Uptime -->
+<div class="row g-3 mb-4">
+  <!-- RAM Memory Card -->
+  <div class="col-md-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-memory text-primary me-2"></i>RAM / Memory Usage</h6>
+        <span class="badge {% if infra.ram.percent_used > 85 %}bg-danger{% elif infra.ram.percent_used > 70 %}bg-warning text-dark{% else %}bg-success{% endif %}">
+          {{ infra.ram.percent_used }}% Used
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="progress mb-3" style="height: 10px;">
+          <div class="progress-bar {% if infra.ram.percent_used > 85 %}bg-danger{% elif infra.ram.percent_used > 70 %}bg-warning{% else %}bg-success{% endif %}" 
+               role="progressbar" 
+               style="width: {{ infra.ram.percent_used }}%;" 
+               aria-valuenow="{{ infra.ram.percent_used }}" 
+               aria-valuemin="0" 
+               aria-valuemax="100">
+          </div>
+        </div>
+        <ul class="list-group list-group-flush small">
+          <li class="list-group-item d-flex justify-content-between px-0 py-1 border-0">
+            <span class="text-muted">Total Host RAM</span>
+            <span class="fw-semibold">{{ (infra.ram.total_mb / 1024)|round(2) }} GB</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 py-1 border-0">
+            <span class="text-muted">Used RAM</span>
+            <span class="fw-semibold text-danger">{{ (infra.ram.used_mb / 1024)|round(2) }} GB</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 py-1 border-0">
+            <span class="text-muted">Available / Free</span>
+            <span class="fw-semibold text-success">{{ (infra.ram.available_mb / 1024)|round(2) }} GB</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 py-1 border-0 pt-2 border-top">
+            <span class="text-muted"><i class="bi bi-cpu me-1"></i>Flask Process RSS</span>
+            <span class="badge bg-light text-dark border">{{ infra.ram.process_rss_mb }} MB</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Disk Storage Pressure Card -->
+  <div class="col-md-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-hdd-network text-info me-2"></i>Disk Storage & Pressure</h6>
+        <span class="badge {% if infra.disk_percent > 85 %}bg-danger{% elif infra.disk_percent > 70 %}bg-warning text-dark{% else %}bg-info text-dark{% endif %}">
+          {{ infra.disk_percent }}% Used
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="progress mb-3" style="height: 10px;">
+          <div class="progress-bar {% if infra.disk_percent > 85 %}bg-danger{% elif infra.disk_percent > 70 %}bg-warning{% else %}bg-info{% endif %}" 
+               role="progressbar" 
+               style="width: {{ infra.disk_percent }}%;" 
+               aria-valuenow="{{ infra.disk_percent }}" 
+               aria-valuemin="0" 
+               aria-valuemax="100">
+          </div>
+        </div>
+        <ul class="list-group list-group-flush small">
+          <li class="list-group-item d-flex justify-content-between px-0 py-1 border-0">
+            <span class="text-muted">Total Storage Capacity</span>
+            <span class="fw-semibold">{{ infra.disk_total_gb }} GB</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 py-1 border-0">
+            <span class="text-muted">Used Disk Space</span>
+            <span class="fw-semibold text-danger">{{ infra.disk_used_gb }} GB</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 py-1 border-0">
+            <span class="text-muted">Free Disk Space</span>
+            <span class="fw-semibold text-success">{{ infra.disk_free_gb }} GB</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 py-1 border-0 pt-2 border-top">
+            <span class="text-muted"><i class="bi bi-archive me-1"></i>Backups Footprint</span>
+            <span class="badge bg-light text-dark border">{{ (infra.backup_storage_bytes / 1024)|round(1) }} KB</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- CPU & Engine Health Card -->
+  <div class="col-md-4">
+    <div class="card h-100 shadow-sm">
+      <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+        <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-cpu-fill text-warning me-2"></i>CPU & Server Health</h6>
+        <span class="badge bg-success bg-opacity-10 text-success border border-success">
+          <i class="bi bi-check2-circle me-1"></i>Online
+        </span>
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush small">
+          <li class="list-group-item d-flex justify-content-between px-0 py-2 border-0">
+            <span class="text-muted">Database Engine</span>
+            <span class="badge bg-secondary text-uppercase">{{ infra.database_uri_scheme }}</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 py-2 border-0">
+            <span class="text-muted">CPU Allocation</span>
+            <span class="fw-semibold">{{ infra.cpu.cores }} Logical Cores</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 py-2 border-0">
+            <span class="text-muted">Load Average (1m, 5m, 15m)</span>
+            <span class="fw-semibold text-dark">{{ infra.cpu.load_1m }} &bull; {{ infra.cpu.load_5m }} &bull; {{ infra.cpu.load_15m }}</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between px-0 py-2 border-0 pt-2 border-top">
+            <span class="text-muted"><i class="bi bi-stopwatch me-1"></i>System Uptime</span>
+            <span class="badge bg-primary">{{ infra.requests.uptime }}</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- HTTP Traffic & Request Telemetry -->
+<div class="card mb-4 shadow-sm">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <div>
+      <h5 class="fw-semibold mb-0"><i class="bi bi-arrow-left-right text-primary me-2"></i>HTTP Traffic & Ingress Telemetry</h5>
+      <small class="text-muted">Real-time incoming request volume, latency, and HTTP status code distribution.</small>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+      <span class="badge bg-light text-dark border"><i class="bi bi-speedometer2 text-primary me-1"></i>Avg Latency: <strong>{{ infra.requests.avg_latency_ms }} ms</strong></span>
+      <span class="badge bg-primary"><i class="bi bi-broadcast me-1"></i>{{ infra.requests.total_requests }} Total Requests</span>
+    </div>
+  </div>
+  <div class="card-body">
+    <!-- Status Code Badges Row -->
+    <div class="row g-2 text-center mb-4">
+      <div class="col-6 col-sm-3">
+        <div class="p-2 border rounded bg-success-subtle border-success-subtle">
+          <div class="small fw-bold text-success">2xx Success</div>
+          <div class="fs-4 fw-bold text-success">{{ infra.requests.status_2xx }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="p-2 border rounded bg-info-subtle border-info-subtle">
+          <div class="small fw-bold text-info-emphasis">3xx Redirects</div>
+          <div class="fs-4 fw-bold text-info-emphasis">{{ infra.requests.status_3xx }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="p-2 border rounded bg-warning-subtle border-warning-subtle">
+          <div class="small fw-bold text-warning-emphasis">4xx Client Errors</div>
+          <div class="fs-4 fw-bold text-warning-emphasis">{{ infra.requests.status_4xx }}</div>
+        </div>
+      </div>
+      <div class="col-6 col-sm-3">
+        <div class="p-2 border rounded bg-danger-subtle border-danger-subtle">
+          <div class="small fw-bold text-danger">5xx Server Errors</div>
+          <div class="fs-4 fw-bold text-danger">{{ infra.requests.status_5xx }}</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Ingress Stream Table -->
+    <h6 class="fw-semibold text-secondary small text-uppercase mb-2"><i class="bi bi-clock-history me-1"></i>Live Request Stream (Latest Inbound Traffic)</h6>
+    <div class="table-responsive">
+      <table class="table table-sm table-hover align-middle mb-0 font-monospace small">
+        <thead class="table-light">
+          <tr>
+            <th class="ps-2">Timestamp</th>
+            <th>Method</th>
+            <th>Tenant Host</th>
+            <th>Endpoint Path</th>
+            <th>Status</th>
+            <th class="text-end pe-2">Latency</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for req in infra.requests.recent_requests %}
+            <tr>
+              <td class="ps-2 text-muted">{{ req.time }}</td>
+              <td>
+                {% if req.method == 'GET' %}
+                  <span class="badge bg-success bg-opacity-75">GET</span>
+                {% elif req.method == 'POST' %}
+                  <span class="badge bg-primary">POST</span>
+                {% elif req.method == 'PUT' or req.method == 'PATCH' %}
+                  <span class="badge bg-warning text-dark">{{ req.method }}</span>
+                {% elif req.method == 'DELETE' %}
+                  <span class="badge bg-danger">DEL</span>
+                {% else %}
+                  <span class="badge bg-secondary">{{ req.method }}</span>
+                {% endif %}
+              </td>
+              <td><span class="badge bg-light text-dark border">{{ req.host }}</span></td>
+              <td class="text-truncate" style="max-width: 320px;">{{ req.path }}</td>
+              <td>
+                {% if req.status_code >= 200 and req.status_code < 300 %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">{{ req.status_code }} OK</span>
+                {% elif req.status_code >= 300 and req.status_code < 400 %}
+                  <span class="badge bg-info-subtle text-info border border-info-subtle">{{ req.status_code }}</span>
+                {% elif req.status_code >= 400 and req.status_code < 500 %}
+                  <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">{{ req.status_code }}</span>
+                {% else %}
+                  <span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ req.status_code }} ERR</span>
+                {% endif %}
+              </td>
+              <td class="text-end pe-2">
+                <span class="{% if req.latency_ms > 200 %}text-danger fw-bold{% elif req.latency_ms > 80 %}text-warning{% else %}text-muted{% endif %}">
+                  {{ req.latency_ms }} ms
+                </span>
+              </td>
+            </tr>
+          {% else %}
+            <tr>
+              <td colspan="6" class="text-center py-3 text-muted">No recent HTTP requests recorded yet. Browse any tenant URL to view live requests stream.</td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- Infrastructure Stats Row -->
+<div class="row g-3 mb-4">
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header bg-white py-3">
+        <h5 class="fw-semibold mb-0">Infrastructure Health</h5>
+      </div>
+      <div class="card-body">
+        <ul class="list-group list-group-flush">
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span>Database Engine</span>
+            <span class="badge bg-secondary text-uppercase">{{ infra.database_uri_scheme }}</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span>Backup Storage Used</span>
+            <span class="fw-bold">{{ (infra.backup_storage_bytes / 1024)|round(1) }} KB</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span>Disk Free</span>
+            <span class="fw-bold">{{ (infra.disk_free_bytes / (1024*1024*1024))|round(1) }} GB</span>
+          </li>
+          <li class="list-group-item d-flex justify-content-between align-items-center px-0">
+            <span>Background Scheduled Jobs</span>
+            <span class="badge bg-primary">{{ infra.active_scheduler_jobs|length }} jobs</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <div class="col-md-6">
+    <div class="card h-100">
+      <div class="card-header bg-white py-3">
+        <h5 class="fw-semibold mb-0">Key Table Volumes</h5>
+      </div>
+      <div class="card-body">
+        <div class="row g-2">
+          {% for table, count in infra.table_counts.items() %}
+            <div class="col-6">
+              <div class="p-2 border rounded bg-light text-center">
+                <div class="text-muted small text-uppercase">{{ table }}</div>
+                <div class="fs-4 fw-bold text-dark">{{ count }}</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Per-Tenant Load Breakdown -->
+<div class="card mb-4">
+  <div class="card-header bg-white py-3">
+    <h5 class="fw-semibold mb-0">Tenant Load &amp; Activity Breakdown</h5>
+  </div>
+  <div class="table-responsive">
+    <table class="table table-hover align-middle mb-0">
+      <thead class="table-light">
+        <tr>
+          <th class="ps-3">Tenant Name</th>
+          <th>Status</th>
+          <th>Registered Users</th>
+          <th>Total Bookings</th>
+          <th class="text-end pe-3">Gross Revenue</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in business.tenants %}
+          <tr>
+            <td class="ps-3 fw-bold">{{ t.name }}</td>
+            <td>
+              {% if t.status == 'active' %}
+                <span class="badge bg-success bg-opacity-10 text-success border border-success">Active</span>
+              {% else %}
+                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger">Suspended</span>
+              {% endif %}
+            </td>
+            <td>{{ t.users_count }}</td>
+            <td>{{ t.bookings_count }}</td>
+            <td class="text-end pe-3 fw-bold">₹{{ "{:,.2f}".format(t.revenue) }}</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
