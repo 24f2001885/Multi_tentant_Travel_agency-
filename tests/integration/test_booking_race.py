@@ -5,6 +5,8 @@ Verifies PostgreSQL SELECT ... FOR UPDATE row-level locking behavior.
 
 from pathlib import Path
 import threading
+import uuid
+from unittest.mock import patch
 import pytest
 from sqlalchemy import select
 
@@ -58,8 +60,15 @@ def test_concurrent_last_slot_booking_confirmation_race(app, org_a, make_user, m
         db.session.add_all([booking_1, booking_2])
         db.session.flush()
 
-        order_1 = payment_service.create_gateway_order(booking_1)
-        order_2 = payment_service.create_gateway_order(booking_2)
+        with patch.object(payment_service, "_client") as mock_client:
+            mock_client.return_value.order.create.side_effect = lambda data: {
+                "id": f"order_mock_{uuid.uuid4().hex[:12]}",
+                "amount": data["amount"],
+                "currency": "INR",
+                "status": "created",
+            }
+            order_1 = payment_service.create_gateway_order(booking_1)
+            order_2 = payment_service.create_gateway_order(booking_2)
         db.session.commit()
 
         order_id_1 = order_1["id"]

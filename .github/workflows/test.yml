@@ -68,6 +68,8 @@ jobs:
           FLASK_APP: app:create_app
           BASE_DOMAIN: abhishek4312.info
           PLATFORM_ADMIN_HOST: platform.abhishek4312.info
+          RAZORPAY_KEY_ID: rzp_test_mock_ci_id
+          RAZORPAY_KEY_SECRET: mock_ci_secret_key_12345
         run: |
           pytest tests/isolation/ -v --tb=short
 
@@ -80,6 +82,8 @@ jobs:
           FLASK_APP: app:create_app
           BASE_DOMAIN: abhishek4312.info
           PLATFORM_ADMIN_HOST: platform.abhishek4312.info
+          RAZORPAY_KEY_ID: rzp_test_mock_ci_id
+          RAZORPAY_KEY_SECRET: mock_ci_secret_key_12345
         run: |
           pytest tests/unit/ tests/integration/ -v --tb=short
 
@@ -89,5 +93,7 @@ jobs:
           FLASK_APP: app:create_app
           BASE_DOMAIN: abhishek4312.info
           PLATFORM_ADMIN_HOST: platform.abhishek4312.info
+          RAZORPAY_KEY_ID: rzp_test_mock_ci_id
+          RAZORPAY_KEY_SECRET: mock_ci_secret_key_12345
         run: |
           flask init-live-tenants
