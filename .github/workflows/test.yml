@@ -41,7 +41,7 @@ jobs:
       - name: Install System Dependencies (WeasyPrint / Fonts)
         run: |
           sudo apt-get update
-          sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 fonts-dejavu-core
+          sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libharfbuzz-subset0 libpangoft2-1.0-0 libpangocairo-1.0-0 fonts-dejavu-core
 
       - name: Install Python Dependencies & Linters
         run: |
@@ -69,7 +69,7 @@ jobs:
           BASE_DOMAIN: abhishek4312.info
           PLATFORM_ADMIN_HOST: platform.abhishek4312.info
         run: |
-          pytest tests/isolation/ -v
+          pytest tests/isolation/ -v --tb=short
 
       - name: "Run Unit & Integration Test Suites"
         env:
@@ -81,7 +81,7 @@ jobs:
           BASE_DOMAIN: abhishek4312.info
           PLATFORM_ADMIN_HOST: platform.abhishek4312.info
         run: |
-          pytest tests/unit/ tests/integration/ -v
+          pytest tests/unit/ tests/integration/ -v --tb=short
 
       - name: "Verify Live Tenant Seeding Command"
         env:
