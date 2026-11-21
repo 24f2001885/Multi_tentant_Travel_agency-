@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>GST Invoice for Your Trek Booking</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Your Tax Invoice: {{ invoice.invoice_number }}</h2>
+  <p>Dear {{ booking.user.name }},</p>
+  <p>Thank you for booking with <strong>{{ org.name }}</strong>. Please find attached the tax invoice for your booking of <strong>{{ booking.trek.name }}</strong>.</p>
+  <table style="width: 100%; max-width: 500px; border-collapse: collapse; margin: 20px 0;">
+    <tr>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Invoice Number:</strong></td>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ invoice.invoice_number }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>Total Paid:</strong></td>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;">₹{{ invoice.total_amount }}</td>
+    </tr>
+    <tr>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;"><strong>GSTIN:</strong></td>
+      <td style="padding: 8px; border-bottom: 1px solid #ddd;">{{ org.gst_number }}</td>
+    </tr>
+  </table>
+  <p>We look forward to hosting you on the trails!</p>
+  <p>Best regards,<br>{{ org.name }} Team</p>
+</body>
+</html>

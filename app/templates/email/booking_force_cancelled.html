@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Notice: Cancellation of your booking for {{ booking.trek.name }}</title>
+</head>
+<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+  <h2>Booking Cancellation Notification</h2>
+  <p>Dear {{ booking.user.name }},</p>
+  <p>We regret to inform you that your booking for <strong>{{ booking.trek.name }}</strong> (Booking #{{ booking.id }}) has been cancelled by our operations team.</p>
+  <p><strong>Reason / Note from Organizer:</strong></p>
+  <blockquote style="background-color: #f3f4f6; padding: 12px; border-left: 4px solid #ef4444; margin: 15px 0;">
+    {{ reason_note }}
+  </blockquote>
+  <p>A full 100% refund has been authorized and initiated to your original payment method.</p>
+  <p>We sincerely apologize for the inconvenience this may cause to your travel plans.</p>
+  <p>Best regards,<br>{{ booking.trek.organization.name if booking.trek else 'TMA Operations' }}</p>
+</body>
+</html>

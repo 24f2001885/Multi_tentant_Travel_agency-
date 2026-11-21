@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>GST Tax Invoice - {{ invoice_number }}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm;
+    }
+    body {
+      font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+      color: #333333;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .header {
+      border-bottom: 2px solid #2563EB;
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+    .company-title {
+      font-size: 20px;
+      font-weight: bold;
+      color: #1E3A8A;
+    }
+    .meta-table {
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .meta-table td {
+      vertical-align: top;
+    }
+    .invoice-title {
+      font-size: 18px;
+      font-weight: bold;
+      text-align: right;
+      color: #374151;
+    }
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+      margin-bottom: 20px;
+    }
+    .items-table th {
+      background-color: #F3F4F6;
+      border: 1px solid #E5E7EB;
+      padding: 8px;
+      text-align: left;
+      font-weight: bold;
+    }
+    .items-table td {
+      border: 1px solid #E5E7EB;
+      padding: 8px;
+    }
+    .totals-table {
+      width: 45%;
+      margin-left: auto;
+      border-collapse: collapse;
+    }
+    .totals-table td {
+      padding: 6px 8px;
+    }
+    .totals-table .grand-total {
+      font-size: 14px;
+      font-weight: bold;
+      border-top: 2px solid #2563EB;
+      border-bottom: 2px solid #2563EB;
+      color: #1E3A8A;
+    }
+    .footer {
+      margin-top: 40px;
+      border-top: 1px solid #E5E7EB;
+      padding-top: 10px;
+      font-size: 10px;
+      color: #6B7280;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <table style="width: 100%;">
+      <tr>
+        <td>
+          <div class="company-title">{{ org.name }}</div>
+          <div>{{ org.contact_email or '' }} {% if org.contact_phone %} | {{ org.contact_phone }}{% endif %}</div>
+          <div><strong>GSTIN:</strong> {{ org.gst_number }}</div>
+        </td>
+        <td style="text-align: right;">
+          <div class="invoice-title">TAX INVOICE</div>
+          <div><strong>Invoice #:</strong> {{ invoice_number }}</div>
+          <div><strong>Date:</strong> {{ date_str }}</div>
+        </td>
+      </tr>
+    </table>
+  </div>
+
+  <table class="meta-table">
+    <tr>
+      <td style="width: 50%;">
+        <strong>Billed To:</strong><br>
+        {{ booking.user.name }}<br>
+        {{ booking.user.email }}<br>
+        {% if booking.user.mobile_number %}Mobile: {{ booking.user.mobile_country_code }} {{ booking.user.mobile_number }}{% endif %}
+      </td>
+      <td style="width: 50%;">
+        <strong>Booking Details:</strong><br>
+        Trek: {{ booking.trek.name }}<br>
+        Duration: {{ booking.trek.duration_days }} Days ({{ booking.trek.start_date }} to {{ booking.trek.end_date }})<br>
+        Participants: {{ booking.slot_count }}
+      </td>
+    </tr>
+  </table>
+
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th style="width: 15%; text-align: center;">Slots</th>
+        <th style="width: 25%; text-align: right;">Amount (INR)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>
+          <strong>{{ booking.trek.name }} Expedition</strong><br>
+          <small>
+            Participants:
+            {% for p in booking.participants %}
+              {{ p.name }}{% if not loop.last %}, {% endif %}
+            {% else %}
+              {{ booking.user.name }}
+            {% endfor %}
+          </small>
+        </td>
+        <td style="text-align: center;">{{ booking.slot_count }}</td>
+        <td style="text-align: right;">₹{{ taxable }}</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <table class="totals-table">
+    <tr>
+      <td>Taxable Amount:</td>
+      <td style="text-align: right;">₹{{ taxable }}</td>
+    </tr>
+    <tr>
+      <td>GST ({{ gst_rate }}%):</td>
+      <td style="text-align: right;">₹{{ gst }}</td>
+    </tr>
+    <tr class="grand-total">
+      <td>Total Amount:</td>
+      <td style="text-align: right;">₹{{ total }}</td>
+    </tr>
+  </table>
+
+  <div class="footer">
+    This is a computer-generated invoice and requires no physical signature.<br>
+    &copy; {{ org.name }}. All rights reserved.
+  </div>
+</body>
+</html>
