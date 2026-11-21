@@ -59,7 +59,7 @@ def create_app(config_object=None) -> Flask:
 
     app.config["SQLALCHEMY_DATABASE_URI"] = db_uri
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
-    os.makedirs("/app/instance", exist_ok=True)
+    os.makedirs(app.instance_path, exist_ok=True)
 
     # Email configuration
     app.config["MAIL_SERVER"] = os.environ.get("MAIL_SERVER")
