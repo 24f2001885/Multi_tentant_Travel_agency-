@@ -1,0 +1,159 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Notification Preferences - TMA{% endblock %}
+
+{% block shell %}
+  {% include "shared/navbar_trekker.html" %}
+{% endblock %}
+
+{% block content %}
+<!-- DEBUG: notification_preferences.html user={{ current_user.id }} -->
+<div class="container py-4 mb-5" style="max-width: 760px;">
+  <div class="mb-4">
+    <h2 class="fw-bold mb-1" style="font-family: 'Bitter', serif;">Notification Preferences</h2>
+    <p class="text-muted small mb-0">Control the communication channels and notification types you receive from us.</p>
+  </div>
+
+  <div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-4 p-md-5">
+      <form method="POST">
+        {{ form.hidden_tag() }}
+
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light text-center small text-uppercase">
+              <tr>
+                <th scope="col" class="text-start ps-3" style="width: 25%;">Channel</th>
+                <th scope="col" style="width: 25%;">Channel Enabled</th>
+                <th scope="col" style="width: 25%;">Booking Updates<br><span class="text-muted text-lowercase fw-normal">(Transactional)</span></th>
+                <th scope="col" style="width: 25%;">Offers & News<br><span class="text-muted text-lowercase fw-normal">(Marketing)</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Email Row -->
+              <tr>
+                <td class="ps-3 fw-bold">
+                  <i class="bi bi-envelope me-2 text-primary"></i>Email
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ form.email_enabled(class="form-check-input", id="email_enabled") }}
+                    <label class="visually-hidden" for="email_enabled">Email Enabled</label>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ form.email_transactional(class="form-check-input", id="email_transactional") }}
+                    <label class="visually-hidden" for="email_transactional">Email Transactional Updates</label>
+                  </div>
+                  {% if consents_map.get('email_tx') and consents_map.get('email_tx').granted_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('email_tx').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ form.email_marketing(class="form-check-input", id="email_marketing") }}
+                    <label class="visually-hidden" for="email_marketing">Email Offers & News</label>
+                  </div>
+                  {% if consents_map.get('email_mkt') and consents_map.get('email_mkt').granted_at and not consents_map.get('email_mkt').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('email_mkt').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <td colspan="4" class="bg-light py-2 px-3 small text-muted border-top-0">
+                  <i class="bi bi-shield-check me-1"></i>
+                  <strong>Security Note:</strong> Account security notifications (such as password resets and OTP verification) will always be delivered to your registered email address regardless of preferences.
+                </td>
+              </tr>
+
+              <!-- WhatsApp Row -->
+              <tr>
+                <td class="ps-3 fw-bold">
+                  <i class="bi bi-whatsapp me-2 text-success"></i>WhatsApp
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ form.whatsapp_enabled(class="form-check-input", id="whatsapp_enabled") }}
+                    <label class="visually-hidden" for="whatsapp_enabled">WhatsApp Enabled</label>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ form.whatsapp_transactional(class="form-check-input", id="whatsapp_transactional") }}
+                    <label class="visually-hidden" for="whatsapp_transactional">WhatsApp Transactional Updates</label>
+                  </div>
+                  {% if consents_map.get('whatsapp_tx') and consents_map.get('whatsapp_tx').granted_at and not consents_map.get('whatsapp_tx').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('whatsapp_tx').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ form.whatsapp_marketing(class="form-check-input", id="whatsapp_marketing") }}
+                    <label class="visually-hidden" for="whatsapp_marketing">WhatsApp Offers & News</label>
+                  </div>
+                  {% if consents_map.get('whatsapp_mkt') and consents_map.get('whatsapp_mkt').granted_at and not consents_map.get('whatsapp_mkt').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('whatsapp_mkt').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+
+              <!-- SMS Row -->
+              <tr>
+                <td class="ps-3 fw-bold">
+                  <i class="bi bi-chat-text me-2 text-info"></i>SMS
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ form.sms_enabled(class="form-check-input", id="sms_enabled") }}
+                    <label class="visually-hidden" for="sms_enabled">SMS Enabled</label>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ form.sms_transactional(class="form-check-input", id="sms_transactional") }}
+                    <label class="visually-hidden" for="sms_transactional">SMS Transactional Updates</label>
+                  </div>
+                  {% if consents_map.get('sms_tx') and consents_map.get('sms_tx').granted_at and not consents_map.get('sms_tx').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('sms_tx').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ form.sms_marketing(class="form-check-input", id="sms_marketing") }}
+                    <label class="visually-hidden" for="sms_marketing">SMS Offers & News</label>
+                  </div>
+                  {% if consents_map.get('sms_mkt') and consents_map.get('sms_mkt').granted_at and not consents_map.get('sms_mkt').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('sms_mkt').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-between align-items-center">
+          <button type="submit" class="btn btn-primary px-4 fw-bold">
+            Save Preferences
+          </button>
+          <a href="{{ url_for('trekker.profile') }}" class="btn btn-outline-secondary">
+            Back to Profile
+          </a>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

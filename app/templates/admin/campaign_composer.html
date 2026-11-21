@@ -1,0 +1,380 @@
+{% extends "shared/base.html" %}
+
+{% block title %}{{ 'Edit Campaign' if campaign else 'Compose Campaign' }} - TMA{% endblock %}
+
+{% block shell %}
+  {% include layout %}
+{% endblock %}
+
+{% block content %}
+<!-- DEBUG: campaign_composer.html status={{ campaign.status if campaign else 'new' }} -->
+<div class="container-fluid py-4 px-md-4">
+  <div class="row justify-content-center">
+    <div class="col-lg-10">
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h2 class="fw-bold mb-1" style="font-family: 'Bitter', serif;">
+            {{ 'Edit Campaign Draft' if campaign else 'Campaign Composer' }}
+          </h2>
+          <p class="text-muted small mb-0">Design merge-templated messages and target segments with strict consent gating.</p>
+        </div>
+        <a href="{{ url_for('admin.campaigns_list') }}" class="btn btn-outline-secondary btn-sm">
+          Back to Campaigns
+        </a>
+      </div>
+
+      {% if campaign and campaign.status == 'tested' %}
+      <div class="alert alert-warning d-flex align-items-center mb-4">
+        <i class="bi bi-exclamation-triangle-fill me-2 fs-5"></i>
+        <div>
+          <strong>Notice:</strong> This campaign was already tested. Saving modifications will automatically reset its status to <strong>draft</strong>, requiring a new test send before broadcast.
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="card shadow-sm border-0 rounded-3 mb-4">
+        <div class="card-body p-4 p-md-5">
+          <form method="POST" enctype="multipart/form-data" novalidate>
+            {{ form.hidden_tag() }}
+
+            <!-- Channel Selection (Single or Multi-Channel) -->
+            {% if not campaign %}
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-bold mb-0">Delivery Channels</label>
+                <span class="badge bg-light text-primary border" id="channel_selection_badge">
+                  <i class="bi bi-broadcast me-1"></i>Select any channel (choose one or more)
+                </span>
+              </div>
+
+              <div class="row g-3">
+                <!-- Email Checkbox Card -->
+                <div class="col-md-4">
+                  <div class="card h-100 border p-3 channel-select-card active-channel-card" id="card_channel_email" style="border-color:#1F4FD8; cursor: pointer; transition: all 0.15s ease;">
+                    <div class="form-check d-flex align-items-center mb-1">
+                      <input class="form-check-input me-2 channel-checkbox" type="checkbox" name="channels" value="email" id="channel_email" checked>
+                      <label class="form-check-label fw-bold text-dark flex-grow-1" for="channel_email" style="cursor: pointer;">
+                        <i class="bi bi-envelope-fill text-primary me-2 fs-5"></i>Email
+                      </label>
+                    </div>
+                    <p class="text-muted small mb-0 ps-4">Newsletters, rich expedition launches, and updates.</p>
+                  </div>
+                </div>
+
+                <!-- WhatsApp Checkbox Card -->
+                <div class="col-md-4">
+                  <div class="card h-100 border p-3 channel-select-card" id="card_channel_whatsapp" style="border-color:#E2E4E9; cursor: pointer; transition: all 0.15s ease;">
+                    <div class="form-check d-flex align-items-center mb-1">
+                      <input class="form-check-input me-2 channel-checkbox" type="checkbox" name="channels" value="whatsapp" id="channel_whatsapp">
+                      <label class="form-check-label fw-bold text-dark flex-grow-1" for="channel_whatsapp" style="cursor: pointer;">
+                        <i class="bi bi-whatsapp text-success me-2 fs-5"></i>WhatsApp
+                      </label>
+                    </div>
+                    <p class="text-muted small mb-0 ps-4">Instant high-open messaging to opt-in phone numbers.</p>
+                  </div>
+                </div>
+
+                <!-- SMS Checkbox Card -->
+                <div class="col-md-4">
+                  <div class="card h-100 border p-3 channel-select-card" id="card_channel_sms" style="border-color:#E2E4E9; cursor: pointer; transition: all 0.15s ease;">
+                    <div class="form-check d-flex align-items-center mb-1">
+                      <input class="form-check-input me-2 channel-checkbox" type="checkbox" name="channels" value="sms" id="channel_sms">
+                      <label class="form-check-label fw-bold text-dark flex-grow-1" for="channel_sms" style="cursor: pointer;">
+                        <i class="bi bi-chat-text-fill text-info me-2 fs-5"></i>SMS
+                      </label>
+                    </div>
+                    <p class="text-muted small mb-0 ps-4">Direct SMS alerts and urgent operational announcements.</p>
+                  </div>
+                </div>
+              </div>
+              <input type="hidden" name="channel" id="channel_fallback" value="email">
+            </div>
+            {% else %}
+            <div class="mb-4 p-3 bg-light rounded border d-flex align-items-center justify-content-between">
+              <div>
+                <span class="text-muted small text-uppercase fw-semibold d-block">Channel for this Draft</span>
+                <span class="badge bg-primary text-uppercase px-3 py-2 fs-6 mt-1">{{ campaign.channel }}</span>
+              </div>
+              <input type="hidden" name="channel" value="{{ campaign.channel }}">
+              <input type="hidden" name="channels" value="{{ campaign.channel }}">
+              <span class="text-muted small">Channel is fixed for existing drafts.</span>
+            </div>
+            {% endif %}
+
+            <div class="row g-3 mb-4" id="subject_wrapper">
+              <div class="col-12">
+                {{ form.subject.label(class="form-label fw-bold") }}
+                {{ form.subject(class="form-control", placeholder="e.g. Early Bird Slots: Valley of Flowers Expedition") }}
+                <div class="form-text small">Subject line for email broadcasts (max 200 characters).</div>
+                {% for error in form.subject.errors %}
+                  <div class="text-danger small">{{ error }}</div>
+                {% endfor %}
+              </div>
+            </div>
+
+            <div class="mb-4" id="wa_template_wrapper" style="display: none;">
+              {{ form.provider_template_name.label(class="form-label fw-bold") }}
+              {{ form.provider_template_name(class="form-control", placeholder="e.g. spring_early_bird_v1") }}
+              <div class="form-text small">Meta-approved WhatsApp template identifier (required for WhatsApp delivery).</div>
+              {% for error in form.provider_template_name.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+            </div>
+
+            <div class="mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                {{ form.template_body.label(class="form-label fw-bold mb-0") }}
+                <span class="badge bg-light text-muted border">Plain substitution only</span>
+              </div>
+              {{ form.template_body(class="form-control font-monospace", rows=6, placeholder="Hello {first_name}, get ready for {trek_name} with {organization_name}!") }}
+              {% for error in form.template_body.errors %}
+                <div class="text-danger small">{{ error }}</div>
+              {% endfor %}
+
+              <!-- Allowed Merge Fields Pill Bar -->
+              <div class="mt-2 p-2 bg-light rounded border">
+                <div class="small fw-bold text-muted mb-1">Available Merge Fields (Click to insert):</div>
+                <div class="d-flex flex-wrap gap-1">
+                  {% for k in allowed_merge_keys %}
+                  <span class="badge bg-white text-dark border merge-pill" style="cursor: pointer;" onclick="insertMergeField('{{ k }}')">
+                    {<span>{{ k }}</span>}
+                  </span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+
+            <!-- Campaign Poster / Visuals Card -->
+            <div class="card border rounded-3 p-3 p-md-4 mb-4" style="background-color: #fafbfc;">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <label class="form-label fw-bold mb-0">
+                  <i class="bi bi-image text-primary me-2"></i>Campaign Poster / Visual Banner (Optional)
+                </label>
+                <span class="badge bg-light text-muted border">JPG, PNG, WebP</span>
+              </div>
+              <p class="text-muted small mb-3">
+                Attach a promotional poster, trek itinerary flyer, or discount banner. Displayed as a rich hero image in emails and attached to WhatsApp messages.
+              </p>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  {{ form.poster.label(class="form-label small fw-bold") }}
+                  {{ form.poster(class="form-control", id="poster_file_input", accept="image/jpeg,image/png,image/webp", onchange="previewPosterFile(this)") }}
+                  <div class="form-text small">Select an image file from your device (max 25 MB).</div>
+                  {% for error in form.poster.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+                </div>
+                <div class="col-md-6">
+                  {{ form.poster_url.label(class="form-label small fw-bold") }}
+                  {{ form.poster_url(class="form-control", id="poster_url_input", placeholder="https://example.com/poster.jpg", oninput="previewPosterUrl(this.value)") }}
+                  <div class="form-text small">Or paste a direct web image link (CDN/hosting URL).</div>
+                  {% for error in form.poster_url.errors %}
+                    <div class="text-danger small">{{ error }}</div>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Live Poster Preview -->
+              <div id="poster_preview_box" class="mt-3 p-2 bg-white rounded border text-center {% if not (campaign and campaign.poster_url) %}d-none{% endif %}" style="max-width: 480px; margin: 0 auto;">
+                <div class="d-flex justify-content-between align-items-center mb-2 px-2">
+                  <span class="small fw-bold text-muted"><i class="bi bi-eye me-1"></i>Poster Preview</span>
+                  <button type="button" class="btn btn-sm btn-outline-danger py-0 px-2" onclick="removePosterPreview()">
+                    <i class="bi bi-x-circle me-1"></i>Remove
+                  </button>
+                </div>
+                <img id="poster_preview_img" src="{{ campaign.poster_url if (campaign and campaign.poster_url) else '#' }}" alt="Poster Preview" class="img-fluid rounded border" style="max-height: 240px; object-fit: contain;">
+              </div>
+            </div>
+
+            <!-- Audience Filter Fieldset -->
+            <fieldset class="border rounded p-3 p-md-4 mb-4 bg-light bg-opacity-25">
+              <legend class="float-none w-auto px-2 fs-6 fw-bold text-dark">
+                <i class="bi bi-funnel me-1"></i> Target Audience Segment
+              </legend>
+              <p class="text-muted small mb-3">
+                Broadcast messages are automatically filtered by active marketing consent and channel notification preferences.
+              </p>
+
+              <div class="row g-3">
+                <div class="col-md-6">
+                  {{ form.roles.label(class="form-label small fw-bold") }}
+                  {{ form.roles(class="form-select form-select-sm") }}
+                </div>
+                <div class="col-md-6">
+                  {{ form.booking_statuses.label(class="form-label small fw-bold") }}
+                  {{ form.booking_statuses(class="form-select form-select-sm") }}
+                </div>
+                <div class="col-md-6">
+                  {{ form.signup_from.label(class="form-label small fw-bold") }}
+                  {{ form.signup_from(class="form-control form-control-sm") }}
+                </div>
+                <div class="col-md-6">
+                  {{ form.signup_to.label(class="form-label small fw-bold") }}
+                  {{ form.signup_to(class="form-control form-control-sm") }}
+                </div>
+                <div class="col-md-6">
+                  {{ form.is_active.label(class="form-label small fw-bold") }}
+                  {{ form.is_active(class="form-select form-select-sm") }}
+                </div>
+                <div class="col-md-6">
+                  {{ form.has_any_booking.label(class="form-label small fw-bold") }}
+                  {{ form.has_any_booking(class="form-select form-select-sm") }}
+                </div>
+              </div>
+            </fieldset>
+
+            <div class="d-flex justify-content-between align-items-center">
+              <button type="submit" class="btn btn-primary px-4 fw-bold">
+                {{ 'Save & Continue' if campaign else 'Create Draft' }}
+              </button>
+              {% if campaign %}
+              <a href="{{ url_for('admin.campaign_detail', id=campaign.id) }}" class="btn btn-outline-secondary">
+                View Detail & Test Send
+              </a>
+              {% endif %}
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+  function insertMergeField(field) {
+    var textarea = document.getElementById('template_body');
+    if (!textarea) return;
+    var toInsert = "{" + field + "}";
+    var start = textarea.selectionStart;
+    var end = textarea.selectionEnd;
+    textarea.value = textarea.value.substring(0, start) + toInsert + textarea.value.substring(end);
+    textarea.focus();
+    textarea.selectionStart = textarea.selectionEnd = start + toInsert.length;
+  }
+
+  function previewPosterFile(input) {
+    if (input.files && input.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('poster_preview_img').src = e.target.result;
+        document.getElementById('poster_preview_box').classList.remove('d-none');
+      };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  function previewPosterUrl(val) {
+    val = (val || '').trim();
+    if (val && (val.startsWith('http://') || val.startsWith('https://') || val.startsWith('/static/'))) {
+      document.getElementById('poster_preview_img').src = val;
+      document.getElementById('poster_preview_box').classList.remove('d-none');
+    } else {
+      var fileInput = document.getElementById('poster_file_input');
+      if (!fileInput || !fileInput.files.length) {
+        document.getElementById('poster_preview_box').classList.add('d-none');
+      }
+    }
+  }
+
+  function removePosterPreview() {
+    var fileInput = document.getElementById('poster_file_input');
+    var urlInput = document.getElementById('poster_url_input');
+    if (fileInput) fileInput.value = '';
+    if (urlInput) urlInput.value = '';
+    document.getElementById('poster_preview_img').src = '#';
+    document.getElementById('poster_preview_box').classList.add('d-none');
+  }
+
+  function updateChannelFieldVisibility() {
+    var emailBox = document.getElementById('channel_email');
+    var waBox = document.getElementById('channel_whatsapp');
+    var smsBox = document.getElementById('channel_sms');
+    var subjectWrapper = document.getElementById('subject_wrapper');
+    var waWrapper = document.getElementById('wa_template_wrapper');
+    var channelFallback = document.getElementById('channel_fallback');
+    var badge = document.getElementById('channel_selection_badge');
+
+    var emailChecked = emailBox ? emailBox.checked : false;
+    var waChecked = waBox ? waBox.checked : false;
+    var smsChecked = smsBox ? smsBox.checked : false;
+
+    // Update Card Highlight Styles
+    var emailCard = document.getElementById('card_channel_email');
+    var waCard = document.getElementById('card_channel_whatsapp');
+    var smsCard = document.getElementById('card_channel_sms');
+
+    if (emailCard) {
+      emailCard.style.borderColor = emailChecked ? '#1F4FD8' : '#E2E4E9';
+      emailCard.style.backgroundColor = emailChecked ? '#F8FAFC' : '#FFFFFF';
+    }
+    if (waCard) {
+      waCard.style.borderColor = waChecked ? '#16A34A' : '#E2E4E9';
+      waCard.style.backgroundColor = waChecked ? '#F8FAFC' : '#FFFFFF';
+    }
+    if (smsCard) {
+      smsCard.style.borderColor = smsChecked ? '#0284C7' : '#E2E4E9';
+      smsCard.style.backgroundColor = smsChecked ? '#F8FAFC' : '#FFFFFF';
+    }
+
+    // Subject line required for email
+    if (subjectWrapper) {
+      subjectWrapper.style.display = (emailChecked || (!emailBox && !waBox)) ? 'block' : 'none';
+    }
+
+    // WhatsApp provider template required for WhatsApp
+    if (waWrapper) {
+      waWrapper.style.display = waChecked ? 'block' : 'none';
+    }
+
+    // Fallback primary channel
+    if (channelFallback) {
+      if (emailChecked) channelFallback.value = 'email';
+      else if (waChecked) channelFallback.value = 'whatsapp';
+      else if (smsChecked) channelFallback.value = 'sms';
+      else channelFallback.value = '';
+    }
+
+    // Summary badge text
+    if (badge) {
+      var selected = [];
+      if (emailChecked) selected.push('Email');
+      if (waChecked) selected.push('WhatsApp');
+      if (smsChecked) selected.push('SMS');
+
+      if (selected.length === 0) {
+        badge.className = 'badge bg-danger-subtle text-danger border border-danger-subtle';
+        badge.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i>Please select at least 1 channel';
+      } else if (selected.length === 1) {
+        badge.className = 'badge bg-light text-primary border';
+        badge.innerHTML = '<i class="bi bi-check2-circle me-1"></i>Single Channel: ' + selected[0];
+      } else {
+        badge.className = 'badge bg-primary text-white shadow-sm';
+        badge.innerHTML = '<i class="bi bi-broadcast me-1"></i>Multi-Channel (' + selected.length + '): ' + selected.join(' + ');
+      }
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.channel-checkbox').forEach(function(cb) {
+      cb.addEventListener('change', updateChannelFieldVisibility);
+    });
+
+    document.querySelectorAll('.channel-select-card').forEach(function(card) {
+      card.addEventListener('click', function(e) {
+        if (e.target.tagName.toLowerCase() !== 'input' && e.target.tagName.toLowerCase() !== 'label') {
+          var checkbox = card.querySelector('.channel-checkbox');
+          if (checkbox) {
+            checkbox.checked = !checkbox.checked;
+            updateChannelFieldVisibility();
+          }
+        }
+      });
+    });
+
+    updateChannelFieldVisibility();
+  });
+</script>
+{% endblock %}

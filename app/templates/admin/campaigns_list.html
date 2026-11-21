@@ -1,0 +1,93 @@
+{% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
+
+{% block title %}Message Campaigns - TMA{% endblock %}
+
+{% block shell %}
+  {% include layout %}
+{% endblock %}
+
+{% block content %}
+<!-- DEBUG: campaigns_list.html role={{ current_user.role }} count={{ campaigns|length }} -->
+<div class="container-fluid py-4 px-md-4">
+  <div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+      <h2 class="fw-bold mb-1" style="font-family: 'Bitter', serif;">Targeted Campaigns</h2>
+      <p class="text-muted small mb-0">Create, test, and broadcast verified communication campaigns to opted-in users.</p>
+    </div>
+    <a href="{{ url_for('admin.campaign_new') }}" class="btn btn-primary fw-medium">
+      <i class="bi bi-plus-lg me-1"></i> New Campaign
+    </a>
+  </div>
+
+  <div class="card shadow-sm border-0 rounded-3">
+    <div class="card-body p-0">
+      {% if campaigns %}
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light text-muted small text-uppercase">
+            <tr>
+              <th scope="col" class="ps-4">Channel</th>
+              <th scope="col">Subject / Preview</th>
+              <th scope="col">Status</th>
+              <th scope="col">Recipients</th>
+              <th scope="col">Created</th>
+              <th scope="col" class="text-end pe-4">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in campaigns %}
+            <tr>
+              <td class="ps-4">
+                <span class="badge {% if c.channel == 'email' %}bg-primary{% elif c.channel == 'whatsapp' %}bg-success{% else %}bg-info text-dark{% endif %} text-uppercase">
+                  {{ c.channel }}
+                </span>
+              </td>
+              <td>
+                <div class="fw-semibold text-dark text-truncate" style="max-width: 320px;">
+                  {{ c.subject or c.template_body[:60] ~ '...' }}
+                </div>
+                <div class="text-muted small text-truncate" style="max-width: 320px;">
+                  {{ c.template_body[:80] }}
+                </div>
+              </td>
+              <td>
+                {{ status_badge(c.status, 'campaign_status') }}
+              </td>
+              <td>
+                {{ c.recipient_count if c.recipient_count is not none else '—' }}
+              </td>
+              <td class="small text-muted">
+                {{ c.created_at.strftime('%Y-%m-%d %H:%M') if c.created_at else '' }}
+              </td>
+              <td class="text-end pe-4">
+                <div class="btn-group btn-group-sm">
+                  <a href="{{ url_for('admin.campaign_detail', id=c.id) }}" class="btn btn-outline-secondary">
+                    View
+                  </a>
+                  {% if c.status != 'sent' %}
+                  <a href="{{ url_for('admin.campaign_edit', id=c.id) }}" class="btn btn-outline-primary">
+                    Edit
+                  </a>
+                  {% endif %}
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="text-center py-5">
+        <div class="text-muted mb-3 fs-1">&#9993;</div>
+        <h5 class="fw-bold text-dark">No campaigns found</h5>
+        <p class="text-muted small mb-4">Start composing an email, WhatsApp, or SMS communication campaign.</p>
+        <a href="{{ url_for('admin.campaign_new') }}" class="btn btn-primary btn-sm">
+          Create First Campaign
+        </a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

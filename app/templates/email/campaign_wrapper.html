@@ -1,0 +1,41 @@
+<!-- DEBUG: campaign_wrapper.html org={{ current_org.name if current_org else '' }} -->
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>{{ current_org.name if current_org else 'TMA Platform' }}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; margin: 0; padding: 0; background-color: #f8fafc; color: #1e293b; }
+    .wrapper { max-width: 600px; margin: 24px auto; background-color: #ffffff; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+    .header { background-color: #0f172a; color: #ffffff; padding: 24px; text-align: center; }
+    .header h1 { margin: 0; font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+    .content { padding: 32px 24px; font-size: 15px; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+    .footer { padding: 24px; background-color: #f1f5f9; font-size: 12px; color: #64748b; text-align: center; border-top: 1px solid #e2e8f0; }
+    .footer a { color: #0284c7; text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="wrapper">
+    <div class="header">
+      <h1>{{ current_org.name if current_org else 'TMA Platform' }}</h1>
+    </div>
+    {% if poster_url %}
+    <div class="poster-container" style="text-align: center; background-color: #0f172a; margin: 0; padding: 0;">
+      <img src="{{ poster_url }}" alt="Campaign Poster" style="width: 100%; max-width: 600px; height: auto; display: block; margin: 0 auto; border-bottom: 1px solid #e2e8f0;">
+    </div>
+    {% endif %}
+    <div class="content">
+{{ body }}
+    </div>
+    <div class="footer">
+      <p style="margin: 0 0 8px 0;">
+        You received this message because you opted in to marketing announcements from {{ current_org.name if current_org else 'TMA Platform' }}.
+      </p>
+      <p style="margin: 0;">
+        <a href="{{ unsubscribe_url }}">Unsubscribe from these emails</a> &bull;
+        <a href="#">Privacy Policy</a>
+      </p>
+    </div>
+  </div>
+</body>
+</html>
