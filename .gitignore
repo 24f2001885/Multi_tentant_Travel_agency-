@@ -13,6 +13,10 @@ instance/
 
 # Env / secrets
 .env
+.env.*
+.env.production
+!.env.example
+!.env.production.example
 
 # Testing
 .pytest_cache/

@@ -59,13 +59,14 @@ def update_status(
 ) -> CallRequest:
     """
     Updates status through allowed state transitions:
-    new -> contacted, contacted -> closed, new -> closed.
+    new -> contacted, contacted -> closed, new -> closed,
+    closed -> new (reopen closed request).
     """
     current_status = call_request.status
     allowed_transitions = {
         "new": {"contacted", "closed"},
         "contacted": {"closed"},
-        "closed": set(),
+        "closed": {"new"},
     }
 
     if new_status not in allowed_transitions.get(current_status, set()):

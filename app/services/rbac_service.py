@@ -39,6 +39,11 @@ CAPABILITY_CATALOG: List[tuple[str, str, bool]] = [
     ("tickets.view", "View incoming customer query and problem tickets", False),
     ("tickets.respond", "Respond to support tickets and change ticket status", False),
     ("reports.view", "View trek completion reports, analytics, and participant summaries", False),
+    ("bookings.manual_create", "Create offline/manual bookings for customers", False),
+    ("bookings.force_cancel", "Force-cancel bookings on assigned treks with operational reason", False),
+    ("treks.create", "Originate new treks pending admin approval", False),
+    ("treks.edit_content", "Edit itinerary and media content on created or assigned treks", False),
+    ("campaigns.compose", "Compose and send targeted communication campaigns", False),
     # Protected tenant-admin capabilities (for catalog listing/documentation only; enforcement NEVER reads DB)
     ("settings.org.edit", "Edit organization profile, branding, colors, and legal terms", True),
     ("payments.payout.configure", "Configure payout bank accounts and Razorpay Route linkage", True),
@@ -109,6 +114,7 @@ def seed_starter_roles(org: Organization) -> List[Role]:
             "Trek Coordinator",
             [
                 "treks.manage_assigned",
+                "treks.edit_content",
                 "participants.view",
                 "payments.view_assigned",
                 "tickets.view",

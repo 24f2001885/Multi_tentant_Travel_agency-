@@ -1,0 +1,45 @@
+name: Deploy TMA to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Production
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy to AWS EC2 via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.AWS_HOST }}
+          username: ${{ secrets.AWS_USER || 'ubuntu' }}
+          key: ${{ secrets.AWS_SSH_KEY }}
+          port: 22
+          script_stop: true
+          script: |
+            set -e
+            echo "=== [1/5] Navigating to TMA Project Directory ==="
+            cd /home/ubuntu/mad1
+
+            echo "=== [2/5] Pulling Latest Changes from GitHub (main) ==="
+            git fetch origin main
+            git reset --hard origin/main
+
+            echo "=== [3/5] Building & Launching Low-Memory Production Containers ==="
+            docker compose -f docker-compose.prod.yml up -d --build
+
+            echo "=== [4/5] Executing Database Migrations ==="
+            docker compose -f docker-compose.prod.yml exec -T web flask db upgrade
+
+            echo "=== [5/5] Initializing Live Production Tenants ==="
+            docker compose -f docker-compose.prod.yml exec -T web flask init-live-tenants
+
+            echo "=== [Verification] Checking Container Status ==="
+            docker compose -f docker-compose.prod.yml ps
+
+            echo "Deployment to abhishek4312.info subdomains completed successfully!"

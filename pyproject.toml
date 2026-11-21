@@ -4,3 +4,23 @@ line-length = 100
 [tool.isort]
 profile = "black"
 line_length = 100
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+exclude = [
+    ".git",
+    ".pytest_cache",
+    "instance",
+    "venv",
+    ".venv",
+    "migrations",
+]
+
+[tool.ruff.lint]
+select = [
+    "E9",   # syntax errors
+    "F63",  # assertion errors
+    "F7",   # syntax / undefined in __all__
+    "F82",  # undefined names (F821, etc.)
+]

@@ -1,0 +1,93 @@
+name: TMA Multi-Tenant Platform CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'phase/**'
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: tma_platform_test
+          POSTGRES_USER: tma
+          POSTGRES_PASSWORD: tma_dev_password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      - name: Install System Dependencies (WeasyPrint / Fonts)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libpango-1.0-0 libharfbuzz0b libpangoft2-1.0-0 fonts-dejavu-core
+
+      - name: Install Python Dependencies & Linters
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+          pip install flake8 ruff
+
+      - name: Verify Python Code Syntax
+        run: |
+          python -m compileall app migrations tests
+
+      - name: Static Code Analysis (Ruff & Flake8)
+        run: |
+          ruff check app tests
+          flake8 app migrations tests --count --select=E9,F63,F7,F82 --show-source --statistics
+
+      - name: "Required Gate: Cross-Tenant Data Isolation Suite (TDR §10)"
+        env:
+          TEST_DATABASE_URL: postgresql://tma:tma_dev_password@localhost:5432/tma_platform_test
+          DATABASE_URL: postgresql://tma:tma_dev_password@localhost:5432/tma_platform_test
+          SECRET_KEY: ci-secret-key-tma-multi-tenant
+          HASHIDS_SALT: ci-salt-hashids-tma
+          FLASK_APP: app:create_app
+          BASE_DOMAIN: abhishek4312.info
+          PLATFORM_ADMIN_HOST: platform.abhishek4312.info
+        run: |
+          pytest tests/isolation/ -v
+
+      - name: "Run Unit & Integration Test Suites"
+        env:
+          TEST_DATABASE_URL: postgresql://tma:tma_dev_password@localhost:5432/tma_platform_test
+          DATABASE_URL: postgresql://tma:tma_dev_password@localhost:5432/tma_platform_test
+          SECRET_KEY: ci-secret-key-tma-multi-tenant
+          HASHIDS_SALT: ci-salt-hashids-tma
+          FLASK_APP: app:create_app
+          BASE_DOMAIN: abhishek4312.info
+          PLATFORM_ADMIN_HOST: platform.abhishek4312.info
+        run: |
+          pytest tests/unit/ tests/integration/ -v
+
+      - name: "Verify Live Tenant Seeding Command"
+        env:
+          DATABASE_URL: postgresql://tma:tma_dev_password@localhost:5432/tma_platform_test
+          FLASK_APP: app:create_app
+          BASE_DOMAIN: abhishek4312.info
+          PLATFORM_ADMIN_HOST: platform.abhishek4312.info
+        run: |
+          flask init-live-tenants

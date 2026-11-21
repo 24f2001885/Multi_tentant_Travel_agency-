@@ -1,4 +1,5 @@
 import os
+import time
 import click
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -77,6 +78,15 @@ def create_app(config_object=None) -> Flask:
     app.config["RAZORPAY_KEY_SECRET"] = os.environ.get("RAZORPAY_KEY_SECRET")
     app.config["RAZORPAY_WEBHOOK_SECRET"] = os.environ.get("RAZORPAY_WEBHOOK_SECRET")
 
+    # WhatsApp Cloud API & Twilio configuration
+    app.config["WHATSAPP_PROVIDER"] = os.environ.get("WHATSAPP_PROVIDER", "meta_cloud_api")
+    app.config["WHATSAPP_ACCESS_TOKEN"] = os.environ.get("WHATSAPP_ACCESS_TOKEN")
+    app.config["WHATSAPP_PHONE_NUMBER_ID"] = os.environ.get("WHATSAPP_PHONE_NUMBER_ID")
+    app.config["WHATSAPP_BUSINESS_ACCOUNT_ID"] = os.environ.get("WHATSAPP_BUSINESS_ACCOUNT_ID")
+    app.config["WHATSAPP_WEBHOOK_VERIFY_TOKEN"] = os.environ.get("WHATSAPP_WEBHOOK_VERIFY_TOKEN", "tma_trek_token_123")
+    app.config["WHATSAPP_APP_SECRET"] = os.environ.get("WHATSAPP_APP_SECRET")
+    app.config["WHATSAPP_TEMPLATE_LANG"] = os.environ.get("WHATSAPP_TEMPLATE_LANG", "en_US")
+
     app.config["ADMIN_EMAIL"] = os.environ.get("ADMIN_EMAIL")
     app.config["ADMIN_PASSWORD"] = os.environ.get("ADMIN_PASSWORD")
 
@@ -119,8 +129,29 @@ def create_app(config_object=None) -> Flask:
     app.config["PROFILE_PIC_UPLOAD_FOLDER"] = os.path.join(
         app.root_path, "static", "uploads", "profile_pics"
     )
-    app.config["MAX_CONTENT_LENGTH"] = 2 * 1024 * 1024  # 2 MB upload cap
+    app.config["MAX_CONTENT_LENGTH"] = 30 * 1024 * 1024  # 30 MB upload cap (allows high-res trek photos and banners)
     os.makedirs(app.config["PROFILE_PIC_UPLOAD_FOLDER"], exist_ok=True)
+
+    # Comms provider validation (Milestone P11)
+    email_prov = app.config.get("EMAIL_PROVIDER", os.environ.get("EMAIL_PROVIDER", "smtp")).lower()
+    sms_prov = app.config.get("SMS_PROVIDER", os.environ.get("SMS_PROVIDER", "twilio")).lower()
+    wa_prov = app.config.get("WHATSAPP_PROVIDER", os.environ.get("WHATSAPP_PROVIDER", "meta_cloud_api")).lower()
+
+    valid_email_provs = ("smtp", "sendgrid", "ses")
+    if email_prov not in valid_email_provs:
+        raise ValueError(f"Unknown EMAIL_PROVIDER '{email_prov}'. Must be one of {valid_email_provs}.")
+
+    valid_sms_provs = ("twilio",)
+    if sms_prov not in valid_sms_provs:
+        raise ValueError(f"Unknown SMS_PROVIDER '{sms_prov}'. Must be one of {valid_sms_provs}.")
+
+    valid_wa_provs = ("meta_cloud_api", "twilio")
+    if wa_prov not in valid_wa_provs:
+        raise ValueError(f"Unknown WHATSAPP_PROVIDER '{wa_prov}'. Must be one of {valid_wa_provs}.")
+
+    if not app.debug and not app.config.get("TESTING"):
+        if email_prov == "sendgrid" and not app.config.get("SENDGRID_API_KEY"):
+            raise ValueError("SENDGRID_API_KEY is required when EMAIL_PROVIDER is 'sendgrid'.")
 
     # 3. Extensions initialization
     db.init_app(app)
@@ -128,7 +159,10 @@ def create_app(config_object=None) -> Flask:
     login_manager.init_app(app)
     mail.init_app(app)
     csrf.init_app(app)
-    scheduler.init_app(app)
+    try:
+        scheduler.init_app(app)
+    except Exception:
+        pass
     limiter.init_app(app)
 
     # 4. URL Map Converters (Register BEFORE any blueprints)
@@ -136,6 +170,26 @@ def create_app(config_object=None) -> Flask:
 
     # 5. Initialize Tenancy Subsystem (Host resolution & request hooks)
     init_tenancy(app)
+
+    # 5.1 Real-time Request Telemetry (Latency & HTTP Status tracking)
+    @app.before_request
+    def _record_request_start():
+        g.request_start_time = time.time()
+
+    @app.after_request
+    def _record_request_finish(response):
+        start_time = getattr(g, "request_start_time", None)
+        if start_time is not None:
+            duration_ms = (time.time() - start_time) * 1000.0
+            from app.services.monitoring_service import telemetry
+            telemetry.record(
+                method=request.method,
+                host=request.host,
+                path=request.path,
+                status_code=response.status_code,
+                duration_ms=duration_ms,
+            )
+        return response
 
     login_manager.login_view = "auth.login"
 
@@ -179,9 +233,17 @@ def create_app(config_object=None) -> Flask:
         caps = session.get("capability_keys") or []
         return key in caps
 
+    @app.template_global("tenant_has_feature")
+    def tenant_has_feature(key: str) -> bool:
+        org = getattr(g, "organization", None)
+        if not org or not hasattr(org, "has_feature"):
+            return True
+        return org.has_feature(key)
+
     # 7. Blueprints Registration (public_bp MUST be registered LAST)
-    from app.platform import platform_bp
+    from app.platform import platform_bp, platform_root_bp
     app.register_blueprint(platform_bp)
+    app.register_blueprint(platform_root_bp)
 
     from app.auth import auth_bp
     app.register_blueprint(auth_bp)
@@ -192,17 +254,28 @@ def create_app(config_object=None) -> Flask:
     from app.staff import staff_bp
     app.register_blueprint(staff_bp)
 
-    from app.trekker import trekker_bp
+    from app.trekker import trekker_bp, trekker_root_bp
     app.register_blueprint(trekker_bp)
+    app.register_blueprint(trekker_root_bp)
 
     from app.api import api_bp
     app.register_blueprint(api_bp)
+
+    # Route /webhook alias for WhatsApp webhook (compatible with root /webhook and /api/whatsapp/webhook)
+    from app.api.whatsapp_webhook_resource import WhatsAppWebhookResource
+    webhook_view = WhatsAppWebhookResource.as_view("whatsapp_webhook_root")
+    app.add_url_rule("/webhook", view_func=webhook_view, methods=["GET", "POST"])
+    csrf.exempt(webhook_view)
 
     from app.tickets import tickets_bp
     app.register_blueprint(tickets_bp)
 
     from app.public import public_bp
     app.register_blueprint(public_bp)
+
+    # 8. Dynamic Tenant Theme Loader
+    from app.tenancy.theme_loader import setup_tenant_theme_loader
+    setup_tenant_theme_loader(app)
 
     # # print(f"[DEBUG] create_app v2: db={app.config.get('DATABASE_URL','')[:12]} converters={list(app.url_map.converters)}")
 
@@ -226,7 +299,11 @@ def create_app(config_object=None) -> Flask:
         with tenant_bypass():
             existing = PlatformAdmin.query.filter_by(email=clean_email).first()
             if existing:
-                click.echo(f"Platform Admin '{clean_email}' already exists (id={existing.id}). Skipping.")
+                existing.name = name.strip()
+                existing.set_password(password)
+                existing.is_active = True
+                db.session.commit()
+                click.echo(f"Updated Platform Admin '{clean_email}' password from environment (id={existing.id}).")
                 return
 
             admin = PlatformAdmin(
@@ -239,12 +316,34 @@ def create_app(config_object=None) -> Flask:
             db.session.commit()
             click.echo(f"Seeded Platform Admin: {admin.email} (id={admin.id})")
 
+    @app.cli.command("init-live-tenants")
+    def init_live_tenants_cmd():
+        """Idempotently activates Tenant Zero and Apex Altitude Expeditions and suspends all others."""
+        from app.services.tenancy_service import init_live_tenants
+        res = init_live_tenants()
+        click.echo("Live Tenant Initialization Complete:")
+        click.echo(f"  Tenant 0: {res['tenant0']['name']} -> {res['tenant0']['domain']}")
+        click.echo(f"  Tenant 1: {res['tenant1']['name']} -> {res['tenant1']['domain']}")
+        click.echo(f"  Suspended {res['suspended_count']} other organization(s).")
+
+    @app.cli.command("seed-recruiter-demo")
+    def seed_recruiter_demo_cmd():
+        """Idempotently seeds recruiter demo data, treks, and sample bookings."""
+        from app.services.tenancy_service import seed_recruiter_demo
+        res = seed_recruiter_demo()
+        click.echo("Recruiter Demo Seeding Complete:")
+        click.echo(f"  Platform Super Admin: {res['platform_admin']}")
+        click.echo(f"  Tenant 0: {res['tenant0']['name']} ({res['tenant0']['domain']})")
+        click.echo(f"  Tenant 1: {res['tenant1']['name']} ({res['tenant1']['domain']})")
+
+
     @app.cli.command("create-tenant")
     @click.option("--name", required=True, help="Organization name")
     @click.option("--subdomain", required=True, help="Subdomain prefix")
     @click.option("--admin-email", required=True, help="Tenant admin email")
     @click.option("--admin-name", default="Admin", help="Tenant admin name")
-    def create_tenant(name, subdomain, admin_email, admin_name):
+    @click.option("--theme", default=None, help="Custom UI theme folder name or directory")
+    def create_tenant(name, subdomain, admin_email, admin_name, theme):
         """Provisions a new tenant organization and initial administrator."""
         from app.models.platform_admin import PlatformAdmin
         from app.services import tenancy_service
@@ -262,8 +361,11 @@ def create_app(config_object=None) -> Flask:
                     tenant_admin_email=admin_email,
                     tenant_admin_name=admin_name,
                     platform_admin=creator,
+                    theme=theme,
                 )
                 click.echo(f"Tenant '{org.name}' created successfully (id={org.id}).")
+                if org.theme:
+                    click.echo(f"Custom UI Theme: {org.theme}")
                 click.echo(f"Primary Domain: {subdomain}.{os.environ.get('BASE_DOMAIN', 'localhost')}")
                 click.echo(f"Tenant Admin: {admin_user.email}")
                 click.echo(f"Temporary Password (shown once): {temp_password}")
@@ -288,6 +390,13 @@ def create_app(config_object=None) -> Flask:
             backfill_count = rbac_service.backfill_staff_roles()
             click.echo(f"Seeded starter roles across {len(orgs)} organization(s).")
             click.echo(f"Backfilled {backfill_count} legacy staff profile(s) with 'Trek Coordinator' role.")
+
+    @app.cli.command("backfill-consents")
+    def backfill_consents_command():
+        """Backfills transactional EMAIL consent for legacy users across all tenants."""
+        from app.services import auth_service
+        count = auth_service.backfill_consents()
+        click.echo(f"Successfully backfilled transactional email consent for {count} user(s).")
 
     @app.cli.command("seed-tenant-zero")
     def seed_tenant_zero():
@@ -386,12 +495,15 @@ def create_app(config_object=None) -> Flask:
             ).scalar_one_or_none()
 
             if existing_admin:
-                click.echo("An Admin user already exists. Skipping duplicate creation.")
+                existing_admin.password_hash = generate_password_hash(admin_password)
+                existing_admin.is_active = True
                 with tenant_bypass():
                     if not org.tenant_admin_user_id:
                         org.tenant_admin_user_id = existing_admin.id
-                        db.session.commit()
+                    db.session.commit()
+                click.echo(f"Updated Admin user '{admin_email}' password from environment.")
                 return
+
 
             hashed_password = generate_password_hash(admin_password)
             country_code = os.environ.get("ADMIN_MOBILE_COUNTRY_CODE", "+91")
@@ -417,6 +529,24 @@ def create_app(config_object=None) -> Flask:
 
             click.echo(f"Successfully created Admin user: {admin_email} for org: {org.name} ({org.id})")
 
+    @app.cli.command("set-tenant-password")
+    @click.option("--email", prompt=True, help="User email address")
+    @click.option("--password", prompt=True, hide_input=False, help="New password")
+    def set_tenant_password(email, password):
+        """Sets or resets the password for any tenant user or admin."""
+        from app.models.user import User
+        from app.tenancy.scoping import tenant_bypass
+        with tenant_bypass():
+            user = User.query.filter_by(email=email.strip().lower()).first()
+            if not user:
+                click.echo(f"Error: User with email '{email}' not found.")
+                return
+            user.password_hash = generate_password_hash(password)
+            user.must_reset_password = False
+            user.is_active = True
+            db.session.commit()
+            click.echo(f"Successfully updated password for '{user.email}' (Org ID: {user.organization_id}).")
+
     # 9. Error Handlers
     @app.errorhandler(403)
     def _forbidden(error):
@@ -438,10 +568,17 @@ def create_app(config_object=None) -> Flask:
     # 10. Background Scheduler
     if not app.config.get("SCHEDULER_STARTED"):
         from app.services import payment_service
+
+        def _job_with_ctx(fn):
+            def _runner():
+                with app.app_context():
+                    return fn()
+            return _runner
+
         if scheduler.get_job("expire_stale_bookings") is None:
             scheduler.add_job(
                 id="expire_stale_bookings",
-                func=payment_service.expire_stale_bookings,
+                func=_job_with_ctx(payment_service.expire_stale_bookings),
                 trigger="interval",
                 minutes=15,
             )
@@ -449,7 +586,7 @@ def create_app(config_object=None) -> Flask:
         if scheduler.get_job("purge_expired_tickets") is None:
             scheduler.add_job(
                 id="purge_expired_tickets",
-                func=ticket_service.purge_expired,
+                func=_job_with_ctx(ticket_service.purge_expired),
                 trigger="cron",
                 hour=2,
                 minute=0,

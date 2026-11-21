@@ -22,6 +22,15 @@ class AlreadyRespondedError(Exception):
     pass
 
 
+class TicketResolvedError(Exception):
+    pass
+
+
+class UnauthorizedTicketActionError(Exception):
+    pass
+
+
+
 def create_ticket(
     user_id: int,
     ticket_type: str,
@@ -95,20 +104,65 @@ def get_scoped_tickets(actor, status: Optional[str] = None, type_: Optional[str]
     return query.all()
 
 
+def add_ticket_message(ticket: Ticket, sender, message_text: str):
+    """
+    Appends a new message to the ticket's message thread (Milestone P12 Support v2).
+    A ticket stays open until the raising Trekker marks it resolved.
+    """
+    if not message_text or not message_text.strip():
+        raise ValueError("Message content cannot be empty.")
+    if ticket.status == "resolved":
+        raise TicketResolvedError("This ticket is marked resolved and cannot accept further replies.")
+
+    from app.models.ticket_message import TicketMessage
+
+    clean_msg = message_text.strip()
+    now = datetime.now(timezone.utc)
+
+    msg = TicketMessage(
+        organization_id=ticket.organization_id,
+        ticket_id=ticket.id,
+        ticket=ticket,
+        sender_id=sender.id,
+        message=clean_msg,
+        created_at=now,
+    )
+    db.session.add(msg)
+
+    # Status progression
+    if sender.role in ("admin", "staff"):
+        ticket.status = "answered"
+        if not ticket.response:
+            ticket.response = clean_msg
+            ticket.responded_by_id = sender.id
+            ticket.responded_at = now
+    else:
+        # Trekker replying keeps/returns ticket to open status
+        ticket.status = "open"
+
+    db.session.flush()
+    return msg
+
+
 def respond_ticket(ticket: Ticket, responder, response_text: str) -> Ticket:
-    if ticket.response is not None:
+    """Legacy compatibility method: adds message and updates ticket.response."""
+    if ticket.response is not None and not ticket.messages:
         raise AlreadyRespondedError("This ticket already has a response and cannot be overwritten.")
 
-    ticket.response = response_text
-    ticket.responded_by_id = responder.id
-    ticket.responded_at = datetime.now(timezone.utc)
-    ticket.status = "answered"
+    add_ticket_message(ticket, responder, response_text)
     return ticket
 
 
-def resolve_ticket(ticket: Ticket) -> Ticket:
+def resolve_ticket(ticket: Ticket, resolver=None) -> Ticket:
+    """
+    Marks the ticket as resolved.
+    Enforces rule: Only the raising Trekker can mark the ticket resolved.
+    """
+    if resolver and ticket.user_id != resolver.id:
+        raise UnauthorizedTicketActionError("Only the raising trekker can mark this ticket as resolved.")
     ticket.status = "resolved"
     return ticket
+
 
 
 def purge_expired() -> int:

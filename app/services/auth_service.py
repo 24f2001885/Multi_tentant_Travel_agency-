@@ -6,7 +6,8 @@ from datetime import datetime, timedelta, timezone
 import hashlib
 import os
 import secrets
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Any
+
 
 from flask import current_app, g
 import phonenumbers
@@ -57,6 +58,70 @@ def validate_mobile(country_code: str, number: str) -> Tuple[str, str, str]:
         raise InvalidMobileError(f"Could not parse phone number '{raw}': {str(e)}")
 
 
+def record_consent(
+    user: User,
+    channel: str,
+    consent_type: str,
+    granted: bool,
+    source: str,
+) -> Any:
+    """
+    Upserts the single notification_consents row for (user_id, channel, consent_type).
+    granted -> granted_at=now, revoked_at=None
+    revoked -> revoked_at=now
+    Audits consent.grant or consent.revoke with source.
+    Does NOT commit.
+    """
+    from app.models.notification_consent import NotificationConsent
+    from app.models.audit_log import AuditLog
+    import json
+
+    channel = channel.strip().lower()
+    consent_type = consent_type.strip().lower()
+
+    consent = NotificationConsent.query.filter_by(
+        user_id=user.id,
+        channel=channel,
+        consent_type=consent_type,
+    ).first()
+
+    now = datetime.now(timezone.utc)
+    if not consent:
+        consent = NotificationConsent(
+            organization_id=user.organization_id,
+            user_id=user.id,
+            channel=channel,
+            consent_type=consent_type,
+            granted_at=now,
+            revoked_at=None if granted else now,
+        )
+        db.session.add(consent)
+    else:
+        if granted:
+            consent.granted_at = now
+            consent.revoked_at = None
+        else:
+            consent.revoked_at = now
+
+    audit = AuditLog.record(
+        actor_id=user.id,
+        action="consent.grant" if granted else "consent.revoke",
+        target_type="notification_consent",
+        target_id=0,
+        details=json.dumps({
+            "user_id": user.id,
+            "channel": channel,
+            "consent_type": consent_type,
+            "granted": granted,
+            "source": source,
+        }),
+    )
+    audit.organization_id = user.organization_id
+    db.session.add(audit)
+
+    return consent
+
+
 def register_user(
     name: str,
     email: str,
@@ -66,10 +131,15 @@ def register_user(
     mobile_country_code: str = "+91",
     mobile_number: Optional[str] = None,
     accept_terms: bool = True,
+    whatsapp_transactional: bool = False,
+    sms_transactional: bool = False,
+    marketing_email: bool = False,
+    marketing_whatsapp: bool = False,
+    marketing_sms: bool = False,
 ) -> User:
     """
     Registers a new user in the current tenant context.
-    Captures mobile country code, national number, and terms acceptance timestamp.
+    Captures mobile country code, national number, terms acceptance, and consent opt-ins.
     """
     if not accept_terms:
         raise TermsNotAcceptedError("You must accept the Terms and Conditions and Privacy Policy.")
@@ -103,6 +173,22 @@ def register_user(
                 approval_status="pending",
             )
             db.session.add(staff_profile)
+
+        # Record implied transactional email consent
+        record_consent(user, "email", "transactional", granted=True, source="registration")
+
+        # Record explicit registration opt-ins
+        if whatsapp_transactional:
+            record_consent(user, "whatsapp", "transactional", granted=True, source="registration")
+        if sms_transactional:
+            record_consent(user, "sms", "transactional", granted=True, source="registration")
+        if marketing_email:
+            record_consent(user, "email", "marketing", granted=True, source="registration")
+        if marketing_whatsapp:
+            record_consent(user, "whatsapp", "marketing", granted=True, source="registration")
+        if marketing_sms:
+            record_consent(user, "sms", "marketing", granted=True, source="registration")
+
         db.session.commit()
     except Exception:
         db.session.rollback()
@@ -110,6 +196,41 @@ def register_user(
 
     # print(f"[DEBUG] register_user org={getattr(g,'organization_id',None)} e164={e164}")
     return user
+
+
+def backfill_consents() -> int:
+    """
+    Backfills transactional EMAIL consent for all legacy users who do not have one.
+    Never grants WhatsApp, SMS, or marketing consents.
+    Runs under tenant_bypass. Idempotent.
+    Returns number of created consent records.
+    """
+    from app.models.notification_consent import NotificationConsent
+    from app.tenancy.scoping import tenant_bypass
+
+    created_count = 0
+    with tenant_bypass():
+        users = User.query.all()
+        for u in users:
+            existing = NotificationConsent.query.filter_by(
+                user_id=u.id,
+                channel="email",
+                consent_type="transactional",
+            ).first()
+            if not existing:
+                row = NotificationConsent(
+                    organization_id=u.organization_id,
+                    user_id=u.id,
+                    channel="email",
+                    consent_type="transactional",
+                    granted_at=u.created_at or datetime.now(timezone.utc),
+                    revoked_at=None,
+                )
+                db.session.add(row)
+                created_count += 1
+        db.session.commit()
+
+    return created_count
 
 
 def complete_account(
@@ -185,3 +306,42 @@ def issue_staff_default_password(staff_user: User) -> str:
     staff_user.set_password(default_password)
     staff_user.must_reset_password = True
     return default_password
+
+
+def create_user_for_manual_booking(
+    name: str,
+    email: str,
+    mobile_country_code: str,
+    mobile_number: str,
+) -> User:
+    """
+    Provisions a trekker user inline for a manual/offline booking.
+    terms_accepted_at is None (completion gate triggers on first login).
+    If email already exists in the organization, returns existing user without error.
+    """
+    clean_email = email.lower().strip()
+    existing = User.query.filter_by(email=clean_email).first()
+    if existing:
+        return existing
+
+    norm_cc, norm_num, _ = validate_mobile(mobile_country_code, mobile_number)
+    user = User(
+        name=name.strip(),
+        email=clean_email,
+        role="trekker",
+        mobile_country_code=norm_cc,
+        mobile_number=norm_num,
+        is_active=True,
+        must_reset_password=True,
+        terms_accepted_at=None,
+    )
+    user.set_password(secrets.token_urlsafe(32))
+    db.session.add(user)
+    db.session.commit()
+
+    try:
+        request_password_reset(clean_email)
+    except Exception:
+        pass
+
+    return user
