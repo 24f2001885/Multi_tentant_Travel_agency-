@@ -2,6 +2,7 @@
 Integration tests for Platform Admin authentication, session isolation, and host boundary enforcement (TDR v2 §2, §12, §13; PDR v2 §14.1; Milestone P8).
 """
 
+import os
 import pytest
 from app.extensions import db
 from app.models.organization import Organization
@@ -148,7 +149,8 @@ def test_onboard_organization_displays_temp_password(client_platform, platform_a
     assert resp.status_code == 200
     assert b"Tenant Provisioned Successfully" in resp.data
     assert b"One-Time Temporary Password" in resp.data
-    assert b"k2trek.localhost" in resp.data
+    base_domain = os.environ.get("BASE_DOMAIN", "localhost")
+    assert f"k2trek.{base_domain}".encode("utf-8") in resp.data
 
     # Verify tenant admin was created
     with tenant_bypass():

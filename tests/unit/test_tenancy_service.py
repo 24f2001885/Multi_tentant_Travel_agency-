@@ -2,6 +2,7 @@
 Unit tests for app/services/tenancy_service.py (TDR v2 §5, §13).
 """
 
+import os
 import pytest
 from unittest.mock import patch
 
@@ -36,8 +37,9 @@ def test_create_organization_atomic_success(app, platform_admin):
 
         # Verify domain
         dom = Domain.query.filter_by(organization_id=org.id).first()
+        base_domain = os.environ.get("BASE_DOMAIN", "localhost")
         assert dom is not None
-        assert dom.domain_name == "everest.localhost"
+        assert dom.domain_name == f"everest.{base_domain}"
         assert dom.is_primary is True
         assert dom.verified_at is not None
 
@@ -75,7 +77,8 @@ def test_create_organization_atomic_rollback_on_failure(app, platform_admin):
         pre_org = Organization(name="Existing", status="active", created_by_platform_admin_id=platform_admin.id)
         db.session.add(pre_org)
         db.session.flush()
-        pre_dom = Domain(organization_id=pre_org.id, domain_name="taken.localhost", domain_type="subdomain", is_primary=True)
+        base_domain = os.environ.get("BASE_DOMAIN", "localhost")
+        pre_dom = Domain(organization_id=pre_org.id, domain_name=f"taken.{base_domain}", domain_type="subdomain", is_primary=True)
         db.session.add(pre_dom)
         db.session.commit()
 
