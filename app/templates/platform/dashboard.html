@@ -98,33 +98,73 @@
   </div>
 </div>
 
-<!-- Deferred Panels (P9 / P13) -->
+<!-- Live Operational & Financial Telemetry (P9 & P13 Active) -->
 <div class="row g-4">
   <div class="col-md-6">
-    <div class="card h-100 p-4 bg-light border-dashed">
-      <div class="d-flex align-items-center mb-3">
-        <i class="bi bi-wallet2 fs-3 text-secondary me-3"></i>
-        <div>
-          <h5 class="fw-semibold mb-0">Net Route Revenue</h5>
-          <small class="text-muted">Automated payment split and commission engine</small>
+    <div class="card h-100 p-4 bg-white border">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center">
+          <div class="p-2 bg-success bg-opacity-10 text-success rounded-3 me-3">
+            <i class="bi bi-wallet2 fs-4"></i>
+          </div>
+          <div>
+            <h5 class="fw-semibold mb-0">Net Route Revenue</h5>
+            <small class="text-muted">Automated payment split and commission engine (P9)</small>
+          </div>
+        </div>
+        <span class="badge bg-success-subtle text-success border border-success-subtle">Engine Active</span>
+      </div>
+      <div class="row g-3 my-1">
+        <div class="col-6">
+          <div class="text-muted small">Gross Booking Volume (GMV)</div>
+          <div class="fs-4 fw-bold text-dark">₹{{ "{:,.2f}".format(business.gross_merchandise_value) if business else '0.00' }}</div>
+        </div>
+        <div class="col-6">
+          <div class="text-muted small">Est. Platform Commission ({{ business.commission_rate_percent if business else '5.0' }}%)</div>
+          <div class="fs-4 fw-bold text-success">₹{{ "{:,.2f}".format(business.estimated_commission) if business else '0.00' }}</div>
         </div>
       </div>
-      <div class="alert alert-secondary mb-0 small" role="alert">
-        <i class="bi bi-clock-history me-1"></i> Available after Milestone P9 (Booking & Money Engine v2).
+      <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
+        <span class="text-muted small"><i class="bi bi-check-circle-fill text-success me-1"></i> Razorpay Route Connected</span>
+        <a href="{{ url_for('platform.monitoring') }}" class="btn btn-sm btn-outline-primary">View Full Breakdown &rarr;</a>
       </div>
     </div>
   </div>
   <div class="col-md-6">
-    <div class="card h-100 p-4 bg-light border-dashed">
-      <div class="d-flex align-items-center mb-3">
-        <i class="bi bi-cpu fs-3 text-secondary me-3"></i>
-        <div>
-          <h5 class="fw-semibold mb-0">Infrastructure Load</h5>
-          <small class="text-muted">Database pool metrics and async job queue telemetry</small>
+    <div class="card h-100 p-4 bg-white border">
+      <div class="d-flex align-items-center justify-content-between mb-3">
+        <div class="d-flex align-items-center">
+          <div class="p-2 bg-primary bg-opacity-10 text-primary rounded-3 me-3">
+            <i class="bi bi-cpu fs-4"></i>
+          </div>
+          <div>
+            <h5 class="fw-semibold mb-0">Infrastructure Load</h5>
+            <small class="text-muted">Database telemetry and async background jobs (P13)</small>
+          </div>
+        </div>
+        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Healthy</span>
+      </div>
+      <div class="row g-3 my-1">
+        <div class="col-6 col-lg-3">
+          <div class="text-muted small">Database</div>
+          <div class="fs-6 fw-bold text-success"><i class="bi bi-database-check me-1"></i>{{ infra.database_uri_scheme|upper if infra else 'POSTGRES' }}</div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="text-muted small">RAM Used</div>
+          <div class="fs-6 fw-bold text-dark">{{ infra.ram.percent_used if infra and infra.ram else '0' }}% <span class="small text-muted">({{ (infra.ram.used_mb / 1024)|round(1) if infra and infra.ram else '0' }} GB)</span></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="text-muted small">Disk Used</div>
+          <div class="fs-6 fw-bold text-dark">{{ infra.disk_percent if infra else '0' }}% <span class="small text-muted">({{ infra.disk_used_gb if infra else '0' }} GB)</span></div>
+        </div>
+        <div class="col-6 col-lg-3">
+          <div class="text-muted small">HTTP Traffic</div>
+          <div class="fs-6 fw-bold text-primary">{{ infra.requests.total_requests if infra and infra.requests else '0' }} <span class="small text-muted">reqs</span></div>
         </div>
       </div>
-      <div class="alert alert-secondary mb-0 small" role="alert">
-        <i class="bi bi-clock-history me-1"></i> Available after Milestone P13 (Platform Operations & Observability).
+      <div class="mt-3 pt-2 border-top d-flex justify-content-between align-items-center">
+        <span class="text-muted small"><i class="bi bi-hdd-network text-info me-1"></i> Telemetry active</span>
+        <a href="{{ url_for('platform.monitoring') }}" class="btn btn-sm btn-outline-primary">Open Monitoring &rarr;</a>
       </div>
     </div>
   </div>

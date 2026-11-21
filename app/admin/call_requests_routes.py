@@ -44,7 +44,10 @@ def call_request_update_status(id: UUID):
     try:
         call_request_service.update_status(req, new_status, handler_user=current_user)
         db.session.commit()
-        flash(f"Call request marked as {new_status}.", "success")
+        if new_status == "new":
+            flash("Call request reopened successfully.", "success")
+        else:
+            flash(f"Call request marked as {new_status}.", "success")
     except InvalidCallRequestTransition as exc:
         flash(str(exc), "danger")
 

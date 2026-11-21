@@ -75,8 +75,8 @@ def test_legal_status_transitions_and_handled_by(app, org_a, make_user):
         assert req.handled_by == admin_user.id
 
 
-def test_illegal_status_transition_raises_error(app, org_a):
-    """Illegal transitions (e.g. closed -> new) raise InvalidCallRequestTransition."""
+def test_reopen_closed_call_request(app, org_a):
+    """Closed call requests can be reopened back to 'new'."""
     with app.app_context(), tenant_context(org_a.id):
         req = call_request_service.create_call_request(
             name="Bob Brown",
@@ -86,10 +86,27 @@ def test_illegal_status_transition_raises_error(app, org_a):
         db.session.commit()
         assert req.status == "closed"
 
-        # Attempt illegal transition from closed back to new
+        # Reopen closed call request back to new
+        call_request_service.update_status(req, "new")
+        db.session.commit()
+        assert req.status == "new"
+
+
+def test_illegal_status_transition_raises_error(app, org_a):
+    """Illegal transitions (e.g. contacted -> new or invalid status) raise InvalidCallRequestTransition."""
+    with app.app_context(), tenant_context(org_a.id):
+        req = call_request_service.create_call_request(
+            name="Bob Brown",
+            phone="+919876543212",
+        )
+        call_request_service.update_status(req, "contacted")
+        db.session.commit()
+        assert req.status == "contacted"
+
+        # Attempt illegal transition from contacted back to new
         with pytest.raises(InvalidCallRequestTransition, match="Cannot transition CallRequest"):
             call_request_service.update_status(req, "new")
 
-        # Attempt illegal transition from closed to contacted
+        # Attempt illegal transition with unsupported status
         with pytest.raises(InvalidCallRequestTransition, match="Cannot transition CallRequest"):
-            call_request_service.update_status(req, "contacted")
+            call_request_service.update_status(req, "cancelled")

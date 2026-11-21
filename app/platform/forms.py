@@ -3,7 +3,7 @@ WTForms for the Platform Admin console.
 """
 
 from flask_wtf import FlaskForm
-from wtforms import PasswordField, StringField, SubmitField
+from wtforms import PasswordField, SelectField, StringField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, Regexp
 
 
@@ -59,6 +59,19 @@ class OnboardOrganizationForm(FlaskForm):
             Length(max=255, message="Email must be 255 characters or fewer."),
         ],
     )
+    theme = StringField(
+        "Custom UI Theme / Directory (Optional)",
+        validators=[Length(max=100, message="Theme name must be 100 characters or fewer.")],
+    )
+    subscription_tier = SelectField(
+        "Subscription Tier",
+        choices=[
+            ("enterprise", "Enterprise Plan (Full Access)"),
+            ("growth", "Growth Plan (Coupons, Itineraries, Manual Bookings)"),
+            ("starter", "Starter Plan (Core Essentials)"),
+        ],
+        default="enterprise",
+    )
     submit = SubmitField("Onboard Organization")
 
 
@@ -75,6 +88,22 @@ class CustomDomainForm(FlaskForm):
         ],
     )
     submit = SubmitField("Add Custom Domain")
+
+
+class OrganizationPayoutForm(FlaskForm):
+    razorpay_route_account_id = StringField(
+        "Razorpay Route Account ID",
+        validators=[Length(max=100, message="Account ID must be 100 characters or fewer.")],
+    )
+    gst_number = StringField(
+        "GST Number",
+        validators=[Length(max=20, message="GST number must be 20 characters or fewer.")],
+    )
+    theme = StringField(
+        "Custom UI Theme / Directory",
+        validators=[Length(max=100, message="Theme name must be 100 characters or fewer.")],
+    )
+    submit = SubmitField("Save Configuration")
 
 
 class PlatformProfileForm(FlaskForm):

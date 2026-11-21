@@ -47,6 +47,14 @@ class Ticket(TenantScopedMixin, db.Model):
     trek = db.relationship("Trek", foreign_keys=[trek_id], lazy=True)
     booking = db.relationship("Booking", foreign_keys=[booking_id], lazy=True)
     responded_by = db.relationship("User", foreign_keys=[responded_by_id], lazy=True)
+    messages = db.relationship(
+        "TicketMessage",
+        back_populates="ticket",
+        cascade="all, delete-orphan",
+        order_by="TicketMessage.created_at.asc()",
+        lazy="selectin",
+    )
+
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)

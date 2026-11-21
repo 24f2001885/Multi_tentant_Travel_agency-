@@ -2,24 +2,45 @@
 {% extends "shared/base.html" %}
 {% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
 {% block content %}
-<div class="mx-auto bg-white border rounded-3 p-4" style="max-width:480px;border-color:#E2E4E9;">
-  <h1 class="h4 mb-4" style="font-family:'Bitter',serif;font-weight:700;">Profile</h1>
-  <form method="post">
-    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-    <div class="mb-3">
-      <label class="form-label">Name</label>
-      <input type="text" name="name" class="form-control" value="{{ current_user.name }}">
-    </div>
-    <div class="mb-3">
-      <label class="form-label">Email</label>
-      <input type="text" class="form-control" value="{{ current_user.email }}" disabled readonly>
-    </div>
-    <hr>
-    <h2 class="h6 text-uppercase" style="color:#6B7280;">Change Password</h2>
-    <div class="mb-3"><label class="form-label">Current Password</label><input type="password" name="current_password" class="form-control"></div>
-    <div class="mb-3"><label class="form-label">New Password</label><input type="password" name="new_password" class="form-control"></div>
-    <div class="mb-3"><label class="form-label">Confirm New Password</label><input type="password" name="confirm_password" class="form-control"></div>
-    <button type="submit" class="btn w-100" style="background:#1F4FD8;color:#fff;">Save Changes</button>
-  </form>
+<div class="mx-auto" style="max-width:520px;">
+  <h1 class="h4 mb-4" style="font-family:'Bitter',serif;font-weight:700;">Admin Profile</h1>
+
+  <!-- Profile Picture Upload Widget -->
+  <div class="d-flex align-items-center gap-4 mb-4 p-4 bg-white border rounded-3 shadow-sm" style="border-color:#E2E4E9;">
+    <img src="{{ current_user.avatar_url }}" 
+         alt="{{ current_user.name }}" class="flex-shrink-0 rounded-circle border shadow-sm" 
+         style="width: 80px; height: 80px; object-fit: cover; border-color: #E5E7EB;"
+         onerror="this.src='/static/img/default_avatar.svg'">
+
+    <form method="POST" action="{{ url_for('admin.upload_profile_picture') }}" enctype="multipart/form-data" class="flex-grow-1">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <label class="form-label fw-bold text-muted mb-2" style="font-size: 0.85rem;">UPDATE PICTURE</label>
+      <div class="input-group input-group-sm">
+        <input type="file" name="picture" class="form-control" accept=".jpg,.jpeg" required>
+        <button type="submit" class="btn text-white" style="background:#1F4FD8;">Upload</button>
+      </div>
+      <div class="form-text mt-1 text-muted" style="font-size:0.75rem;">JPG format only (max 2MB).</div>
+    </form>
+  </div>
+
+  <div class="bg-white border rounded-3 p-4 shadow-sm" style="border-color:#E2E4E9;">
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="mb-3">
+        <label class="form-label">Name</label>
+        <input type="text" name="name" class="form-control" value="{{ current_user.name }}">
+      </div>
+      <div class="mb-3">
+        <label class="form-label">Email</label>
+        <input type="text" class="form-control" value="{{ current_user.email }}" disabled readonly>
+      </div>
+      <hr>
+      <h2 class="h6 text-uppercase" style="color:#6B7280;">Change Password</h2>
+      <div class="mb-3"><label class="form-label">Current Password</label><input type="password" name="current_password" class="form-control"></div>
+      <div class="mb-3"><label class="form-label">New Password</label><input type="password" name="new_password" class="form-control"></div>
+      <div class="mb-3"><label class="form-label">Confirm New Password</label><input type="password" name="confirm_password" class="form-control"></div>
+      <button type="submit" class="btn w-100" style="background:#1F4FD8;color:#fff;">Save Changes</button>
+    </form>
+  </div>
 </div>
 {% endblock %}

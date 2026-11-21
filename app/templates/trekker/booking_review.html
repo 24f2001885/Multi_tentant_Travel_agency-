@@ -1,20 +1,348 @@
-
 {% extends "shared/base.html" %}
-{% block shell %}{% endblock %}
+{% block title %}Confirm Booking - {{ trek.name }}{% endblock %}
+
+{% block shell %}
+  {% include "shared/navbar_trekker.html" %}
+{% endblock %}
 
 {% block content %}
-<div class="tma-card" style="max-width: 560px; margin: 4rem auto;">
-  <h2>Confirm Your Booking</h2>
-  <p><strong>{{ trek.name }}</strong></p>
-  <p>{{ trek.start_date }} – {{ trek.end_date }}</p>
-  <p>Price: ₹{{ trek.price }}</p>
+<div class="container py-4 mb-5" style="max-width: 900px;">
+  <div class="mb-4">
+    <a href="{{ url_for('trekker.trek_detail', trek_id=trek.id) }}" class="text-decoration-none text-muted small">
+      &larr; Back to Trek Overview
+    </a>
+    <h2 class="fw-bold mt-2" style="font-family: 'Bitter', serif; color: #111827;">Confirm & Review Your Booking</h2>
+    <p class="text-secondary small mb-0">Please review your party details, apply any eligible discounts, and confirm your reservation.</p>
+  </div>
 
-  <form method="POST" action="{{ url_for('trekker.book', trek_id=trek.id) }}">
+  <form method="POST" action="{{ url_for('trekker.book', trek_id=trek.id) }}" id="booking-form">
     {{ form.csrf_token }}
-    <button type="submit" class="btn tma-btn-primary w-100">Confirm & Pay</button>
+
+    <div class="row g-4">
+      <!-- Left Column: Trek Info & Participants -->
+      <div class="col-lg-7">
+        
+        <!-- Trek Info Card -->
+        <div class="card border shadow-sm mb-4" style="border-radius: 10px; border-color: #E5E7EB !important;">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <div>
+                <span class="badge bg-dark text-white px-2 py-1 mb-2 text-uppercase" style="font-size: 0.7rem; letter-spacing: 0.05em;">
+                  {{ trek.difficulty | title }}
+                </span>
+                <h4 class="fw-bold mb-1" style="font-family: 'Bitter', serif; color: #111827;">{{ trek.name }}</h4>
+                <div class="text-muted small">
+                  <i class="bi bi-geo-alt me-1"></i>{{ trek.location | title }} &bull; 
+                  <i class="bi bi-calendar-event mx-1"></i>
+                  {{ trek.start_date.strftime('%b %d, %Y') if trek.start_date else 'TBD' }} &ndash; 
+                  {{ trek.end_date.strftime('%b %d, %Y') if trek.end_date else 'TBD' }}
+                </div>
+              </div>
+              <div class="text-end">
+                <span class="text-muted small d-block">Price / Person</span>
+                <span class="fw-bold text-dark fs-5">₹{{ "%.2f"|format(trek.price) }}</span>
+              </div>
+            </div>
+            <div class="mt-3 pt-3 border-top d-flex justify-content-between align-items-center">
+              <span class="small text-muted">Availability</span>
+              <span class="badge bg-success-subtle text-success-emphasis border border-success-subtle px-3 py-1">
+                {{ trek.available_slots }} slots remaining
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lead Participant & Personal Details Card -->
+        <div class="card border shadow-sm mb-4" style="border-radius: 10px; border-color: #E5E7EB !important;">
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-1" style="font-family: 'Bitter', serif;">Lead Participant (Primary Contact)</h5>
+            <p class="text-muted small mb-3">Pre-filled with your profile details. You can update them if booking on someone else's behalf.</p>
+
+            <div class="row g-3">
+              <div class="col-md-8">
+                <label class="form-label small fw-semibold">Full Name <span class="text-danger">*</span></label>
+                <input type="text" name="participant_name" class="form-control" 
+                       value="{{ current_user.name }}" required maxlength="150" placeholder="Full legal name">
+              </div>
+              <div class="col-md-4">
+                <label class="form-label small fw-semibold">Age</label>
+                <input type="number" name="participant_age" class="form-control" min="1" max="120" placeholder="Age">
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Contact Email</label>
+                <input type="email" class="form-control bg-light" value="{{ current_user.email }}" readonly>
+                <div class="form-text" style="font-size: 0.72rem;">Confirmation & tickets will be sent here.</div>
+              </div>
+              <div class="col-md-6">
+                <label class="form-label small fw-semibold">Mobile / Emergency Contact</label>
+                <input type="tel" name="contact_phone" class="form-control" 
+                       value="{% if current_user.mobile_number and current_user.mobile_number != 'UNSET' %}{{ current_user.mobile_country_code }} {{ current_user.mobile_number }}{% endif %}" 
+                       placeholder="+91 9999999999">
+                <div class="form-text" style="font-size: 0.72rem;">Include country code.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Additional Group Participants Card -->
+        <div class="card border shadow-sm mb-4" style="border-radius: 10px; border-color: #E5E7EB !important;">
+          <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <div>
+                <h5 class="fw-bold mb-0" style="font-family: 'Bitter', serif;">Additional Participants</h5>
+                <span class="text-muted small">Bringing friends or family? Add their details below.</span>
+              </div>
+              <button type="button" class="btn btn-outline-dark btn-sm" id="btn-add-participant">
+                <i class="bi bi-person-plus me-1"></i> Add Person
+              </button>
+            </div>
+
+            <div id="additional-participants-list" class="d-flex flex-column gap-3">
+              <!-- Dynamically added rows go here -->
+            </div>
+            
+            <div id="no-extra-participants-msg" class="text-muted small py-2 text-center bg-light rounded-2 border">
+              Only booking for 1 person currently. Click <strong>Add Person</strong> to include more.
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Coupons & Price Breakdown -->
+      <div class="col-lg-5">
+        
+        <!-- Coupon Card -->
+        <div class="card border shadow-sm mb-4" style="border-radius: 10px; border-color: #E5E7EB !important;">
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-2" style="font-family: 'Bitter', serif;">Promotional Coupon</h5>
+            <p class="text-muted small mb-3">Have a promotion code? Enter it below to claim your discount.</p>
+
+            <div class="input-group mb-2">
+              <input type="text" name="coupon_code" id="coupon-code-input" class="form-control text-uppercase" 
+                     placeholder="e.g. TEST500" style="letter-spacing: 0.05em;" autocomplete="off">
+              <button type="button" class="btn text-white" id="btn-apply-coupon" style="background-color: #111827;">
+                Apply
+              </button>
+            </div>
+
+            <div id="coupon-alert" class="small mt-2 d-none" role="alert"></div>
+          </div>
+        </div>
+
+        <!-- Order Summary & Checkout Card -->
+        <div class="card border shadow-sm sticky-top" style="border-radius: 10px; border-color: #E5E7EB !important; top: 2rem;">
+          <div class="card-body p-4">
+            <h5 class="fw-bold mb-3" style="font-family: 'Bitter', serif;">Payment Breakdown</h5>
+
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted small">Price per person</span>
+              <span class="small fw-semibold">₹{{ "%.2f"|format(trek.price) }}</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted small">Total participants</span>
+              <span class="small fw-semibold" id="display-slots">1</span>
+            </div>
+            <div class="d-flex justify-content-between mb-2">
+              <span class="text-muted small">Base subtotal</span>
+              <span class="small fw-semibold">₹<span id="display-subtotal">{{ "%.2f"|format(trek.price) }}</span></span>
+            </div>
+            <div class="d-flex justify-content-between mb-3 text-success d-none" id="discount-row">
+              <span class="small">Coupon Discount</span>
+              <span class="small fw-bold">-₹<span id="display-discount">0.00</span></span>
+            </div>
+
+            <hr class="my-3">
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <span class="fw-bold">Total Amount</span>
+              <span class="fw-bold fs-4 text-dark">₹<span id="display-total">{{ "%.2f"|format(trek.price) }}</span></span>
+            </div>
+
+            <button type="submit" class="btn w-100 py-3 text-white fw-bold shadow-sm" style="background-color: #1F4FD8; border-radius: 8px;">
+              Confirm & Pay ₹<span id="btn-total-text">{{ "%.2f"|format(trek.price) }}</span>
+            </button>
+
+            <div class="text-center mt-3">
+              <span class="text-muted" style="font-size: 0.72rem;">
+                <i class="bi bi-shield-lock me-1"></i> Secured 256-bit encrypted checkout via Razorpay
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
   </form>
-  <a href="{{ url_for('trekker.trek_detail', trek_id=trek.id) }}" class="btn tma-btn-ghost w-100 mt-2">
-    Back
-  </a>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+  const trekPrice = parseFloat("{{ trek.price }}");
+  const maxSlots = parseInt("{{ trek.available_slots }}", 10) || 1;
+  const csrfToken = "{{ csrf_token() }}";
+  const validateCouponUrl = "{{ url_for('trekker.validate_coupon_ajax', trek_id=trek.id) }}";
+
+  const participantsList = document.getElementById("additional-participants-list");
+  const emptyMsg = document.getElementById("no-extra-participants-msg");
+  const btnAdd = document.getElementById("btn-add-participant");
+  const couponInput = document.getElementById("coupon-code-input");
+  const btnApplyCoupon = document.getElementById("btn-apply-coupon");
+  const couponAlert = document.getElementById("coupon-alert");
+
+  const displaySlots = document.getElementById("display-slots");
+  const displaySubtotal = document.getElementById("display-subtotal");
+  const displayDiscount = document.getElementById("display-discount");
+  const discountRow = document.getElementById("discount-row");
+  const displayTotal = document.getElementById("display-total");
+  const btnTotalText = document.getElementById("btn-total-text");
+
+  let appliedCoupon = null;
+
+  function getParticipantCount() {
+    // 1 lead participant + extra participant rows
+    const extraRows = participantsList.querySelectorAll(".participant-row");
+    return 1 + extraRows.length;
+  }
+
+  function updatePricing() {
+    const count = getParticipantCount();
+    const baseSubtotal = trekPrice * count;
+    displaySlots.textContent = count;
+    displaySubtotal.textContent = baseSubtotal.toFixed(2);
+
+    let discount = 0;
+    if (appliedCoupon && appliedCoupon.valid) {
+      if (appliedCoupon.discount_type === "percentage") {
+        discount = baseSubtotal * (appliedCoupon.discount_value / 100);
+      } else {
+        discount = appliedCoupon.discount_value;
+      }
+      discount = Math.min(discount, Math.max(0, baseSubtotal - 1.00));
+    }
+
+    if (discount > 0) {
+      discountRow.classList.remove("d-none");
+      displayDiscount.textContent = discount.toFixed(2);
+    } else {
+      discountRow.classList.add("d-none");
+      displayDiscount.textContent = "0.00";
+    }
+
+    const finalTotal = Math.max(1.00, baseSubtotal - discount);
+    displayTotal.textContent = finalTotal.toFixed(2);
+    btnTotalText.textContent = finalTotal.toFixed(2);
+
+    if (count >= maxSlots) {
+      btnAdd.disabled = true;
+      btnAdd.title = "Maximum available slots reached";
+    } else {
+      btnAdd.disabled = false;
+      btnAdd.title = "";
+    }
+  }
+
+  btnAdd.addEventListener("click", function () {
+    const currentCount = getParticipantCount();
+    if (currentCount >= maxSlots) {
+      alert("Cannot add more participants than available slots (" + maxSlots + ").");
+      return;
+    }
+
+    const rowIdx = currentCount + 1;
+    const rowDiv = document.createElement("div");
+    rowDiv.className = "participant-row p-3 border rounded-3 bg-light position-relative";
+    rowDiv.innerHTML = `
+      <div class="d-flex justify-content-between align-items-center mb-2">
+        <span class="small fw-bold text-muted text-uppercase">Participant #${rowIdx}</span>
+        <button type="button" class="btn btn-sm btn-outline-danger btn-remove-participant py-0 px-2" style="font-size: 0.75rem;">
+          <i class="bi bi-trash"></i> Remove
+        </button>
+      </div>
+      <div class="row g-2">
+        <div class="col-8">
+          <input type="text" name="participant_name" class="form-control form-control-sm" required placeholder="Full Name">
+        </div>
+        <div class="col-4">
+          <input type="number" name="participant_age" class="form-control form-control-sm" min="1" max="120" placeholder="Age">
+        </div>
+      </div>
+    `;
+
+    rowDiv.querySelector(".btn-remove-participant").addEventListener("click", function () {
+      rowDiv.remove();
+      if (participantsList.children.length === 0) {
+        emptyMsg.classList.remove("d-none");
+      }
+      updatePricing();
+      if (appliedCoupon) {
+        revalidateCoupon();
+      }
+    });
+
+    participantsList.appendChild(rowDiv);
+    emptyMsg.classList.add("d-none");
+    updatePricing();
+
+    if (appliedCoupon) {
+      revalidateCoupon();
+    }
+  });
+
+  function revalidateCoupon() {
+    const code = couponInput.value.trim();
+    if (!code) return;
+    const count = getParticipantCount();
+
+    fetch(validateCouponUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-CSRFToken": csrfToken
+      },
+      body: JSON.stringify({ coupon_code: code, slot_count: count })
+    })
+    .then(res => res.json().then(data => ({ status: res.status, body: data })))
+    .then(({ status, body }) => {
+      if (status === 200 && body.valid) {
+        appliedCoupon = body;
+        couponAlert.className = "alert alert-success small mt-2 py-2 mb-0";
+        couponAlert.textContent = body.message || `Coupon '${body.code}' applied!`;
+        couponAlert.classList.remove("d-none");
+      } else {
+        appliedCoupon = null;
+        couponAlert.className = "alert alert-danger small mt-2 py-2 mb-0";
+        couponAlert.textContent = body.error || "Invalid coupon code.";
+        couponAlert.classList.remove("d-none");
+      }
+      updatePricing();
+    })
+    .catch(err => {
+      console.error(err);
+    });
+  }
+
+  btnApplyCoupon.addEventListener("click", function () {
+    const code = couponInput.value.trim();
+    if (!code) {
+      couponAlert.className = "alert alert-warning small mt-2 py-2 mb-0";
+      couponAlert.textContent = "Please enter a coupon code.";
+      couponAlert.classList.remove("d-none");
+      appliedCoupon = null;
+      updatePricing();
+      return;
+    }
+    revalidateCoupon();
+  });
+
+  couponInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      btnApplyCoupon.click();
+    }
+  });
+
+  updatePricing();
+});
+</script>
 {% endblock %}

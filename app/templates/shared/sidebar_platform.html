@@ -21,18 +21,43 @@
       </a>
     </li>
     <li class="nav-item mb-1">
+      <a href="{{ url_for('platform.monitoring') }}" class="nav-link text-white {{ 'active' if request.endpoint == 'platform.monitoring' else '' }}" style="{{ 'background-color: var(--platform-accent, #7C3AED);' if request.endpoint == 'platform.monitoring' else '' }}">
+        <i class="bi bi-activity me-2"></i>
+        Monitoring
+      </a>
+    </li>
+    <li class="nav-item mb-1">
+      <a href="{{ url_for('platform.backups') }}" class="nav-link text-white {{ 'active' if request.endpoint == 'platform.backups' else '' }}" style="{{ 'background-color: var(--platform-accent, #7C3AED);' if request.endpoint == 'platform.backups' else '' }}">
+        <i class="bi bi-cloud-arrow-down me-2"></i>
+        Backups
+      </a>
+    </li>
+    <li class="nav-item mb-1">
+      <a href="{{ url_for('platform.audit_logs') }}" class="nav-link text-white {{ 'active' if request.endpoint == 'platform.audit_logs' else '' }}" style="{{ 'background-color: var(--platform-accent, #7C3AED);' if request.endpoint == 'platform.audit_logs' else '' }}">
+        <i class="bi bi-shield-check me-2"></i>
+        Audit Trail
+      </a>
+    </li>
+    <li class="nav-item mb-1">
       <a href="{{ url_for('platform.profile') }}" class="nav-link text-white {{ 'active' if request.endpoint == 'platform.profile' else '' }}" style="{{ 'background-color: var(--platform-accent, #7C3AED);' if request.endpoint == 'platform.profile' else '' }}">
         <i class="bi bi-person-gear me-2"></i>
-        Profile & Settings
+        Profile &amp; Settings
       </a>
     </li>
   </ul>
 
   <hr style="border-color: #334155;">
   <div class="d-flex flex-column">
-    <div class="mb-2">
-      <small class="text-muted d-block">Operator</small>
-      <strong class="text-white">{{ admin.name if admin else 'Platform Operator' }}</strong>
+    <div class="d-flex align-items-center mb-3">
+      <img src="{{ admin.avatar_url if admin else '/static/img/default_avatar.svg' }}" 
+           alt="{{ admin.name if admin else 'Platform Operator' }}" 
+           class="rounded-circle me-2 border border-secondary shadow-sm flex-shrink-0" 
+           style="width: 36px; height: 36px; object-fit: cover;"
+           onerror="this.src='/static/img/default_avatar.svg'">
+      <div class="text-truncate">
+        <small class="text-muted d-block" style="font-size:0.75rem;">Operator</small>
+        <strong class="text-white small text-truncate d-block" style="max-width:140px;">{{ admin.name if admin else 'Platform Operator' }}</strong>
+      </div>
     </div>
     <form action="{{ url_for('platform.logout') }}" method="POST" class="d-inline">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">

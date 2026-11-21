@@ -96,6 +96,24 @@
             <div class="form-text">3–63 lowercase alphanumeric characters. Cannot conflict with reserved words.</div>
           </div>
 
+          <div class="mb-4">
+            <label for="theme" class="form-label small fw-semibold">UI Theme / Directory (Optional)</label>
+            {{ form.theme(class="form-control" + (" is-invalid" if form.theme.errors else ""), placeholder="e.g. modern_alpine", id="theme") }}
+            {% for error in form.theme.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <div class="form-text">Custom UI template folder under <code>app/templates/themes/&lt;theme_name&gt;</code>. Leave blank to use the default core theme.</div>
+          </div>
+
+          <div class="mb-4">
+            <label for="subscription_tier" class="form-label small fw-semibold">SaaS Subscription Tier</label>
+            {{ form.subscription_tier(class="form-select" + (" is-invalid" if form.subscription_tier.errors else ""), id="subscription_tier") }}
+            {% for error in form.subscription_tier.errors %}
+              <div class="invalid-feedback">{{ error }}</div>
+            {% endfor %}
+            <div class="form-text">Select subscription tier for initial feature entitlements. Can be customized anytime.</div>
+          </div>
+
           <h5 class="fw-semibold mb-3 border-bottom pb-2 pt-2">Initial Tenant Administrator</h5>
           <div class="row g-3 mb-4">
             <div class="col-md-6">

@@ -1,55 +1,416 @@
-
 {% extends "shared/base.html" %}
+{% from "shared/_badge_macros.html" import status_badge %}
 {% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
 
 {% block content %}
+<style>
+.stat-box-card {
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+  cursor: pointer;
+}
+.stat-box-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08) !important;
+  border-color: #CBD5E1 !important;
+}
+.stat-box-card:hover .stat-box-arrow {
+  transform: translateX(4px);
+  transition: transform 0.18s ease;
+}
+</style>
+
 <!-- DEBUG: dashboard.html rendered stats={{ stats }} -->
-<h1 class="h3 mb-4" style="font-family:'Bitter',serif;font-weight:700;">Dashboard</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+  <div>
+    <h1 class="h3 mb-1" style="font-family:'Bitter',serif;font-weight:700;">Super Admin Dashboard</h1>
+    <div style="font-family:'Inter',sans-serif;font-size:0.875rem;color:#6B7280;">
+      Real-time overview of revenue, operations, customer inquiries, marketing campaigns, and bookings.
+    </div>
+  </div>
+  <div class="d-flex flex-wrap gap-2">
+    <a href="{{ url_for('admin.campaign_new') }}" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center">
+      <i class="bi bi-megaphone me-1"></i> New Campaign
+    </a>
+    <a href="{{ url_for('admin.trek_new') }}" class="btn btn-sm text-white d-inline-flex align-items-center" style="background:#1F4FD8;">
+      <i class="bi bi-plus-lg me-1"></i> Create Trek
+    </a>
+  </div>
+</div>
 
-
-<div class="row g-3 mb-4">
-  {% set stat_items = [
-    ('Total Treks', stats.total_treks, 'bi-compass', '#E0E7FF', '#3730A3'),
-    ('Total Users', stats.total_users, 'bi-people', '#DCFCE7', '#166534'),
-    ('Total Staff', stats.total_staff, 'bi-person-badge', '#FEF3C7', '#92400E'),
-    ('Total Bookings', stats.total_bookings, 'bi-journal-check', '#F3E8FF', '#6B21A8')
-  ] %}
-  {% for label, value, icon, bg_color, text_color in stat_items %}
-  <div class="col-6 col-lg-3">
-    <div class="p-3 bg-white border rounded-3" style="border-color:#E2E4E9;">
-      <div class="d-flex justify-content-between align-items-start">
+{# Operational Notifications / Action Required Hub #}
+{% if notifications and notifications.total_pending_actions > 0 %}
+<div class="p-3 mb-4 rounded-3 border" style="background:#FFFBF2; border-color:#FED7AA !important;">
+  <div class="d-flex align-items-center mb-3">
+    <span class="badge bg-danger rounded-pill me-2 px-2 py-1">Action Required</span>
+    <h2 class="h6 mb-0" style="font-family:'Bitter',serif;font-weight:700;color:#9A3412;">
+      Operational Tasks Awaiting Your Attention ({{ notifications.total_pending_actions }})
+    </h2>
+  </div>
+  <div class="row g-3">
+    {% if notifications.new_call_requests > 0 %}
+    <div class="col-sm-6 col-lg-3">
+      <div class="p-3 bg-white border rounded-3 h-100 d-flex flex-column justify-content-between shadow-sm position-relative stat-box-card" style="border-color:#FDBA74 !important; border-left:4px solid #EA580C !important;">
         <div>
-          <div style="font-family:'Bitter',serif;font-weight:700;font-size:2rem;line-height:1.2;color:#14161A;">{{ value }}</div>
-          <div class="mt-1" style="font-family:'Inter',sans-serif;font-size:0.875rem;color:#6B7280;">{{ label }}</div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="badge rounded-pill" style="background:#FFEDD5; color:#C2410C; font-weight:600;">Call Request</span>
+            <i class="bi bi-telephone-inbound-fill text-warning fs-5"></i>
+          </div>
+          <div class="fw-bold fs-4 text-dark mb-1">{{ notifications.new_call_requests }}</div>
+          <p class="small text-muted mb-0">Customer callback inquiries awaiting response.</p>
         </div>
-       <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" 
-            style="width: 28px; height: 28px; 
-            background-color: {{ bg_color }}; color: {{ text_color }};"
-            aria-hidden="true">
-            <i class="bi {{ icon }}" style="font-size: 14px; line-height: 1;"></i>
-         </div>
+        <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between small fw-semibold text-warning" style="border-color:#FED7AA !important;">
+          <span style="color:#C2410C;">Visit Call Requests Page</span>
+          <i class="bi bi-arrow-right stat-box-arrow" style="color:#C2410C;"></i>
+          <a href="{{ url_for('admin.call_requests_list') }}" class="stretched-link" aria-label="Visit Call Requests Page"></a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if notifications.pending_manual_bookings > 0 %}
+    <div class="col-sm-6 col-lg-3">
+      <div class="p-3 bg-white border rounded-3 h-100 d-flex flex-column justify-content-between shadow-sm position-relative stat-box-card" style="border-color:#C4B5FD !important; border-left:4px solid #7C3AED !important;">
+        <div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="badge rounded-pill" style="background:#EDE9FE; color:#6D28D9; font-weight:600;">Manual Booking</span>
+            <i class="bi bi-clipboard-check-fill fs-5" style="color:#7C3AED;"></i>
+          </div>
+          <div class="fw-bold fs-4 text-dark mb-1">{{ notifications.pending_manual_bookings }}</div>
+          <p class="small text-muted mb-0">Offline counter/phone bookings awaiting sign-off.</p>
+        </div>
+        <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between small fw-semibold" style="border-color:#E9D5FF !important; color:#6D28D9;">
+          <span>Visit Manual Bookings Page</span>
+          <i class="bi bi-arrow-right stat-box-arrow"></i>
+          <a href="{{ url_for('admin.manual_bookings_queue') }}" class="stretched-link" aria-label="Visit Manual Bookings Page"></a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if notifications.open_tickets > 0 %}
+    <div class="col-sm-6 col-lg-3">
+      <div class="p-3 bg-white border rounded-3 h-100 d-flex flex-column justify-content-between shadow-sm position-relative stat-box-card" style="border-color:#93C5FD !important; border-left:4px solid #2563EB !important;">
+        <div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="badge rounded-pill" style="background:#DBEAFE; color:#1E40AF; font-weight:600;">Support Ticket</span>
+            <i class="bi bi-chat-left-dots-fill text-primary fs-5"></i>
+          </div>
+          <div class="fw-bold fs-4 text-dark mb-1">{{ notifications.open_tickets }}</div>
+          <p class="small text-muted mb-0">Customer support inquiries waiting for a reply.</p>
+        </div>
+        <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between small fw-semibold text-primary" style="border-color:#BFDBFE !important;">
+          <span>Visit Support Tickets Page</span>
+          <i class="bi bi-arrow-right stat-box-arrow"></i>
+          <a href="{{ url_for('tickets.list_tickets') }}" class="stretched-link" aria-label="Visit Support Tickets Page"></a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if notifications.pending_staff_approvals > 0 %}
+    <div class="col-sm-6 col-lg-3">
+      <div class="p-3 bg-white border rounded-3 h-100 d-flex flex-column justify-content-between shadow-sm position-relative stat-box-card" style="border-color:#A7F3D0 !important; border-left:4px solid #059669 !important;">
+        <div>
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="badge rounded-pill" style="background:#D1FAE5; color:#065F46; font-weight:600;">Staff Approval</span>
+            <i class="bi bi-person-badge-fill text-success fs-5"></i>
+          </div>
+          <div class="fw-bold fs-4 text-dark mb-1">{{ notifications.pending_staff_approvals }}</div>
+          <p class="small text-muted mb-0">Staff applications awaiting admin activation.</p>
+        </div>
+        <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between small fw-semibold text-success" style="border-color:#A7F3D0 !important;">
+          <span>Visit Staff Approvals Page</span>
+          <i class="bi bi-arrow-right stat-box-arrow"></i>
+          <a href="{{ url_for('admin.staff_list') }}" class="stretched-link" aria-label="Visit Staff Approvals Page"></a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% else %}
+<div class="alert alert-success d-flex align-items-center mb-4 py-2 px-3 border rounded-3" style="background:#ECFDF5; border-color:#A7F3D0; color:#065F46;">
+  <i class="bi bi-check-circle-fill me-2 fs-5"></i>
+  <div style="font-size:0.875rem;">
+    <strong>All operational queues clear:</strong> No pending call requests, manual bookings, support tickets, or staff approvals requiring immediate attention.
+  </div>
+</div>
+{% endif %}
+
+{# Primary KPI Metric Cards Row - Each box has a direct link to visit that page #}
+<div class="row g-3 mb-4">
+  {% set stat_boxes = [
+    {
+      'title': 'Total Revenue (GMV)',
+      'value': '₹' ~ ('%.2f'|format(stats.total_revenue|default(0.0))),
+      'subtext': '₹' ~ ('%.2f'|format(stats.recent_revenue|default(0.0))) ~ ' last 30 days',
+      'subtext2': 'Refunded: ₹' ~ ('%.2f'|format(stats.total_refunded|default(0.0))),
+      'url': url_for('admin.payments_list'),
+      'link_text': 'Visit Payments Page',
+      'icon': 'bi-currency-rupee',
+      'bg_color': '#DCFCE7',
+      'text_color': '#166534'
+    },
+    {
+      'title': 'Total Bookings',
+      'value': stats.total_bookings,
+      'subtext': (stats.confirmed_bookings|default(0)) ~ ' confirmed · ' ~ (stats.pending_bookings|default(0)) ~ ' pending',
+      'subtext2': 'Latest reservation activity',
+      'url': url_for('admin.bookings'),
+      'link_text': 'Visit Bookings Page',
+      'icon': 'bi-journal-check',
+      'bg_color': '#F3E8FF',
+      'text_color': '#6B21A8'
+    },
+    {
+      'title': 'Total Treks',
+      'value': stats.total_treks,
+      'subtext': (stats.open_treks|default(0)) ~ ' open for booking',
+      'subtext2': 'Catalog & itineraries',
+      'url': url_for('admin.treks_list'),
+      'link_text': 'Visit Treks Page',
+      'icon': 'bi-compass',
+      'bg_color': '#E0E7FF',
+      'text_color': '#3730A3'
+    },
+    {
+      'title': 'Total Users',
+      'value': stats.total_users,
+      'subtext': 'Registered customer profiles',
+      'subtext2': 'Trekkers & user directory',
+      'url': url_for('admin.users_list'),
+      'link_text': 'Visit Users Page',
+      'icon': 'bi-people',
+      'bg_color': '#DCFCE7',
+      'text_color': '#166534'
+    },
+    {
+      'title': 'Total Staff',
+      'value': stats.total_staff,
+      'subtext': (notifications.pending_staff_approvals|default(0)) ~ ' pending approval',
+      'subtext2': 'Trek guides & operators',
+      'url': url_for('admin.staff_list'),
+      'link_text': 'Visit Staff Page',
+      'icon': 'bi-person-badge',
+      'bg_color': '#FEF3C7',
+      'text_color': '#92400E'
+    },
+    {
+      'title': 'Campaigns & Outreach',
+      'value': campaigns.total|default(0),
+      'subtext': (campaigns.ongoing|default(0)) ~ ' active · ' ~ (campaigns.sent|default(0)) ~ ' sent',
+      'subtext2': (campaigns.recipients_reached|default(0)) ~ ' customers reached',
+      'url': url_for('admin.campaigns_list'),
+      'link_text': 'Visit Campaigns Page',
+      'icon': 'bi-megaphone',
+      'bg_color': '#FEF3C7',
+      'text_color': '#92400E'
+    }
+  ] %}
+
+  {% for box in stat_boxes %}
+  <div class="col-12 col-sm-6 col-lg-4">
+    <div class="p-3 bg-white border rounded-3 h-100 shadow-sm position-relative d-flex flex-column justify-content-between stat-box-card" style="border-color:#E2E4E9;">
+      <div>
+        <div class="d-flex justify-content-between align-items-start mb-2">
+          <div class="text-muted small text-uppercase fw-semibold" style="letter-spacing:0.04em;">{{ box.title }}</div>
+          <div class="d-flex align-items-center justify-content-center rounded-circle flex-shrink-0" 
+               style="width: 32px; height: 32px; background-color: {{ box.bg_color }}; color: {{ box.text_color }};">
+            <i class="bi {{ box.icon }} fs-6"></i>
+          </div>
+        </div>
+        <div style="font-family:'Bitter',serif;font-weight:700;font-size:1.75rem;line-height:1.2;color:#14161A;">
+          {{ box.value }}
+        </div>
+        <div class="mt-2" style="font-family:'Inter',sans-serif;font-size:0.8125rem;color:#4B5563;">
+          {{ box.subtext }}
+        </div>
+        {% if box.subtext2 %}
+        <div class="mt-1" style="font-family:'Inter',sans-serif;font-size:0.75rem;color:#9CA3AF;">
+          {{ box.subtext2 }}
+        </div>
+        {% endif %}
+      </div>
+
+      {# Direct Link to Visit That Page #}
+      <div class="mt-3 pt-2 border-top d-flex align-items-center justify-content-between small fw-semibold" style="border-color:#F3F4F6 !important; color:#1F4FD8;">
+        <span>{{ box.link_text }} &rarr;</span>
+        <i class="bi bi-arrow-right stat-box-arrow"></i>
+        <a href="{{ box.url }}" class="stretched-link" aria-label="{{ box.link_text }}"></a>
       </div>
     </div>
   </div>
   {% endfor %}
 </div>
 
-
-<div class="row g-3">
+{# Charts Section - Preserved purely as data visualizers (no visit page link) #}
+<div class="row g-3 mb-4">
   <div class="col-lg-7">
-    <div class="p-3 bg-white border rounded-3" style="border-color:#E2E4E9;">
-      <h2 class="h6 mb-3" style="font-family:'Bitter',serif;">Bookings over time</h2>
+    <div class="p-3 bg-white border rounded-3 h-100 shadow-sm" style="border-color:#E2E4E9;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h6 mb-0" style="font-family:'Bitter',serif;font-weight:700;">Bookings over time</h2>
+        <span class="badge bg-light text-muted border">Weekly Volume</span>
+      </div>
       <canvas id="bookingsOverTimeChart"></canvas>
     </div>
   </div>
   <div class="col-lg-5">
-    <div class="p-3 bg-white border rounded-3" style="border-color:#E2E4E9;">
-      <h2 class="h6 mb-3" style="font-family:'Bitter',serif;">Treks by status</h2>
+    <div class="p-3 bg-white border rounded-3 h-100 shadow-sm" style="border-color:#E2E4E9;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h6 mb-0" style="font-family:'Bitter',serif;font-weight:700;">Treks by status</h2>
+        <span class="badge bg-light text-muted border">Catalog Health</span>
+      </div>
       <canvas id="treksByStatusChart"></canvas>
     </div>
   </div>
 </div>
 
+{# Operational Snapshot & Recent Transactions #}
+<div class="row g-3 mb-4">
+  {# Recent Payments Column #}
+  <div class="col-lg-7">
+    <div class="p-3 bg-white border rounded-3 h-100 shadow-sm" style="border-color:#E2E4E9;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h2 class="h6 mb-0" style="font-family:'Bitter',serif;font-weight:700;">Recent Payment Transactions</h2>
+          <span class="small text-muted">Latest payment settlements across all channels</span>
+        </div>
+        <a href="{{ url_for('admin.payments_list') }}" class="btn btn-sm btn-outline-primary">
+          Visit Payments Page &rarr;
+        </a>
+      </div>
+
+      <div class="table-responsive border rounded-2" style="border-color:#E2E4E9;">
+        <table class="table mb-0 align-middle">
+          <thead style="background:#F7F7F8;">
+            <tr style="color:#6B7280;text-transform:uppercase;font-size:0.75rem;">
+              <th>Payment ID</th>
+              <th>Booking</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Date</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for payment in recent_payments %}
+            <tr>
+              <td>
+                <a href="{{ url_for('admin.payment_detail', payment_id=payment.id) }}" class="fw-semibold text-decoration-none">
+                  #{{ payment.id }}
+                </a>
+              </td>
+              <td>
+                <a href="{{ url_for('admin.booking_detail', booking_id=payment.booking_id) }}" class="text-muted text-decoration-none">
+                  #{{ payment.booking_id }}
+                </a>
+              </td>
+              <td class="fw-semibold">
+                {{ payment.currency }} {{ '%.2f'|format(payment.amount) }}
+              </td>
+              <td>
+                {{ status_badge(payment.status, 'payment_status_txn') }}
+              </td>
+              <td class="small text-muted">
+                {{ payment.created_at.strftime('%Y-%m-%d %H:%M') if payment.created_at else '—' }}
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="5" class="text-center text-muted py-4">No payment transactions recorded yet.</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  {# Marketing & Inquiry Management Column #}
+  <div class="col-lg-5">
+    <div class="p-3 bg-white border rounded-3 h-100 shadow-sm" style="border-color:#E2E4E9;">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h2 class="h6 mb-0" style="font-family:'Bitter',serif;font-weight:700;">Marketing & Inquiries</h2>
+          <span class="small text-muted">Customer acquisition and outreach</span>
+        </div>
+        <a href="{{ url_for('admin.campaign_new') }}" class="btn btn-sm btn-primary">
+          <i class="bi bi-plus-lg me-1"></i> New
+        </a>
+      </div>
+
+      <div class="list-group list-group-flush border rounded-2 mb-3">
+        {# Ongoing Campaigns #}
+        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-broadcast text-primary me-2 fs-5"></i>
+            <div>
+              <div class="fw-semibold small">Active & Draft Campaigns</div>
+              <div class="text-muted" style="font-size:0.75rem;">Ongoing promotional message runs</div>
+            </div>
+          </div>
+          <span class="badge bg-primary rounded-pill">{{ campaigns.ongoing|default(0) }}</span>
+        </div>
+
+        {# Sent Campaigns #}
+        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-send-check text-success me-2 fs-5"></i>
+            <div>
+              <div class="fw-semibold small">Completed Campaigns</div>
+              <div class="text-muted" style="font-size:0.75rem;">Successfully delivered broadcasts</div>
+            </div>
+          </div>
+          <span class="badge bg-success rounded-pill">{{ campaigns.sent|default(0) }}</span>
+        </div>
+
+        {# Total Audience Reach #}
+        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-people text-info me-2 fs-5"></i>
+            <div>
+              <div class="fw-semibold small">Total Audience Reached</div>
+              <div class="text-muted" style="font-size:0.75rem;">Unique customer touchpoints</div>
+            </div>
+          </div>
+          <span class="badge bg-info text-dark rounded-pill">{{ campaigns.recipients_reached|default(0) }}</span>
+        </div>
+
+        {# Customer Call Requests #}
+        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-telephone text-warning me-2 fs-5"></i>
+            <div>
+              <div class="fw-semibold small">Call-Back Inquiries</div>
+              <div class="text-muted" style="font-size:0.75rem;">{{ notifications.new_call_requests|default(0) }} new of {{ notifications.total_call_requests|default(0) }} total</div>
+            </div>
+          </div>
+          <a href="{{ url_for('admin.call_requests_list') }}" class="btn btn-sm btn-outline-warning py-0 px-2 fw-semibold" style="font-size:0.75rem;">Visit Call Requests</a>
+        </div>
+
+        {# Manual Booking Sign-off #}
+        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3">
+          <div class="d-flex align-items-center">
+            <i class="bi bi-journal-text text-purple me-2 fs-5" style="color:#7C3AED;"></i>
+            <div>
+              <div class="fw-semibold small">Manual Bookings Sign-off</div>
+              <div class="text-muted" style="font-size:0.75rem;">{{ notifications.pending_manual_bookings|default(0) }} pending sign-off</div>
+            </div>
+          </div>
+          <a href="{{ url_for('admin.manual_bookings_queue') }}" class="btn btn-sm btn-outline-primary py-0 px-2 fw-semibold" style="font-size:0.75rem;">Visit Manual Bookings</a>
+        </div>
+      </div>
+
+      <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.campaigns_list') }}" class="btn btn-sm btn-outline-secondary w-50">
+          <i class="bi bi-list-ul me-1"></i> Visit Campaigns
+        </a>
+        <a href="{{ url_for('admin.coupons_list') }}" class="btn btn-sm btn-outline-secondary w-50">
+          <i class="bi bi-tag me-1"></i> Visit Coupons
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 
 <script id="dash-bookings-data" type="application/json">{{ bookings_over_time | tojson }}</script>
 <script id="dash-treks-data" type="application/json">{{ treks_by_status | tojson }}</script>
@@ -57,13 +418,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <script>
 document.addEventListener('DOMContentLoaded', () => {
-
   const bookingsDataEl = document.getElementById('dash-bookings-data');
   const treksDataEl = document.getElementById('dash-treks-data');
 
   const bookingsOverTime = JSON.parse(bookingsDataEl ? bookingsDataEl.textContent : '{}');
   const treksByStatus = JSON.parse(treksDataEl ? treksDataEl.textContent : '{}');
-
 
   const STATUS_COLORS = { 
     pending: '#D97706', 
@@ -73,7 +432,7 @@ document.addEventListener('DOMContentLoaded', () => {
     completed: '#14161A' 
   };
 
-  //  Bookings Over Time Line Chart
+  // Bookings Over Time Line Chart
   const bookingsCanvas = document.getElementById('bookingsOverTimeChart');
   if (bookingsCanvas && bookingsOverTime) {
     new Chart(bookingsCanvas, {
@@ -84,6 +443,8 @@ document.addEventListener('DOMContentLoaded', () => {
           label: 'Bookings', 
           data: bookingsOverTime.data || [], 
           borderColor: '#1F4FD8', 
+          backgroundColor: 'rgba(31, 79, 216, 0.08)',
+          fill: true,
           tension: 0.3 
         }] 
       },
@@ -91,12 +452,18 @@ document.addEventListener('DOMContentLoaded', () => {
         responsive: true,
         plugins: { 
           legend: { display: false } 
-        } 
+        },
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: { precision: 0 }
+          }
+        }
       }
     });
   }
 
-  //Treks By Status Donut Chart
+  // Treks By Status Donut Chart
   const treksCanvas = document.getElementById('treksByStatusChart');
   if (treksCanvas && treksByStatus) {
     const statusKeys = Object.keys(treksByStatus);

@@ -3,7 +3,12 @@
   <!-- Image Header -->
   <div class="position-relative bg-light">
     <!-- Dynamic Image Logic -->
-    {% if trek.thumbnail_filename %}
+    {% if trek.media and trek.media|length > 0 %}
+      <img src="/media/{{ trek.media[0].id }}" 
+           alt="{{ trek.media[0].caption or trek.name }}" 
+           class="card-img-top" 
+           style="height: 220px; object-fit: cover; width: 100%;">
+    {% elif trek.thumbnail_filename %}
       <img src="{{ url_for('static', filename='uploads/treks/' ~ trek.thumbnail_filename) }}" 
            alt="{{ trek.name }}" 
            class="card-img-top" 
@@ -36,9 +41,16 @@
 
   <!-- Card Body -->
   <div class="card-body p-4 d-flex flex-column">
-    <h4 class="fw-bold mb-3" style="font-family: 'Bitter', serif; color: #111827; font-size: 1.35rem;">
+    <h4 class="fw-bold mb-2" style="font-family: 'Bitter', serif; color: #111827; font-size: 1.35rem;">
       {{ trek.name }}
     </h4>
+
+    {% if trek.reviews and trek.reviews|length > 0 %}
+      <div class="mb-2">
+        <span class="text-warning small">&#9733; {{ (trek.reviews|sum(attribute='rating') / trek.reviews|length)|round(1) }}</span>
+        <span class="text-muted small">({{ trek.reviews|length }})</span>
+      </div>
+    {% endif %}
     
     <!-- Details Grid -->
     <div class="mb-4" style="font-size: 0.85rem; color: #4B5563;">

@@ -3,7 +3,12 @@
 {% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
 {% block content %}
 <!-- DEBUG: staff_list.html roles={{ roles|length }} -->
-<h1 class="h3 mb-3" style="font-family:'Bitter',serif;font-weight:700;">Staff</h1>
+<div class="d-flex align-items-center justify-content-between mb-3">
+  <h1 class="h3 mb-0" style="font-family:'Bitter',serif;font-weight:700;">Staff</h1>
+  <a href="{{ url_for('admin.staff_create') }}" class="btn btn-primary btn-sm d-flex align-items-center gap-1 shadow-sm">
+    <i class="bi bi-person-plus-fill"></i> Add Staff Member
+  </a>
+</div>
 
 <ul class="nav nav-pills mb-3">
   {% for tab_value, tab_label in [('all','All'), ('pending','Pending Approval'), ('approved','Approved'), ('blacklisted','Blacklisted')] %}
@@ -26,7 +31,35 @@
     <tbody>
       {% for staff in staff_rows %}
       <tr>
-        <td>{{ staff.user.name if staff.user else '—' }}</td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <button type="button" 
+                    class="btn p-0 border-0 bg-transparent staff-avatar-trigger"
+                    data-avatar-url="{{ staff.user.avatar_url if staff.user else '/static/img/default_avatar.svg' }}"
+                    data-user-name="{{ staff.user.name if staff.user else 'Staff' }}"
+                    data-user-role="{{ staff.role.name if staff.role else 'Staff' }}"
+                    data-user-email="{{ staff.user.email if staff.user else '' }}"
+                    data-has-custom="{{ 'true' if staff.user and staff.user.has_profile_picture else 'false' }}"
+                    data-user-url="{{ url_for('admin.staff_detail', staff_id=staff.id) }}"
+                    title="Click to view profile picture">
+              <img src="{{ staff.user.avatar_url if staff.user else '/static/img/default_avatar.svg' }}" 
+                   alt="{{ staff.user.name if staff.user else 'Staff' }}" 
+                   class="rounded-circle border flex-shrink-0 shadow-sm" 
+                   style="width: 32px; height: 32px; object-fit: cover; border-color: #E2E8F0; transition: transform 0.15s ease;"
+                   onmouseover="this.style.transform='scale(1.1)'"
+                   onmouseout="this.style.transform='scale(1)'"
+                   onerror="this.src='/static/img/default_avatar.svg'">
+            </button>
+            <div class="d-flex flex-column">
+              <a href="{{ url_for('admin.staff_detail', staff_id=staff.id) }}" class="fw-semibold text-dark text-decoration-none hover-primary">
+                {{ staff.user.name if staff.user else '—' }}
+              </a>
+              {% if staff.user and staff.user.has_profile_picture %}
+                <span class="text-success" style="font-size: 0.7rem;">Custom Photo</span>
+              {% endif %}
+            </div>
+          </div>
+        </td>
         <td>{{ staff.user.email if staff.user else '—' }}</td>
         <td>
           {% if staff.role %}
@@ -68,4 +101,96 @@
     </tbody>
   </table>
 </div>
+
+<!-- Staff Profile Picture Preview Modal -->
+<div class="modal fade" id="staffPicModal" tabindex="-1" aria-labelledby="staffPicModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+      <div class="modal-header border-0 pb-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-person-bounding-box text-primary fs-5"></i>
+          <h5 class="modal-title fs-6 fw-bold text-dark mb-0" id="staffPicModalLabel">Staff Photo</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center p-4">
+        <div class="position-relative d-inline-block mb-3">
+          <div class="rounded-circle p-1 bg-white shadow-sm border" style="border-color: #E2E8F0;">
+            <img id="staffModalAvatarImg" 
+                 src="/static/img/default_avatar.svg" 
+                 alt="Staff Photo" 
+                 class="rounded-circle" 
+                 style="width: 170px; height: 170px; object-fit: cover;"
+                 onerror="this.src='/static/img/default_avatar.svg'">
+          </div>
+        </div>
+        
+        <h4 id="staffModalUserName" class="h5 fw-bold mb-1 text-dark" style="font-family:'Bitter',serif;"></h4>
+        <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+          <span id="staffModalUserRole" class="badge bg-secondary-subtle text-secondary text-uppercase px-2 py-1"></span>
+          <span id="staffModalPhotoStatus" class="badge px-2 py-1"></span>
+        </div>
+        <p id="staffModalUserEmail" class="text-muted small mb-3 text-truncate" style="max-width: 320px; margin: 0 auto;"></p>
+        
+        <div class="d-flex justify-content-center gap-2 pt-3 border-top">
+          <a id="staffModalFullImgBtn" href="#" target="_blank" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-box-arrow-up-right"></i> Open Full Image
+          </a>
+          <a id="staffModalUserDetailBtn" href="#" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" style="background:#1F4FD8;border-color:#1F4FD8;">
+            <i class="bi bi-person-badge"></i> View Staff Profile
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modalEl = document.getElementById('staffPicModal');
+  if (!modalEl) return;
+  const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+  document.querySelectorAll('.staff-avatar-trigger').forEach(function (trigger) {
+    trigger.addEventListener('click', function (e) {
+      e.preventDefault();
+      const avatarUrl = this.dataset.avatarUrl || '/static/img/default_avatar.svg';
+      const userName = this.dataset.userName || 'Staff';
+      const userRole = this.dataset.userRole || 'Staff';
+      const userEmail = this.dataset.userEmail || '';
+      const hasCustom = this.dataset.hasCustom === 'true';
+      const userUrl = this.dataset.userUrl || '#';
+
+      document.getElementById('staffModalAvatarImg').src = avatarUrl;
+      document.getElementById('staffModalUserName').textContent = userName;
+      document.getElementById('staffModalUserRole').textContent = userRole;
+      document.getElementById('staffModalUserEmail').textContent = userEmail;
+
+      const statusBadge = document.getElementById('staffModalPhotoStatus');
+      const fullImgBtn = document.getElementById('staffModalFullImgBtn');
+
+      if (hasCustom) {
+        statusBadge.textContent = 'Custom Photo';
+        statusBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2 py-1';
+        fullImgBtn.href = avatarUrl;
+        fullImgBtn.classList.remove('d-none');
+      } else {
+        statusBadge.textContent = 'Default Avatar';
+        statusBadge.className = 'badge bg-light text-muted border px-2 py-1';
+        fullImgBtn.href = avatarUrl;
+        fullImgBtn.classList.add('d-none');
+      }
+
+      const detailBtn = document.getElementById('staffModalUserDetailBtn');
+      if (detailBtn) {
+        detailBtn.href = userUrl;
+      }
+
+      bsModal.show();
+    });
+  });
+});
+</script>
 {% endblock %}

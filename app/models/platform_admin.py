@@ -37,6 +37,25 @@ class PlatformAdmin(db.Model):
     def check_password(self, password: str) -> bool:
         return check_password_hash(self.password_hash, password)
 
+    @property
+    def avatar_url(self) -> str:
+        """Returns default SVG avatar for platform operator."""
+        try:
+            from flask import url_for
+            return url_for("static", filename="img/default_avatar.svg")
+        except RuntimeError:
+            return "/static/img/default_avatar.svg"
+
+    @property
+    def initials(self) -> str:
+        """Returns 1-2 uppercase letters representing platform operator initials."""
+        if not self.name:
+            return "PO"
+        parts = self.name.strip().split()
+        if len(parts) >= 2:
+            return f"{parts[0][0]}{parts[-1][0]}".upper()
+        return self.name[:2].upper()
+
     def __repr__(self) -> str:
         # print(f"[DEBUG] platform_admin {self.id} active={self.is_active}")
         return f"<PlatformAdmin {self.email} [active={self.is_active}]>"

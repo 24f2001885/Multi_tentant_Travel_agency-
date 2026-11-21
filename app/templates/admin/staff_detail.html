@@ -3,12 +3,19 @@
 {% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
 {% block content %}
 <!-- DEBUG: staff_detail.html role={{ staff.role_id }} -->
-<div class="mb-4">
-  <a href="{{ url_for('admin.staff_list') }}" class="text-decoration-none text-muted small">
-    <i class="bi bi-arrow-left me-1"></i> Back to Staff Directory
-  </a>
-  <h1 class="h3 mt-2 mb-1" style="font-family:'Bitter',serif;font-weight:700;">{{ staff.user.name }}</h1>
-  <p class="text-muted mb-0">{{ staff.user.email }}</p>
+<div class="mb-4 d-flex align-items-center gap-3">
+  <img src="{{ staff.user.avatar_url if staff.user else '/static/img/default_avatar.svg' }}" 
+       alt="{{ staff.user.name if staff.user else 'Staff' }}" 
+       class="rounded-circle border shadow-sm flex-shrink-0" 
+       style="width: 56px; height: 56px; object-fit: cover; border-color: #E2E8F0;"
+       onerror="this.src='/static/img/default_avatar.svg'">
+  <div>
+    <a href="{{ url_for('admin.staff_list') }}" class="text-decoration-none text-muted small">
+      <i class="bi bi-arrow-left me-1"></i> Back to Staff Directory
+    </a>
+    <h1 class="h3 mt-1 mb-0" style="font-family:'Bitter',serif;font-weight:700;">{{ staff.user.name }}</h1>
+    <p class="text-muted mb-0">{{ staff.user.email }}</p>
+  </div>
 </div>
 
 <div class="row g-4">

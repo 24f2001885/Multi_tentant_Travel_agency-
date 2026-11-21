@@ -21,6 +21,9 @@ from app.api.payments_resource import (  # noqa: E402
     PaymentListForBookingResource,
     PaymentWebhookResource,
 )
+from app.api.route_webhook_resource import RouteWebhookResource  # noqa: E402
+from app.api.whatsapp_webhook_resource import WhatsAppWebhookResource  # noqa: E402
+
 from app.api.staff_resource import (  # noqa: E402
     StaffApproveResource,
     StaffBlacklistResource,
@@ -46,6 +49,10 @@ from app.api.serializers import HashidField, encode_id, decode_id  # noqa: E402
 from app.api.users_resource import UserListResource, UserResource  # noqa: E402
 
 api.add_resource(PaymentWebhookResource, "/payments/webhook")
+api.add_resource(RouteWebhookResource, "/payments/route-webhook")
+api.add_resource(WhatsAppWebhookResource, "/whatsapp/webhook")
+
+
 api.add_resource(RegisterResource, "/auth/register")
 api.add_resource(LoginResource, "/auth/login")
 api.add_resource(LogoutResource, "/auth/logout")

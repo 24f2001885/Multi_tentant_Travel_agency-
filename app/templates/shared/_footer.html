@@ -46,8 +46,13 @@
           <li class="mb-2">
             <a href="{{ url_for('public.privacy') }}" class="text-secondary text-decoration-none">Privacy Policy</a>
           </li>
-          <li>
+          <li class="mb-2">
             <a href="{{ url_for('public.browse') }}" class="text-secondary text-decoration-none">Browse Treks</a>
+          </li>
+          <li>
+            <a href="{{ url_for('auth.register', role='staff') }}" class="text-secondary text-decoration-none">
+              <i class="bi bi-person-badge me-1"></i> Apply as Staff
+            </a>
           </li>
         </ul>
       </div>
@@ -74,23 +79,70 @@
           </div>
 
           <div class="mb-3">
-            <label for="call_name" class="form-label">Full Name <span class="text-danger">*</span></label>
-            <input type="text" class="form-control" id="call_name" name="name" required maxlength="150" placeholder="Your name">
+            <label for="call_name" class="form-label fw-semibold">Full Name <span class="text-danger">*</span></label>
+            <input type="text" class="form-control" id="call_name" name="name" required maxlength="150" placeholder="Your name" value="{% if current_user.is_authenticated %}{{ current_user.name }}{% endif %}">
           </div>
 
+          {% if current_user.is_authenticated and current_user.mobile %}
+          <!-- Logged-in 1-click registered phone option -->
+          <div class="mb-3 p-3 rounded-3 border bg-light">
+            <label class="form-label fw-bold small text-uppercase text-muted mb-2 d-flex align-items-center">
+              <i class="bi bi-telephone-outbound text-primary me-1"></i> Callback Phone Number
+            </label>
+
+            <!-- Option 1: Registered Phone Number (Default, 1-Click) -->
+            <div class="form-check p-2 rounded-2 mb-2 bg-white border d-flex align-items-center" style="cursor: pointer;" onclick="document.getElementById('opt_registered_phone').checked=true; updateCallbackPhoneSource('registered');">
+              <input class="form-check-input ms-1 me-2" type="radio" name="phone_option" id="opt_registered_phone" value="registered" checked onchange="updateCallbackPhoneSource(this.value)">
+              <label class="form-check-label w-100 mb-0 d-flex justify-content-between align-items-center" for="opt_registered_phone" style="cursor: pointer;">
+                <div>
+                  <span class="fw-semibold text-dark d-block">Call my registered number</span>
+                  <span class="font-monospace text-primary fw-bold">{{ current_user.mobile }}</span>
+                </div>
+                <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">
+                  <i class="bi bi-shield-check me-1"></i>One-Click
+                </span>
+              </label>
+            </div>
+
+            <!-- Option 2: Custom Phone Number -->
+            <div class="form-check p-2 rounded-2 bg-white border d-flex align-items-center" style="cursor: pointer;" onclick="document.getElementById('opt_custom_phone').checked=true; updateCallbackPhoneSource('custom');">
+              <input class="form-check-input ms-1 me-2" type="radio" name="phone_option" id="opt_custom_phone" value="custom" onchange="updateCallbackPhoneSource(this.value)">
+              <label class="form-check-label w-100 mb-0" for="opt_custom_phone" style="cursor: pointer;">
+                <span class="text-dark">Call a different phone number</span>
+              </label>
+            </div>
+
+            <!-- Alternate phone number input container -->
+            <div class="mt-2" id="callback_custom_phone_wrapper" style="display: none;">
+              <input type="tel" class="form-control form-control-sm mt-2" id="call_phone_custom" name="custom_phone" placeholder="e.g. +91 9876543210" oninput="document.getElementById('call_phone').value = this.value;">
+              <div class="form-text small">Include country code if outside India (e.g. +1 555-0123).</div>
+            </div>
+          </div>
+
+          <input type="hidden" id="call_phone" name="phone" value="{{ current_user.mobile }}" data-registered-phone="{{ current_user.mobile }}">
+          {% else %}
+          <!-- Guest / Not logged-in phone input -->
           <div class="mb-3">
-            <label for="call_phone" class="form-label">Phone Number <span class="text-danger">*</span></label>
-            <input type="tel" class="form-control" id="call_phone" name="phone" required placeholder="+91 9999999999">
+            <label for="call_phone" class="form-label fw-semibold">Phone Number <span class="text-danger">*</span></label>
+            <input type="tel" class="form-control" id="call_phone" name="phone" required placeholder="+91 9999999999" value="{% if current_user.is_authenticated and current_user.mobile %}{{ current_user.mobile }}{% endif %}">
             <div class="form-text">Include country code if outside India (e.g. +1 555-0123).</div>
           </div>
+          {% endif %}
 
           <div class="mb-3">
-            <label for="call_preferred_time" class="form-label">Preferred Time to Call</label>
+            <label for="call_preferred_time" class="form-label fw-semibold">Preferred Time to Call</label>
             <input type="text" class="form-control" id="call_preferred_time" name="preferred_time" placeholder="e.g. Morning, 2 PM - 5 PM">
+            <!-- 1-Click Quick Time Pills -->
+            <div class="d-flex flex-wrap gap-1 mt-2">
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="setCallbackPreferredTime('Any time / ASAP')">⚡ Any time</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="setCallbackPreferredTime('Morning (9 AM - 12 PM)')">🌅 Morning</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="setCallbackPreferredTime('Afternoon (12 PM - 4 PM)')">☀️ Afternoon</button>
+              <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-2" onclick="setCallbackPreferredTime('Evening (4 PM - 8 PM)')">🌆 Evening</button>
+            </div>
           </div>
 
           <div class="mb-3">
-            <label for="call_message" class="form-label">Message / Inquiry (Optional)</label>
+            <label for="call_message" class="form-label fw-semibold">Message / Inquiry (Optional)</label>
             <textarea class="form-control" id="call_message" name="message" rows="3" placeholder="Tell us about the trek you are interested in..."></textarea>
           </div>
         </div>
@@ -102,3 +154,34 @@
     </div>
   </div>
 </div>
+
+<script>
+function updateCallbackPhoneSource(choice) {
+  var wrapper = document.getElementById('callback_custom_phone_wrapper');
+  var hiddenPhone = document.getElementById('call_phone');
+  var customInput = document.getElementById('call_phone_custom');
+  var regNum = hiddenPhone ? hiddenPhone.getAttribute('data-registered-phone') : '';
+
+  if (choice === 'registered') {
+    if (wrapper) wrapper.style.display = 'none';
+    if (hiddenPhone && regNum) hiddenPhone.value = regNum;
+    if (customInput) customInput.required = false;
+  } else {
+    if (wrapper) {
+      wrapper.style.display = 'block';
+      if (customInput) {
+        customInput.required = true;
+        customInput.focus();
+        if (hiddenPhone) hiddenPhone.value = customInput.value;
+      }
+    }
+  }
+}
+
+function setCallbackPreferredTime(val) {
+  var input = document.getElementById('call_preferred_time');
+  if (input) {
+    input.value = val;
+  }
+}
+</script>

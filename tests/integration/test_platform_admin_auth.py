@@ -155,3 +155,28 @@ def test_onboard_organization_displays_temp_password(client_platform, platform_a
         user = User.query.filter_by(email="leader@k2.local").first()
         assert user is not None
         assert user.must_reset_password is True
+
+
+def test_update_organization_payout_settings(client_platform, platform_admin, org_a):
+    """Platform operator can configure Razorpay Route account ID and GST number from the UI."""
+    login_resp = client_platform.post(
+        "/platform/login",
+        data={"email": platform_admin.email, "password": "change-me-platform-password"},
+    )
+    assert login_resp.status_code == 302
+
+    resp = client_platform.post(
+        f"/platform/organizations/{org_a.id}/payout",
+        data={
+            "razorpay_route_account_id": "acc_TestRazorpay123",
+            "gst_number": "07AAAAA0000A1Z5",
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+    assert b"acc_TestRazorpay123" in resp.data
+
+    with tenant_bypass():
+        reloaded_org = Organization.query.get(org_a.id)
+        assert reloaded_org.razorpay_route_account_id == "acc_TestRazorpay123"
+        assert reloaded_org.gst_number == "07AAAAA0000A1Z5"

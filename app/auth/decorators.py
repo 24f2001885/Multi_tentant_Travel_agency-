@@ -1,7 +1,7 @@
 
 from functools import wraps
 
-from flask import abort, g, redirect, session, url_for
+from flask import abort, g, jsonify, redirect, render_template, request, session, url_for
 from flask_login import current_user
 
 from app.services.rbac_service import CAPABILITY_CATALOG, PROTECTED_CAPABILITY_KEYS
@@ -26,12 +26,14 @@ def role_required(*roles):
     return decorator
 
 def approved_staff_required(view):
-    
-
     @wraps(view)
     def wrapped(*args, **kwargs):
         profile = getattr(current_user, "staff_profile", None)
-        if profile is None or profile.approval_status != "approved":
+        if profile is None:
+            if hasattr(current_user, "_temp_capabilities"):
+                return view(*args, **kwargs)
+            return redirect(url_for("auth.pending_approval"))
+        if profile.approval_status != "approved":
             return redirect(url_for("auth.pending_approval"))
         return view(*args, **kwargs)
 
@@ -55,6 +57,7 @@ def staff_owns_trek(view):
         return view(*args, **kwargs)
 
     return wrapped
+
 
 def ticket_access_required(view):
  
@@ -118,7 +121,7 @@ def requires_capability(key: str):
             if not org:
                 abort(403)
 
-            is_tenant_admin = (current_user.id == org.tenant_admin_user_id)
+            is_tenant_admin = (current_user.role == "admin" or current_user.id == org.tenant_admin_user_id)
             if is_tenant_admin:
                 if key in PROTECTED_CAPABILITY_KEYS:
                     abort(403)
@@ -126,9 +129,10 @@ def requires_capability(key: str):
                 return view(*args, **kwargs)
 
             if current_user.role == "staff":
-                snapshot = session.get("capability_keys") or []
-                # print(f"[DEBUG] capability check user={current_user.id} key={key} snapshot={snapshot}")
-                if key in snapshot:
+                snapshot = session.get("capability_keys")
+                if snapshot is not None and key in snapshot:
+                    return view(*args, **kwargs)
+                if current_user.has_capability(key):
                     return view(*args, **kwargs)
 
             abort(403)
@@ -156,3 +160,66 @@ def protected_capability_required(view):
         return view(*args, **kwargs)
 
     return wrapped
+
+
+def trek_content_editor_required(view):
+    """
+    For routes with a trek id parameter. Loads the Trek (404 if missing),
+    then passes only if trek_service.can_edit_content(current_user, trek); else abort(403).
+    Sets g.trek = trek.
+    """
+    @wraps(view)
+    def wrapped(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for("auth.login"))
+
+        from app.models import Trek
+        from app.services import trek_service
+
+        trek_id = kwargs.get("trek_id", kwargs.get("id"))
+        trek = Trek.query.filter_by(id=trek_id).first_or_404()
+
+        if not trek_service.can_edit_content(current_user, trek):
+            abort(403)
+
+        g.trek = trek
+        return view(*args, **kwargs)
+
+    return wrapped
+
+
+def tenant_feature_required(feature_key: str):
+    """
+    Gates route access based on whether the tenant organization has the required
+    SaaS feature enabled in their subscription tier/entitlements.
+    If the feature is missing, returns 403 Forbidden with a feature-locked response.
+    """
+    def decorator(view):
+        @wraps(view)
+        def wrapped(*args, **kwargs):
+            from app.services.tenant_features_service import AVAILABLE_TENANT_FEATURES
+
+            org = getattr(g, "organization", None)
+            if not org:
+                abort(403)
+
+            if not org.has_feature(feature_key):
+                if request.is_json or (request.path and request.path.startswith("/api/")):
+                    return jsonify({
+                        "error": "feature_locked",
+                        "feature": feature_key,
+                        "message": f"Feature '{feature_key}' is not included in your organization's subscription plan."
+                    }), 403
+
+                return render_template(
+                    "errors/feature_locked.html",
+                    feature_key=feature_key,
+                    feature_info=AVAILABLE_TENANT_FEATURES.get(feature_key, {}),
+                    org=org,
+                ), 403
+
+            return view(*args, **kwargs)
+
+        return wrapped
+
+    return decorator

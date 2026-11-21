@@ -172,12 +172,43 @@ hr { border-color: var(--tma-border); opacity: 1; }
   overflow-x: hidden;
 }
 
+@media (min-width: 768px) {
+  body.tma-admin-shell {
+    height: 100vh;
+    max-height: 100vh;
+    overflow: hidden;
+  }
+  body.tma-admin-shell .tma-app-container {
+    height: 100vh;
+    max-height: 100vh;
+  }
+  /* Allow dropdown menus inside table-responsive to overflow freely without scrollbars */
+  .table-responsive {
+    overflow: visible;
+  }
+}
+
+.hover-shadow {
+  transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+}
+.hover-shadow:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.08) !important;
+  border-color: var(--tma-accent) !important;
+}
+
 .tma-main-content {
   flex-grow: 1;
   overflow-y: auto;
   height: 100vh;
   padding: 2rem 2.25rem;
   background-color: var(--tma-app-bg);
+}
+
+.tma-role-trekker .tma-main-content,
+.tma-role-guest .tma-main-content {
+  height: auto;
+  overflow-y: visible;
 }
 
 @media (max-width: 767.98px) {
@@ -500,3 +531,65 @@ hr { border-color: var(--tma-border); opacity: 1; }
   letter-spacing: 0.08em;
   color: var(--tma-signature);
 }
+
+/* ==========================================================================
+   MILESTONE P14: RESPONSIVE BOOTSTRAP PASS & VALIDATION STYLING
+   ========================================================================== */
+.table-responsive {
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+  .tma-chart-panel {
+    height: 240px !important;
+  }
+
+  .tma-sidebar {
+    width: 100% !important;
+    min-height: auto !important;
+  }
+
+  .ticket-thread .card {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+
+  .tma-dashboard-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+/* Real-time client-side validation hints */
+.form-control.is-invalid,
+.was-validated .form-control:invalid {
+  border-color: #dc3545;
+  background-image: none;
+}
+
+.invalid-feedback {
+  font-size: 0.8125rem;
+  margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+   ITINERARY: DAYS, TIMELINE EVENTS, POINTS & DAY-LEVEL IMPORTANT NOTES
+   ========================================================================== */
+.itinerary-day-card {
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.itinerary-day-card:hover {
+  border-color: #cbd5e1;
+}
+.itinerary-event-entry {
+  position: relative;
+  transition: background-color 0.15s ease;
+}
+.itinerary-event-points ul {
+  list-style-type: disc;
+}
+.day-important-points {
+  border-left: 4px solid #f59e0b !important;
+}
+
+

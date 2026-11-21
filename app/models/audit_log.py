@@ -15,16 +15,19 @@ class AuditLog(TenantScopedMixin, db.Model):
     __tablename__ = "audit_logs"
 
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
-    actor_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=False, index=True)
+    actor_user_id = db.Column(db.Integer, db.ForeignKey("users.id"), nullable=True, index=True)
     action = db.Column(db.String(100), nullable=False)
-    target_type = db.Column(db.String(50), nullable=False)
-    target_id = db.Column(db.Integer, nullable=False)
+    target_type = db.Column(db.String(50), nullable=False, default="system", server_default="system")
+    target_id = db.Column(db.Integer, nullable=False, default=0, server_default="0")
     details = db.Column(db.Text, nullable=True)
     created_at = db.Column(
         db.DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
+
+    actor_id = sa.orm.synonym("actor_user_id")
+    user_id = sa.orm.synonym("actor_user_id")
 
     actor = db.relationship("User", lazy=True)
 

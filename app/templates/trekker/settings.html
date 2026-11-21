@@ -1,0 +1,464 @@
+{% extends "shared/base.html" %}
+
+{% block title %}Settings & Account - TMA{% endblock %}
+
+{% block shell %}
+  {% include "shared/navbar_trekker.html" %}
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 mb-5" style="max-width: 900px;">
+  <!-- Header -->
+  <div class="mb-4">
+    <h2 class="fw-bold mb-1" style="font-family: 'Bitter', serif; color: #111827;">Settings &amp; Account</h2>
+    <p class="text-muted small mb-0">Manage your profile, notification channels, saved personal data, and privacy controls.</p>
+  </div>
+
+  <!-- Settings Navigation Tabs -->
+  <ul class="nav nav-pills mb-4 bg-white p-2 rounded-3 border shadow-sm" id="settingsTabs" role="tablist" style="border-color: #E2E4E9;">
+    <li class="nav-item" role="presentation">
+      <a class="nav-link {% if active_tab == 'profile' %}active{% endif %} d-flex align-items-center gap-1"
+         href="{{ url_for('trekker.settings', tab='profile') }}">
+        <i class="bi bi-person-circle"></i> Profile
+      </a>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link {% if active_tab == 'notifications' %}active{% endif %} d-flex align-items-center gap-1"
+         href="{{ url_for('trekker.settings', tab='notifications') }}">
+        <i class="bi bi-bell"></i> Notifications
+      </a>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link {% if active_tab == 'privacy' %}active{% endif %} d-flex align-items-center gap-1"
+         href="{{ url_for('trekker.settings', tab='privacy') }}">
+        <i class="bi bi-shield-lock"></i> Saved Data &amp; Privacy
+      </a>
+    </li>
+    <li class="nav-item" role="presentation">
+      <a class="nav-link {% if active_tab == 'security' %}active{% endif %} d-flex align-items-center gap-1"
+         href="{{ url_for('trekker.settings', tab='security') }}">
+        <i class="bi bi-key"></i> Security
+      </a>
+    </li>
+    <li class="nav-item ms-md-auto" role="presentation">
+      <a class="nav-link text-danger {% if active_tab == 'danger' %}active bg-danger text-white{% endif %} d-flex align-items-center gap-1"
+         href="{{ url_for('trekker.settings', tab='danger') }}">
+        <i class="bi bi-exclamation-triangle"></i> Delete Account
+      </a>
+    </li>
+  </ul>
+
+  <!-- Tab 1: Profile -->
+  {% if active_tab == 'profile' %}
+  <div class="row g-4">
+    <!-- Profile Photo Card -->
+    <div class="col-md-4">
+      <div class="card border-0 shadow-sm rounded-3 h-100">
+        <div class="card-body text-center p-4">
+          <h5 class="card-title fw-bold fs-6 text-uppercase text-muted mb-3">Profile Photo</h5>
+          
+          <div class="position-relative d-inline-block mb-3">
+            <img src="{{ current_user.avatar_url }}" 
+                 alt="{{ current_user.name }}" 
+                 class="rounded-circle border shadow-sm" 
+                 style="width: 110px; height: 110px; object-fit: cover; border-color: #E2E8F0;"
+                 onerror="this.src='/static/img/default_avatar.svg'">
+            {% if current_user.has_profile_picture %}
+              <span class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white"
+                    style="width: 14px; height: 14px;" title="Custom photo active"></span>
+            {% endif %}
+          </div>
+
+          <!-- Upload Form -->
+          <form method="POST" action="{{ url_for('trekker.upload_profile_picture') }}" enctype="multipart/form-data" class="mb-2">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <label class="btn btn-sm btn-outline-primary w-100 mb-2 cursor-pointer">
+              <i class="bi bi-upload me-1"></i> Choose New Photo
+              <input type="file" name="picture" accept=".jpg,.jpeg" class="d-none" onchange="this.form.submit()">
+            </label>
+            <div class="text-muted" style="font-size: 0.72rem;">JPG or JPEG, maximum 5MB.</div>
+          </form>
+
+          {% if current_user.has_profile_picture %}
+          <form method="POST" action="{{ url_for('trekker.delete_profile_picture') }}" onsubmit="return confirm('Remove your profile photo?');">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <button type="submit" class="btn btn-sm btn-link text-danger text-decoration-none p-0 mt-1" style="font-size: 0.8rem;">
+              <i class="bi bi-trash3 me-1"></i> Remove Photo
+            </button>
+          </form>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Personal Info Card -->
+    <div class="col-md-8">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4">
+          <h5 class="card-title fw-bold fs-6 text-uppercase text-muted mb-3">Personal Information</h5>
+          
+          <form method="POST" action="{{ url_for('trekker.settings', tab='profile') }}">
+            {{ profile_form.hidden_tag() }}
+            <input type="hidden" name="form_action" value="profile"/>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Full Name</label>
+              {{ profile_form.name(class="form-control") }}
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label fw-semibold small">Registered Email Address</label>
+              <div class="input-group">
+                <input type="text" class="form-control bg-light text-muted" value="{{ current_user.email }}" disabled/>
+                <span class="input-group-text bg-light text-success border-start-0 small"><i class="bi bi-check-circle-fill me-1"></i>Verified</span>
+              </div>
+              <div class="form-text small">Email cannot be changed directly as it acts as your secure identifier.</div>
+            </div>
+
+            <div class="row g-2 mb-4">
+              <div class="col-4">
+                <label class="form-label fw-semibold small">Country Code</label>
+                {{ profile_form.mobile_country_code(class="form-control", placeholder="+91") }}
+              </div>
+              <div class="col-8">
+                <label class="form-label fw-semibold small">Mobile Phone Number</label>
+                {{ profile_form.mobile_number(class="form-control", placeholder="e.g. 9876543210") }}
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center pt-3 border-top">
+              <span class="text-muted small">
+                Member since: {{ current_user.created_at.strftime('%B %d, %Y') if current_user.created_at else 'Active' }}
+              </span>
+              <button type="submit" class="btn text-white px-4 fw-semibold" style="background-color: #1F4FD8;">
+                Save Profile
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Tab 2: Notification Preferences -->
+  {% if active_tab == 'notifications' %}
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4 p-md-5">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+          <h5 class="card-title fw-bold mb-1" style="font-family:'Bitter',serif;">Notification Channels &amp; Consents</h5>
+          <p class="text-muted small mb-0">Customize what communication channels we use to deliver alerts, booking confirmations, and marketing news.</p>
+        </div>
+      </div>
+
+      <form method="POST" action="{{ url_for('trekker.settings', tab='notifications') }}">
+        {{ notif_form.hidden_tag() }}
+        <input type="hidden" name="form_action" value="notifications"/>
+
+        <div class="table-responsive mb-4">
+          <table class="table table-bordered align-middle">
+            <thead class="table-light text-center small text-uppercase">
+              <tr>
+                <th scope="col" class="text-start ps-3" style="width: 25%;">Channel</th>
+                <th scope="col" style="width: 25%;">Channel Enabled</th>
+                <th scope="col" style="width: 25%;">Booking Updates<br><span class="text-muted text-lowercase fw-normal">(Transactional)</span></th>
+                <th scope="col" style="width: 25%;">Offers &amp; News<br><span class="text-muted text-lowercase fw-normal">(Marketing)</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Email Row -->
+              <tr>
+                <td class="ps-3 fw-bold">
+                  <i class="bi bi-envelope me-2 text-primary"></i>Email
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ notif_form.email_enabled(class="form-check-input", id="email_enabled") }}
+                    <label class="visually-hidden" for="email_enabled">Email Enabled</label>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ notif_form.email_transactional(class="form-check-input", id="email_transactional") }}
+                    <label class="visually-hidden" for="email_transactional">Email Transactional Updates</label>
+                  </div>
+                  {% if consents_map.get('email_tx') and consents_map.get('email_tx').granted_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('email_tx').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ notif_form.email_marketing(class="form-check-input", id="email_marketing") }}
+                    <label class="visually-hidden" for="email_marketing">Email Offers & News</label>
+                  </div>
+                  {% if consents_map.get('email_mkt') and consents_map.get('email_mkt').granted_at and not consents_map.get('email_mkt').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('email_mkt').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+              <tr>
+                <td colspan="4" class="bg-light py-2 px-3 small text-muted border-top-0">
+                  <i class="bi bi-shield-check me-1"></i>
+                  <strong>Security Note:</strong> Account security notifications (such as password resets and OTP verification) will always be delivered to your registered email address regardless of preferences.
+                </td>
+              </tr>
+
+              <!-- WhatsApp Row -->
+              <tr>
+                <td class="ps-3 fw-bold">
+                  <i class="bi bi-whatsapp me-2 text-success"></i>WhatsApp
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ notif_form.whatsapp_enabled(class="form-check-input", id="whatsapp_enabled") }}
+                    <label class="visually-hidden" for="whatsapp_enabled">WhatsApp Enabled</label>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ notif_form.whatsapp_transactional(class="form-check-input", id="whatsapp_transactional") }}
+                    <label class="visually-hidden" for="whatsapp_transactional">WhatsApp Transactional Updates</label>
+                  </div>
+                  {% if consents_map.get('whatsapp_tx') and consents_map.get('whatsapp_tx').granted_at and not consents_map.get('whatsapp_tx').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('whatsapp_tx').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ notif_form.whatsapp_marketing(class="form-check-input", id="whatsapp_marketing") }}
+                    <label class="visually-hidden" for="whatsapp_marketing">WhatsApp Offers & News</label>
+                  </div>
+                  {% if consents_map.get('whatsapp_mkt') and consents_map.get('whatsapp_mkt').granted_at and not consents_map.get('whatsapp_mkt').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('whatsapp_mkt').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+
+              <!-- SMS Row -->
+              <tr>
+                <td class="ps-3 fw-bold">
+                  <i class="bi bi-chat-text me-2 text-info"></i>SMS
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ notif_form.sms_enabled(class="form-check-input", id="sms_enabled") }}
+                    <label class="visually-hidden" for="sms_enabled">SMS Enabled</label>
+                  </div>
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ notif_form.sms_transactional(class="form-check-input", id="sms_transactional") }}
+                    <label class="visually-hidden" for="sms_transactional">SMS Transactional Updates</label>
+                  </div>
+                  {% if consents_map.get('sms_tx') and consents_map.get('sms_tx').granted_at and not consents_map.get('sms_tx').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('sms_tx').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <div class="form-check d-flex justify-content-center m-0">
+                    {{ notif_form.sms_marketing(class="form-check-input", id="sms_marketing") }}
+                    <label class="visually-hidden" for="sms_marketing">SMS Offers & News</label>
+                  </div>
+                  {% if consents_map.get('sms_mkt') and consents_map.get('sms_mkt').granted_at and not consents_map.get('sms_mkt').revoked_at %}
+                  <div class="text-muted" style="font-size: 0.7rem;">
+                    Since {{ consents_map.get('sms_mkt').granted_at.strftime('%Y-%m-%d') }}
+                  </div>
+                  {% endif %}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="d-flex justify-content-end">
+          <button type="submit" class="btn text-white px-4 fw-semibold" style="background-color: #1F4FD8;">
+            Save Preferences
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Tab 3: Saved Data & Privacy -->
+  {% if active_tab == 'privacy' %}
+  <div class="row g-4">
+    <!-- Transparency Overview -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4">
+          <div class="d-flex align-items-center justify-content-between mb-3">
+            <div>
+              <h5 class="card-title fw-bold mb-1" style="font-family:'Bitter',serif;">Data Transparency Hub</h5>
+              <p class="text-muted small mb-0">Here is the exact breakdown of what personal and operational data we store for your account.</p>
+            </div>
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-2">
+              <i class="bi bi-shield-check me-1"></i> Data Protection Active
+            </span>
+          </div>
+
+          <div class="row g-3 my-2">
+            <div class="col-sm-6 col-lg-3">
+              <div class="p-3 bg-light rounded-3 border">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Personal Profile</div>
+                <div class="fs-5 fw-bold text-dark">1 Record</div>
+                <div class="text-muted" style="font-size: 0.75rem;">Name, email, contact phone, profile photo</div>
+              </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+              <div class="p-3 bg-light rounded-3 border">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Trek Bookings</div>
+                <div class="fs-5 fw-bold text-dark">{{ bookings_count }} Bookings</div>
+                <div class="text-muted" style="font-size: 0.75rem;">Dates, participants, slot reservations</div>
+              </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+              <div class="p-3 bg-light rounded-3 border">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Financial Receipts</div>
+                <div class="fs-5 fw-bold text-dark">{{ payments_count }} Payments</div>
+                <div class="text-muted" style="font-size: 0.75rem;">Invoices, transaction IDs, refund status</div>
+              </div>
+            </div>
+            <div class="col-sm-6 col-lg-3">
+              <div class="p-3 bg-light rounded-3 border">
+                <div class="text-muted small text-uppercase fw-semibold mb-1">Channel Consents</div>
+                <div class="fs-5 fw-bold text-dark">{{ active_consents_count }} Active</div>
+                <div class="text-muted" style="font-size: 0.75rem;">Opt-in records with compliance timestamps</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Portability / Export Card -->
+    <div class="col-12">
+      <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-4">
+          <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between gap-3">
+            <div>
+              <h5 class="fw-bold mb-1" style="font-family:'Bitter',serif;">Download Your Personal Data (Data Portability)</h5>
+              <p class="text-muted small mb-0">
+                You can download a complete, machine-readable JSON archive containing all personal details, bookings, payments, preferences, and support inquiries saved on this platform.
+              </p>
+            </div>
+            <a href="{{ url_for('trekker.export_data') }}" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 flex-shrink-0 fw-semibold">
+              <i class="bi bi-download"></i> Download My Data (JSON)
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Tab 4: Security -->
+  {% if active_tab == 'security' %}
+  <div class="card border-0 shadow-sm rounded-3">
+    <div class="card-body p-4 p-md-5">
+      <h5 class="card-title fw-bold mb-1" style="font-family:'Bitter',serif;">Change Password</h5>
+      <p class="text-muted small mb-4">Ensure your account is protected with a strong password (minimum 8 characters).</p>
+
+      <form method="POST" action="{{ url_for('trekker.settings', tab='security') }}" style="max-width: 480px;">
+        {{ pwd_form.hidden_tag() }}
+        <input type="hidden" name="form_action" value="password"/>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">Current Password</label>
+          {{ pwd_form.current_password(class="form-control", placeholder="Enter your current password") }}
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label fw-semibold small">New Password</label>
+          {{ pwd_form.new_password(class="form-control", placeholder="At least 8 characters") }}
+        </div>
+
+        <div class="mb-4">
+          <label class="form-label fw-semibold small">Confirm New Password</label>
+          {{ pwd_form.confirm_password(class="form-control", placeholder="Re-enter new password") }}
+        </div>
+
+        <button type="submit" class="btn text-white px-4 fw-semibold" style="background-color: #111827;">
+          Update Password
+        </button>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Tab 5: Danger Zone (Account Deletion) -->
+  {% if active_tab == 'danger' %}
+  <div class="card border-danger shadow-sm rounded-3">
+    <div class="card-body p-4 p-md-5">
+      <div class="d-flex align-items-center gap-2 text-danger mb-2">
+        <i class="bi bi-exclamation-octagon fs-4"></i>
+        <h5 class="fw-bold mb-0" style="font-family:'Bitter',serif;">Delete Account &amp; Erase Personal Data</h5>
+      </div>
+      <p class="text-muted small mb-3">
+        Permanently remove your personal identity from this platform in accordance with the Right to Erasure (GDPR / DPDP).
+      </p>
+
+      <div class="alert alert-danger py-2 small mb-4">
+        <strong>Warning:</strong> This action cannot be reversed. Once confirmed:
+        <ul class="mb-0 mt-1 ps-3">
+          <li>Your personal name, email, and mobile phone number will be erased and anonymized.</li>
+          <li>Your custom profile photo will be permanently deleted from disk.</li>
+          <li>All notification permissions and communication channels will be revoked.</li>
+          <li>Your account will be deactivated and your current login session terminated.</li>
+        </ul>
+      </div>
+
+      <button type="button" class="btn btn-danger fw-semibold" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+        <i class="bi bi-trash3 me-1"></i> Delete My Account &amp; Data
+      </button>
+    </div>
+  </div>
+
+  <!-- Delete Account Confirmation Modal -->
+  <div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+        <div class="modal-header bg-danger text-white border-0 py-3">
+          <h5 class="modal-title fs-6 fw-bold" id="deleteAccountModalLabel">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>Permanently Delete Account?
+          </h5>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="text-dark small mb-3">
+            Please confirm that you want to delete your account. To prevent accidental deletion, type <strong>DELETE</strong> in the confirmation box below.
+          </p>
+
+          <form method="POST" action="{{ url_for('trekker.delete_account') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+
+            <div class="mb-3">
+              <label class="form-label small fw-semibold text-muted">Type DELETE to confirm:</label>
+              <input type="text" name="confirm_phrase" class="form-control" placeholder="DELETE" required autocomplete="off">
+            </div>
+
+            <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+              <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-danger btn-sm fw-bold">
+                Permanently Delete Everything
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

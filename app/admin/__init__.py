@@ -7,5 +7,7 @@ admin_bp = Blueprint(
 from app.admin import routes  # noqa: E402,F401
 from app.admin import call_requests_routes  # noqa: E402,F401
 from app.admin import roles_routes  # noqa: E402,F401
-
-# print("[DEBUG] admin roles_routes imported")
+from app.admin import refund_policy_routes  # noqa: E402,F401
+from app.admin import coupons_routes  # noqa: E402,F401
+from app.admin import manual_booking_routes  # noqa: E402,F401
+from app.admin import campaigns_routes  # noqa: E402,F401

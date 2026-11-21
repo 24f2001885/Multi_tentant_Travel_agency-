@@ -1,20 +1,75 @@
- 
 {% extends "shared/base.html" %}
 
 {% block content %}
 <div class="tma-payment-wrapper">
-  <div class="card tma-payment-card">
-    <div class="card-body text-center">
-      <h1 class="h4 mb-3">Complete Your Payment</h1>
-      <p class="text-muted">{{ booking.trek.name }} — &#8377;{{ "%.2f"|format(booking.trek.price) }}</p>
+  <div class="card tma-payment-card shadow-sm border-0">
+    <div class="card-body text-center p-4">
+      <div id="payment-prompt-state">
+        <div class="spinner-border text-primary mb-3" role="status" style="width: 2.5rem; height: 2.5rem;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h1 class="h5 mb-2 fw-bold" style="font-family: 'Bitter', serif;">Opening Secure Checkout...</h1>
+        <p class="text-muted small mb-2">{{ booking.trek.name }} &bull; {{ booking.slot_count }} participant{{ 's' if booking.slot_count > 1 else '' }}</p>
+        <p class="fw-bold fs-4 text-dark mb-3">&#8377;{{ "%.2f"|format(amount / 100.0) }}</p>
+        <button id="btn-reopen-rzp" class="btn btn-outline-primary btn-sm mb-3 d-none" onclick="rzp.open()">
+          Click here if payment modal did not open
+        </button>
+      </div>
+
+      <div id="payment-verifying-state" class="d-none">
+        <div class="spinner-border text-success mb-3" role="status" style="width: 2.5rem; height: 2.5rem;">
+          <span class="visually-hidden">Verifying...</span>
+        </div>
+        <h1 class="h5 mb-2 fw-bold text-success" style="font-family: 'Bitter', serif;">Payment Received!</h1>
+        <p class="text-muted small">Verifying and reserving your seats, please do not close this window...</p>
+      </div>
+
       <div id="razorpay-container"></div>
-      <p class="tma-payment-trust">Secured by Razorpay</p>
+      <p class="tma-payment-trust mb-0">
+        <i class="bi bi-shield-check me-1 text-success"></i> 256-bit SSL Secured via Razorpay
+      </p>
     </div>
   </div>
 </div>
 
 <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
 <script>
+  function submitPaymentSuccess(response) {
+    document.getElementById("payment-prompt-state").classList.add("d-none");
+    document.getElementById("payment-verifying-state").classList.remove("d-none");
+
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = "{{ url_for('trekker.payment_result', booking_id=booking.id) }}";
+
+    const csrfInput = document.createElement("input");
+    csrfInput.type = "hidden";
+    csrfInput.name = "csrf_token";
+    csrfInput.value = "{{ csrf_token() }}";
+    form.appendChild(csrfInput);
+
+    const payInput = document.createElement("input");
+    payInput.type = "hidden";
+    payInput.name = "razorpay_payment_id";
+    payInput.value = response.razorpay_payment_id || "";
+    form.appendChild(payInput);
+
+    const ordInput = document.createElement("input");
+    ordInput.type = "hidden";
+    ordInput.name = "razorpay_order_id";
+    ordInput.value = response.razorpay_order_id || "";
+    form.appendChild(ordInput);
+
+    const sigInput = document.createElement("input");
+    sigInput.type = "hidden";
+    sigInput.name = "razorpay_signature";
+    sigInput.value = response.razorpay_signature || "";
+    form.appendChild(sigInput);
+
+    document.body.appendChild(form);
+    form.submit();
+  }
+
   var options = {
     key: "{{ razorpay_key }}",
     amount: "{{ amount }}",
@@ -23,22 +78,32 @@
     name: "Trekking Management Application",
     description: "{{ booking.trek.name }}",
     handler: function (response) {
-      window.location.href = "{{ url_for('trekker.payment_result', booking_id=booking.id) }}";
+      submitPaymentSuccess(response);
     },
     modal: {
       ondismiss: function () {
+        // If dismissed, redirect to check if payment went through or remains pending
         window.location.href = "{{ url_for('trekker.payment_result', booking_id=booking.id) }}";
       }
     },
     theme: { color: "#1F4FD8" }
   };
+
   var rzp = new Razorpay(options);
+  rzp.on('payment.failed', function (response) {
+    window.location.href = "{{ url_for('trekker.payment_result', booking_id=booking.id) }}";
+  });
   rzp.open();
+
+  setTimeout(function() {
+    var reopenBtn = document.getElementById("btn-reopen-rzp");
+    if (reopenBtn) reopenBtn.classList.remove("d-none");
+  }, 2500);
 </script>
 
 <style>
-  .tma-payment-wrapper { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: #F7F7F8; padding: 2rem; }
-  .tma-payment-card { width: 400px; max-width: 100%; border: 1px solid #E2E4E9; border-radius: 10px; }
-  .tma-payment-trust { color: #6B7280; font-size: 0.75rem; margin-top: 1rem; }
+  .tma-payment-wrapper { min-height: 80vh; display: flex; align-items: center; justify-content: center; background: #F8FAFC; padding: 2rem; }
+  .tma-payment-card { width: 420px; max-width: 100%; border: 1px solid #E2E8F0 !important; border-radius: 12px; }
+  .tma-payment-trust { color: #64748B; font-size: 0.75rem; margin-top: 1.25rem; }
 </style>
 {% endblock %}

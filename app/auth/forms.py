@@ -52,6 +52,14 @@ class RegisterForm(FlaskForm):
         validators=[DataRequired(message="You must accept the Terms and Conditions and Privacy Policy.")],
     )
 
+    # P11 Communication opt-ins (all default unchecked)
+    whatsapp_transactional = BooleanField("Receive booking updates on WhatsApp", default=False)
+    sms_transactional = BooleanField("Receive booking updates via SMS", default=False)
+    marketing_email = BooleanField("Receive newsletter and trek offers via Email", default=False)
+    marketing_whatsapp = BooleanField("Receive trek offers on WhatsApp", default=False)
+    marketing_sms = BooleanField("Receive trek offers via SMS", default=False)
+
+
 
 class CompleteAccountForm(FlaskForm):
     mobile_country_code = SelectField(

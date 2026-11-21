@@ -1,103 +1,156 @@
 {% extends "shared/base.html" %}
 {% from "shared/_badge_macros.html" import status_badge %}
 
-{% block shell %}
-    {% if current_user.role == 'admin' %}
-        {% include "shared/sidebar_admin.html" %}
-    {% elif current_user.role == 'staff' %}
-        {% include "shared/sidebar_staff.html" %}
-    {% elif current_user.role == 'trekker' %}
-        {% include "shared/navbar_trekker.html" %}
-    {% endif %}
-{% endblock %}
-
 {% block content %}
 <!-- DEBUG: detail.html rendered ticket_id={{ ticket.id }} viewer_role={{ current_user.role }} -->
 
-<div class="container-fluid py-4 max-w-75">
+<div class="{% if current_user.role == 'trekker' %}container py-4{% else %}w-100{% endif %}" style="max-width: 960px;">
     <div class="mb-3">
-        <a href="{{ url_for('tickets.list_tickets') }}" class="text-decoration-none text-secondary">
-            &larr; Back to Tickets
+        <a href="{{ url_for('tickets.list_tickets') }}" class="text-decoration-none text-muted small">
+            <i class="bi bi-arrow-left me-1"></i> Back to Tickets
         </a>
     </div>
 
     <!-- Ticket Metadata Header -->
     <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom">
         <div>
-            <h2 class="h4 mb-1">
-                Ticket #{{ ticket.id }}
+            <div class="d-flex align-items-center gap-2 mb-1 flex-wrap">
+                <h1 class="h3 mb-0" style="font-family:'Bitter',serif;font-weight:700;">Ticket #{{ ticket.id }}</h1>
                 {% if ticket.type == 'query' %}
-                    <span class="badge border border-secondary text-secondary bg-transparent align-middle ms-2 fs-6">Query</span>
+                    <span class="badge border border-secondary text-secondary bg-white align-middle fs-6" style="font-weight:500;">Query</span>
                 {% else %}
-                    <span class="badge border border-primary text-primary bg-transparent align-middle ms-2 fs-6">Problem</span>
+                    <span class="badge border border-primary text-primary bg-white align-middle fs-6" style="font-weight:500;">Problem</span>
                 {% endif %}
-            </h2>
-            <div class="text-muted small">
-                Raised by <strong>{{ ticket.user.name if ticket.user else 'Unknown' }}</strong> on {{ ticket.created_at.strftime('%b %d, %Y at %H:%M') }}
+            </div>
+            <div class="text-muted small d-flex align-items-center flex-wrap gap-2 mt-1">
+                <img src="{{ ticket.user.avatar_url if ticket.user else '/static/img/default_avatar.svg' }}" 
+                     alt="{{ ticket.user.name if ticket.user else 'User' }}" 
+                     class="rounded-circle border flex-shrink-0" 
+                     style="width: 22px; height: 22px; object-fit: cover; border-color: #E2E8F0;"
+                     onerror="this.src='/static/img/default_avatar.svg'">
+                <span>Raised by <strong>{{ ticket.user.name if ticket.user else 'Unknown' }}</strong> on {{ ticket.created_at.strftime('%b %d, %Y at %H:%M') }}</span>
                 {% if ticket.booking_id %}
-                    &bull; Booking Ref: <a href="#">#{{ ticket.booking_id }}</a>
+                    &bull; <span>Booking Ref: <a href="{{ url_for('admin.booking_detail', booking_id=ticket.booking_id) if current_user.role == 'admin' else (url_for('trekker.booking_detail', booking_id=ticket.booking_id) if current_user.role == 'trekker' else '#') }}" class="fw-semibold">#{{ ticket.booking_id }}</a></span>
                 {% endif %}
             </div>
         </div>
-        <div class="mt-2 mt-md-0 d-flex align-items-center gap-3">
-            {{ status_badge('ticket_status', ticket.status) }}
+        <div class="mt-3 mt-md-0 d-flex align-items-center gap-2">
+            {{ status_badge(ticket.status, 'ticket_status') }}
             
             <!-- Trekker "Mark Resolved" Action -->
             {% if can_resolve %}
                 <form method="POST" action="{{ url_for('tickets.resolve_ticket', id=ticket.id) }}" class="m-0 p-0">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" class="btn btn-outline-success btn-sm">Mark Resolved</button>
+                    <button type="submit" class="btn btn-outline-success btn-sm"><i class="bi bi-check2-circle me-1"></i> Mark Resolved</button>
                 </form>
             {% endif %}
         </div>
     </div>
 
-    <!-- Original Message Quote Block -->
-    <div class="p-3 mb-4 bg-light border-start border-3 border-secondary rounded" style="background-color: var(--tma-app-bg, #f8f9fa) !important; border-left-color: var(--tma-border, #dee2e6) !important; padding: 1rem;">
-        <h5 class="mb-3 text-dark">{{ ticket.subject }}</h5>
-        <div class="text-body text-break" style="white-space: pre-wrap;">{{ ticket.message }}</div>
+    <!-- Original Message Box -->
+    <div class="bg-white border rounded-3 p-4 mb-4 shadow-sm" style="border-color:#E2E4E9;">
+        <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+            <h2 class="h5 mb-0 fw-bold text-dark" style="font-family:'Bitter',serif;">{{ ticket.subject }}</h2>
+            <span class="badge bg-light text-secondary border px-2 py-1 small">Initial Request</span>
+        </div>
+        <div class="text-body text-break" style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6;">{{ ticket.message }}</div>
     </div>
 
-    <!-- Single Response Block (If Responded) -->
-    {% if ticket.response %}
-        <div class="card border-0 mb-4 bg-primary bg-opacity-10">
-            <div class="card-body p-4">
-                <div class="d-flex align-items-center mb-3">
-                    <div class="fw-bold text-primary">Support Response</div>
-                    <div class="text-muted small ms-auto">
-                        {% if ticket.responded_at %}
-                            {{ ticket.responded_at.strftime('%b %d, %Y at %H:%M') }}
-                        {% endif %}
+    <!-- Multi-Turn Conversation Thread (Milestone P12 Support v2) -->
+    <div class="ticket-thread my-4">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <h2 class="h6 text-uppercase fw-bold mb-0 text-muted" style="letter-spacing: 0.05em; font-family:'Inter',sans-serif;">Conversation Thread</h2>
+            <span class="badge bg-secondary-subtle text-secondary rounded-pill">{{ (ticket.messages|length) if ticket.messages else (1 if ticket.response else 0) }} replies</span>
+        </div>
+
+        <!-- Legacy Single Response (if no messages in thread yet) -->
+        {% if ticket.response and not ticket.messages %}
+            <div class="card border mb-3 shadow-sm rounded-3" style="border-color:#D0E1FD !important; background-color: #F8FAFF;">
+                <div class="card-body p-3 p-md-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <span class="badge bg-primary me-2">Support Staff</span>
+                        <span class="fw-bold text-primary">{{ ticket.responded_by.name if ticket.responded_by else 'Support Team' }}</span>
+                        <div class="text-muted small ms-auto">
+                            {% if ticket.responded_at %}
+                                {{ ticket.responded_at.strftime('%b %d, %Y at %H:%M') }}
+                            {% endif %}
+                        </div>
                     </div>
+                    <div class="text-body text-break" style="white-space: pre-wrap; line-height: 1.6;">{{ ticket.response }}</div>
                 </div>
-                <div class="text-body text-break" style="white-space: pre-wrap;">{{ ticket.response }}</div>
+            </div>
+        {% endif %}
+
+        <!-- Thread Messages -->
+        {% for msg in ticket.messages %}
+            <div class="card border mb-3 shadow-sm rounded-3 {% if msg.sender.role in ['admin', 'staff'] %}ms-md-4{% else %}me-md-4{% endif %}" 
+                 style="{% if msg.sender.role in ['admin', 'staff'] %}border-color: #C7D9FB !important; background-color: #F8FAFF;{% else %}border-color: #E2E4E9 !important; background-color: #FFFFFF;{% endif %}">
+                <div class="card-body p-3 p-md-4">
+                    <div class="d-flex align-items-center mb-2">
+                        <img src="{{ msg.sender.avatar_url if msg.sender else '/static/img/default_avatar.svg' }}" 
+                             alt="{{ msg.sender.name if msg.sender else 'User' }}" 
+                             class="rounded-circle me-2 border flex-shrink-0" 
+                             style="width: 28px; height: 28px; object-fit: cover; border-color: #E2E8F0;"
+                             onerror="this.src='/static/img/default_avatar.svg'">
+                        {% if msg.sender.role in ['admin', 'staff'] %}
+                            <span class="badge bg-primary text-white me-2">{{ msg.sender.role|capitalize }}</span>
+                            <span class="fw-bold text-primary">{{ msg.sender.name }}</span>
+                        {% else %}
+                            <span class="badge bg-secondary text-white me-2">Trekker</span>
+                            <span class="fw-bold text-dark">{{ msg.sender.name }}</span>
+                        {% endif %}
+                        <div class="text-muted small ms-auto">
+                            {{ msg.created_at.strftime('%b %d, %Y at %H:%M') }}
+                        </div>
+                    </div>
+                    <div class="text-body text-break" style="white-space: pre-wrap; line-height: 1.6;">{{ msg.message }}</div>
+                </div>
+            </div>
+        {% else %}
+            {% if not ticket.response %}
+                <div class="p-4 bg-white border rounded-3 text-center text-muted mb-3" style="border-color:#E2E4E9;">
+                    <i class="bi bi-chat-left-dots fs-3 text-muted d-block mb-1"></i>
+                    <p class="mb-0 small">No replies in this thread yet.</p>
+                </div>
+            {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Ticket Resolved Banner -->
+    {% if ticket.status == 'resolved' %}
+        <div class="alert alert-success d-flex align-items-center mb-4 rounded-3 border-0 shadow-sm" role="alert" style="background-color: #E7F6EC; color: #166534;">
+            <i class="bi bi-check-circle-fill fs-5 me-2"></i>
+            <div>
+                <strong>This ticket is resolved.</strong> The thread is closed for further replies.
             </div>
         </div>
     {% endif %}
 
-    <!-- Respond Ticket Form (Staff/Admin ONLY, when no response exists) -->
-    {% if form and current_user.role in ['staff', 'admin'] and not ticket.response %}
-        <div class="card shadow-sm mt-5">
-            <div class="card-header bg-white py-3">
-                <h5 class="mb-0 fs-5">Submit Response</h5>
+    <!-- Reply Form (Available when ticket is open/answered and user has permission) -->
+    {% if form and can_reply and ticket.status != 'resolved' %}
+        <div class="card shadow-sm border rounded-3 mt-4" style="border-color:#E2E4E9;">
+            <div class="card-header bg-white py-3 border-bottom" style="border-color:#E2E4E9;">
+                <h2 class="h6 mb-0 fw-bold text-dark" style="font-family:'Bitter',serif;">
+                    <i class="bi bi-reply-fill me-1"></i> Post a Reply
+                </h2>
             </div>
-            <div class="card-body">
+            <div class="card-body p-4">
                 <form method="POST" action="{{ url_for('tickets.respond_ticket', id=ticket.id) }}">
                     {{ form.hidden_tag() }}
-                    
                     <div class="mb-3">
-                        {{ form.response.label(class="form-label visually-hidden") }}
-                        {{ form.response(class="form-control" + (" is-invalid" if form.response.errors else ""), rows="5", placeholder="Draft your response to the trekker here...") }}
-                        {% for error in form.response.errors %}
-                            <div class="invalid-feedback">{{ error }}</div>
-                        {% endfor %}
+                        <textarea name="message" class="form-control" rows="4" placeholder="Write your response clearly here..." required style="border-color:#CBD5E1; font-size:0.95rem;"></textarea>
                         <div class="form-text text-muted mt-2">
-                            <i class="bi bi-info-circle me-1"></i> Note: Tickets support a single response. This action cannot be edited later.
+                            {% if current_user.role in ['admin', 'staff'] %}
+                                Responding moves the ticket to <strong>Answered</strong> status. The trekker can reply or mark it resolved.
+                            {% else %}
+                                This ticket stays open until you mark it as resolved.
+                            {% endif %}
                         </div>
                     </div>
-                    
-                    <div class="d-flex justify-content-end">
-                        <button type="submit" class="btn btn-primary">Send Response</button>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="submit" class="btn btn-primary px-4">
+                            <i class="bi bi-send me-1"></i> Send Reply
+                        </button>
                     </div>
                 </form>
             </div>

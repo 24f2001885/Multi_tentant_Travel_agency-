@@ -14,6 +14,13 @@
         One more step before you continue. Please verify your mobile number and accept our policies.
       </p>
 
+      {% if current_user.role == 'staff' %}
+        <div class="alert alert-info py-2 small mb-3">
+          <i class="bi bi-person-badge me-1"></i>
+          <strong>Staff Registration:</strong> After submitting your details, your account will be reviewed by the administrator before activation.
+        </div>
+      {% endif %}
+
       <form method="POST" action="{{ url_for('auth.complete_account') }}" id="complete-account-form">
         {{ form.hidden_tag() }}
 

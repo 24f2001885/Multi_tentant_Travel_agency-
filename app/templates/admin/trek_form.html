@@ -2,65 +2,130 @@
 {% extends "shared/base.html" %}
 {% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
 {% block content %}
-<h1 class="h3 mb-4" style="font-family:'Bitter',serif;font-weight:700;">{{ 'Edit Trek' if trek else 'New Trek' }}</h1>
-
-<form method="POST" enctype="multipart/form-data" novalidate>
-  {{ form.hidden_tag() }}
-  {% if not trek %}<input type="hidden" name="status" value="pending">{% endif %}
-
-  <h2 class="h6 text-uppercase" style="color:#6B7280;">Basic Info</h2>
-  <div class="row g-3 mb-4">
-    <div class="col-md-6">{{ form.name.label(class_='form-label') }}{{ form.name(class_='form-control') }}</div>
-    <div class="col-md-6">{{ form.location.label(class_='form-label') }}{{ form.location(class_='form-control') }}</div>
-    <div class="col-md-6">{{ form.difficulty.label(class_='form-label') }}{{ form.difficulty(class_='form-select') }}</div>
-    <div class="col-md-6">{{ form.duration_days.label(class_='form-label') }}{{ form.duration_days(class_='form-control') }}</div>
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <a href="{{ url_for('admin.treks_list') }}" class="text-decoration-none text-muted small">
+      <i class="bi bi-arrow-left me-1"></i> Back to Treks
+    </a>
+    <h1 class="h3 mb-0 mt-1" style="font-family:'Bitter',serif;font-weight:700;">{{ 'Edit Trek: ' ~ trek.name if trek else 'New Trek' }}</h1>
   </div>
-
-  <h2 class="h6 text-uppercase" style="color:#6B7280;">Capacity &amp; Pricing</h2>
-  <div class="row g-3 mb-4">
-    <div class="col-md-6">{{ form.total_slots.label(class_='form-label') }}{{ form.total_slots(class_='form-control') }}</div>
-    {% if trek %}
-    <div class="col-md-6">{{ form.available_slots.label(class_='form-label') }}{{ form.available_slots(class_='form-control') }}</div>
-    {% endif %}
-    <div class="col-md-6">{{ form.price.label(class_='form-label') }}{{ form.price(class_='form-control') }}</div>
-  </div>
-
-  <h2 class="h6 text-uppercase" style="color:#6B7280;">Schedule</h2>
-  <div class="row g-3 mb-4">
-    <div class="col-md-6">{{ form.start_date.label(class_='form-label') }}{{ form.start_date(class_='form-control', type='date') }}</div>
-    <div class="col-md-6">{{ form.end_date.label(class_='form-label') }}{{ form.end_date(class_='form-control', type='date') }}</div>
-  </div>
-
-  <h2 class="h6 text-uppercase" style="color:#6B7280;">Assignment</h2>
-  <div class="row g-3 mb-4">
-    <div class="col-md-6">{{ form.assigned_staff_id.label(class_='form-label') }}{{ form.assigned_staff_id(class_='form-select') }}</div>
-    {% if trek %}
-    <div class="col-md-6">{{ form.status.label(class_='form-label') }}{{ form.status(class_='form-select') }}</div>
-    {% endif %}
-  </div>
-
-  <h2 class="h6 text-uppercase" style="color:#6B7280;">Media</h2>
-  <div class="mb-4">
-    {{ form.thumbnail.label(class="form-label fw-bold") }}
-    {{ form.thumbnail(class="form-control") }}
-    <div class="form-text">Upload a scenic image (JPG or PNG) for the trek card.</div>
-<div class="mb-4">
-    {{ form.description.label(class="form-label fw-bold") }}
-    {{ form.description(class="form-control", rows="5", placeholder="Write a captivating description for this trek...") }}
-</div>
-    <!-- Show current thumbnail if editing -->
-    {% if trek and trek.thumbnail_filename %}
-    <div class="mt-2">
-      <span class="text-muted small d-block mb-1">Current Thumbnail:</span>
-      <img src="{{ url_for('static', filename='uploads/treks/' ~ trek.thumbnail_filename) }}" 
-           alt="Thumbnail" style="height: 100px; border-radius: 8px; object-fit: cover;">
+  {% if trek %}
+    <div>
+      <a href="{{ url_for('admin.trek_detail', trek_id=trek.id) }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-eye me-1"></i> View Trek Overview
+      </a>
     </div>
-    {% endif %}
-  </div>
+  {% endif %}
+</div>
 
-  <div class="d-flex justify-content-end gap-2 pt-3 border-top">
-    <a href="{{ url_for('admin.treks_list') }}" class="btn btn-outline-secondary">Cancel</a>
-    <button type="submit" class="btn" style="background:#1F4FD8;color:#fff;">Save Trek</button>
+{% if trek %}
+  <!-- Tab Navigation for Dedicated Editing Workspaces -->
+  <ul class="nav nav-pills mb-4 p-1 bg-white rounded border shadow-sm" id="trekEditTabs">
+    <li class="nav-item">
+      <a class="nav-link {% if active_tab == 'details' %}active fw-bold{% else %}text-dark{% endif %}" href="{{ url_for('admin.trek_edit', trek_id=trek.id, tab='details') }}">
+        <i class="bi bi-pencil-square me-1"></i> 1. Trek Details &amp; Pricing
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active_tab == 'itinerary' %}active fw-bold{% else %}text-dark{% endif %}" href="{{ url_for('admin.trek_edit', trek_id=trek.id, tab='itinerary') }}">
+        <i class="bi bi-map me-1"></i> 2. Itinerary Builder <span class="badge {{ 'bg-light text-dark' if active_tab == 'itinerary' else 'bg-secondary' }} ms-1">{{ itinerary|length }} Days</span>
+      </a>
+    </li>
+    <li class="nav-item">
+      <a class="nav-link {% if active_tab == 'gallery' %}active fw-bold{% else %}text-dark{% endif %}" href="{{ url_for('admin.trek_edit', trek_id=trek.id, tab='gallery') }}">
+        <i class="bi bi-images me-1"></i> 3. Photo Gallery &amp; Groups <span class="badge {{ 'bg-light text-dark' if active_tab == 'gallery' else 'bg-secondary' }} ms-1">{{ trek.media|length }} Photos</span>
+      </a>
+    </li>
+  </ul>
+{% endif %}
+
+{% if not trek or active_tab == 'details' %}
+  <!-- Dedicated Workspace: Trek Details Form -->
+  <div class="card shadow-sm border-0 p-4 mb-4">
+    <form method="POST" enctype="multipart/form-data" novalidate>
+      {{ form.hidden_tag() }}
+      {% if not trek %}<input type="hidden" name="status" value="pending">{% endif %}
+
+      <h2 class="h6 text-uppercase fw-bold text-muted mb-3"><i class="bi bi-info-circle me-1"></i> Basic Info</h2>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">{{ form.name.label(class_='form-label') }}{{ form.name(class_='form-control') }}</div>
+        <div class="col-md-6">{{ form.location.label(class_='form-label') }}{{ form.location(class_='form-control') }}</div>
+        <div class="col-md-6">{{ form.difficulty.label(class_='form-label') }}{{ form.difficulty(class_='form-select') }}</div>
+        <div class="col-md-6">{{ form.duration_days.label(class_='form-label') }}{{ form.duration_days(class_='form-control') }}</div>
+      </div>
+
+      <h2 class="h6 text-uppercase fw-bold text-muted mb-3"><i class="bi bi-currency-rupee me-1"></i> Capacity &amp; Pricing</h2>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">{{ form.total_slots.label(class_='form-label') }}{{ form.total_slots(class_='form-control') }}</div>
+        {% if trek %}
+        <div class="col-md-6">{{ form.available_slots.label(class_='form-label') }}{{ form.available_slots(class_='form-control') }}</div>
+        {% endif %}
+        <div class="col-md-6">{{ form.price.label(class_='form-label') }}{{ form.price(class_='form-control') }}</div>
+      </div>
+
+      <h2 class="h6 text-uppercase fw-bold text-muted mb-3"><i class="bi bi-calendar3 me-1"></i> Schedule</h2>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">{{ form.start_date.label(class_='form-label') }}{{ form.start_date(class_='form-control', type='date') }}</div>
+        <div class="col-md-6">{{ form.end_date.label(class_='form-label') }}{{ form.end_date(class_='form-control', type='date') }}</div>
+      </div>
+
+      <h2 class="h6 text-uppercase fw-bold text-muted mb-3"><i class="bi bi-layout-text-window me-1"></i> Display &amp; Layout</h2>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          {{ form.itinerary_layout.label(class_='form-label fw-bold') }}
+          {{ form.itinerary_layout(class_='form-select') }}
+          <div class="form-text">Choose how the itinerary is presented on the public web page (Accordion, Mountain Timeline, or Magazine Brochure).</div>
+        </div>
+      </div>
+
+      <h2 class="h6 text-uppercase fw-bold text-muted mb-3"><i class="bi bi-person-badge me-1"></i> Assignment &amp; Status</h2>
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">{{ form.assigned_staff_id.label(class_='form-label') }}{{ form.assigned_staff_id(class_='form-select') }}</div>
+        {% if trek %}
+        <div class="col-md-6">{{ form.status.label(class_='form-label') }}{{ form.status(class_='form-select') }}</div>
+        {% endif %}
+      </div>
+
+      <h2 class="h6 text-uppercase fw-bold text-muted mb-3"><i class="bi bi-card-image me-1"></i> Cover Thumbnail &amp; Description</h2>
+      <div class="mb-4">
+        {{ form.thumbnail.label(class="form-label fw-bold") }}
+        {{ form.thumbnail(class="form-control") }}
+        <div class="form-text">Upload a scenic banner image (JPG, PNG, WEBP).</div>
+        {% if trek and trek.thumbnail_filename %}
+        <div class="mt-2">
+          <span class="text-muted small d-block mb-1">Current Thumbnail:</span>
+          <img src="{{ url_for('static', filename='uploads/treks/' ~ trek.thumbnail_filename) }}" 
+               alt="Thumbnail" style="height: 100px; border-radius: 8px; object-fit: cover;">
+        </div>
+        {% endif %}
+      </div>
+
+      <div class="mb-4">
+        {{ form.description.label(class="form-label fw-bold") }}
+        {{ form.description(class="form-control", rows="5", placeholder="Write a captivating description for this trek...") }}
+      </div>
+
+      <div class="d-flex justify-content-end gap-2 pt-3 border-top">
+        <a href="{{ url_for('admin.treks_list') }}" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary px-4 fw-semibold">Save Trek Details</button>
+      </div>
+    </form>
   </div>
-</form>
+{% elif active_tab == 'itinerary' %}
+  <!-- Dedicated Workspace: Itinerary Builder -->
+  <div class="mb-4">
+    {% include "shared/_itinerary_builder.html" %}
+  </div>
+{% elif active_tab == 'gallery' %}
+  <!-- Dedicated Workspace: Photo Gallery & Groups -->
+  <div class="mb-4">
+    {% include "shared/_media_manager.html" %}
+  </div>
+{% endif %}
+
+{% if not trek %}
+  <div class="alert alert-secondary text-center mt-4">
+    <i class="bi bi-info-circle me-1"></i> Save the basic trek details first to configure the day-by-day itinerary and upload gallery photos.
+  </div>
+{% endif %}
 {% endblock %}

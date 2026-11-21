@@ -1,32 +1,35 @@
 {% extends "shared/base.html" %}
 {% from "shared/_badge_macros.html" import status_badge %}
 
-{% block shell %}
-    {% if current_user.role == 'admin' %}
-        {% include "shared/sidebar_admin.html" %}
-    {% elif current_user.role == 'staff' %}
-        {% include "shared/sidebar_staff.html" %}
-    {% elif current_user.role == 'trekker' %}
-        {% include "shared/navbar_trekker.html" %}
-    {% endif %}
-{% endblock %}
-
 {% block content %}
 <!-- DEBUG: list.html rendered role={{ current_user.role }} count={{ tickets|length }} -->
 
-<div class="container-fluid py-4">
+<div class="{% if current_user.role == 'trekker' %}container py-4{% else %}w-100{% endif %}">
     <!-- Header -->
     <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2 class="h3 mb-0">{% if current_user.role == 'trekker' %}My Tickets{% else %}Ticket Queue{% endif %}</h2>
+        <div>
+            <h1 class="h3 mb-0" style="font-family:'Bitter',serif;font-weight:700;">
+                {% if current_user.role == 'trekker' %}My Tickets{% else %}Ticket Queue{% endif %}
+            </h1>
+            <p class="text-muted small mb-0 mt-1">
+                {% if current_user.role == 'trekker' %}
+                    Track and manage your questions and support requests.
+                {% else %}
+                    Review, assign, and respond to incoming trekker tickets.
+                {% endif %}
+            </p>
+        </div>
         {% if current_user.role == 'trekker' %}
-            <a href="{{ url_for('tickets.raise_ticket') }}" class="btn btn-primary">Raise Ticket</a>
+            <a href="{{ url_for('tickets.raise_ticket') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle me-1"></i> Raise Ticket
+            </a>
         {% endif %}
     </div>
 
     <!-- Filters -->
     {% if current_user.role in ['admin', 'staff'] %}
         <!-- Admin / Staff: Dense Filter Bar -->
-        <div class="card shadow-sm mb-4">
+        <div class="card shadow-sm mb-4 border" style="border-color:#E2E4E9;">
             <div class="card-body py-2">
                 <form method="GET" action="{{ url_for('tickets.list_tickets') }}" class="row g-3 align-items-center">
                     <div class="col-auto">
@@ -47,7 +50,7 @@
                         </select>
                     </div>
                     <div class="col-auto">
-                        <button type="submit" class="btn btn-sm btn-secondary">Filter</button>
+                        <button type="submit" class="btn btn-sm btn-primary">Filter</button>
                         <a href="{{ url_for('tickets.list_tickets') }}" class="btn btn-sm btn-outline-secondary">Clear</a>
                     </div>
                 </form>
@@ -78,38 +81,36 @@
     <!-- Content Listing -->
     {% if current_user.role in ['admin', 'staff'] %}
         <!-- Admin / Staff: Operational Table -->
-        <div class="card shadow-sm border-0">
+        <div class="card shadow-sm border rounded-3" style="border-color:#E2E4E9;">
             <div class="table-responsive">
-                <!-- ADDED text-nowrap HERE to force horizontal scrolling on mobile -->
                 <table class="table table-hover table-striped align-middle mb-0 text-nowrap">
-                    <thead class="table-light">
-                        <tr>
-                            <th scope="col">Ticket ID</th>
+                    <thead style="background:#F7F7F8;">
+                        <tr style="color:#6B7280;text-transform:uppercase;font-size:0.75rem;">
+                            <th scope="col" class="ps-3">Ticket ID</th>
                             <th scope="col">Trekker</th>
                             <th scope="col">Type</th>
                             <th scope="col">Subject</th>
                             <th scope="col">Status</th>
                             <th scope="col">Created Date</th>
-                            <th scope="col" class="text-end">Action</th>
+                            <th scope="col" class="text-end pe-3">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for ticket in tickets %}
                         <tr>
-                            <td class="fw-bold">#{{ ticket.id }}</td>
+                            <td class="ps-3 fw-bold">#{{ ticket.id }}</td>
                             <td>{{ ticket.user.name if ticket.user else '—' }}</td>
                             <td>
                                 {% if ticket.type == 'query' %}
-                                    <span class="badge border border-secondary text-secondary bg-transparent">Query</span>
+                                    <span class="badge border border-secondary text-secondary bg-white">Query</span>
                                 {% else %}
-                                    <span class="badge border border-primary text-primary bg-transparent">Problem</span>
+                                    <span class="badge border border-primary text-primary bg-white">Problem</span>
                                 {% endif %}
                             </td>
-                            <!-- Using a slightly wider truncate for desktop, text-nowrap handles mobile -->
                             <td>{{ ticket.subject | truncate(45) }}</td>
-                            <td>{{ status_badge('ticket_status', ticket.status) }}</td>
+                            <td>{{ status_badge(ticket.status, 'ticket_status') }}</td>
                             <td>{{ ticket.created_at.strftime('%b %d, %Y %H:%M') }}</td>
-                            <td class="text-end">
+                            <td class="text-end pe-3">
                                 <a href="{{ url_for('tickets.detail_ticket', id=ticket.id) }}" class="btn btn-sm btn-outline-primary">View</a>
                             </td>
                         </tr>
@@ -128,25 +129,25 @@
             {% for ticket in tickets %}
             <div class="col-12 col-md-6 col-lg-4">
                 <a href="{{ url_for('tickets.detail_ticket', id=ticket.id) }}" class="text-decoration-none">
-                    <div class="card shadow-sm h-100 hover-shadow transition border-0">
+                    <div class="card shadow-sm h-100 hover-shadow transition border rounded-3" style="border-color:#E2E4E9;">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-2">
                                 <div>
                                     <span class="text-muted small fw-bold">#{{ ticket.id }}</span>
                                 </div>
                                 {% if ticket.type == 'query' %}
-                                    <span class="badge border border-secondary text-secondary bg-transparent">Query</span>
+                                    <span class="badge border border-secondary text-secondary bg-white">Query</span>
                                 {% else %}
-                                    <span class="badge border border-primary text-primary bg-transparent">Problem</span>
+                                    <span class="badge border border-primary text-primary bg-white">Problem</span>
                                 {% endif %}
                             </div>
-                            <h5 class="card-title text-dark fs-6">{{ ticket.subject | truncate(55) }}</h5>
+                            <h5 class="card-title text-dark fs-6" style="font-family:'Bitter',serif;">{{ ticket.subject | truncate(55) }}</h5>
                             <div class="d-flex justify-content-between align-items-end mt-3">
                                 <div class="text-muted small">
                                     {{ ticket.created_at.strftime('%b %d, %Y') }}
                                 </div>
                                 <div class="d-flex align-items-center gap-2">
-                                    {{ status_badge('ticket_status', ticket.status) }}
+                                    {{ status_badge(ticket.status, 'ticket_status') }}
                                     <span class="text-muted">&rang;</span>
                                 </div>
                             </div>
@@ -156,7 +157,8 @@
             </div>
             {% else %}
             <div class="col-12">
-                <div class="p-5 border rounded bg-light text-center text-muted border-0 shadow-sm">
+                <div class="p-5 border rounded bg-white text-center text-muted shadow-sm" style="border-color:#E2E4E9;">
+                    <i class="bi bi-inbox fs-2 text-muted d-block mb-2"></i>
                     <p class="mb-0">You have no tickets matching this status.</p>
                 </div>
             </div>

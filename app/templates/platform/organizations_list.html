@@ -24,6 +24,7 @@
           <tr>
             <th class="ps-3">Organization</th>
             <th>Primary Domain</th>
+            <th>Plan</th>
             <th>Status</th>
             <th>Route Linkage</th>
             <th>Users</th>
@@ -40,6 +41,9 @@
                 </a>
               </td>
               <td><code>{{ row.primary_domain }}</code></td>
+              <td>
+                <span class="badge bg-secondary text-capitalize">{{ row.organization.subscription_tier or 'Enterprise' }}</span>
+              </td>
               <td>
                 {% if row.organization.status == 'active' %}
                   <span class="badge bg-success-subtle text-success border border-success-subtle badge-status">Active</span>
@@ -64,7 +68,7 @@
             </tr>
           {% else %}
             <tr>
-              <td colspan="7" class="text-center py-4 text-muted">No organizations registered yet.</td>
+              <td colspan="8" class="text-center py-4 text-muted">No organizations registered yet.</td>
             </tr>
           {% endfor %}
         </tbody>

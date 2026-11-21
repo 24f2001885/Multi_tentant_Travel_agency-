@@ -10,6 +10,8 @@
   'organization_status': {'active': ('#16A34A','#E7F6EC'), 'suspended': ('#DC2626','#FBE9E9')},
   'route_linkage': {'pending': ('#D97706','#FDF3E3'), 'verified': ('#16A34A','#E7F6EC'), 'linked': ('#16A34A','#E7F6EC')},
   'domain_verification': {'pending': ('#D97706','#FDF3E3'), 'verified': ('#16A34A','#E7F6EC')},
+  'campaign_status': {'draft': ('#6B7280','#EEEFF1'), 'tested': ('#0891B2','#E5F5F8'), 'sent': ('#16A34A','#E7F6EC')},
+  'delivery_status': {'queued': ('#6B7280','#EEEFF1'), 'sent': ('#0891B2','#E5F5F8'), 'delivered': ('#16A34A','#E7F6EC'), 'read': ('#16A34A','#E7F6EC'), 'failed': ('#DC2626','#FBE9E9')},
 } %}
 {%- set pair = colors.get(domain, {}).get(value) -%}
 {%- if pair -%}

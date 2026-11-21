@@ -138,6 +138,65 @@ def test_account_completion_gate_intercepts_legacy_user(client_a, org_a, make_us
     assert resp_after.status_code == 200
 
 
+def test_call_request_logged_in_one_click_registered_phone(client_a, org_a, make_user):
+    """Logged in user can submit a callback request using their registered mobile in one click."""
+    user = make_user(
+        org_a,
+        role="trekker",
+        email="callback_user@example.com",
+        password="Password123!",
+        mobile_country_code="+91",
+        mobile_number="9123456780",
+        terms_accepted=True,
+    )
+
+    # Login user
+    with client_a.session_transaction() as sess:
+        sess["_user_id"] = str(user.id)
+        sess["organization_id"] = str(org_a.id)
+
+    # 1. Submit with phone_option="registered" (1-click, phone field omitted or blank)
+    resp = client_a.post(
+        "/public/call-requests",
+        data={
+            "phone_option": "registered",
+            "phone": "",
+            "preferred_time": "Morning (9 AM - 12 PM)",
+            "message": "Please call my registered number",
+            "website": "",
+        },
+        follow_redirects=True,
+    )
+    assert resp.status_code == 200
+
+    with tenant_context(org_a.id):
+        cr = CallRequest.query.filter_by(phone="+919123456780").first()
+        assert cr is not None
+        assert cr.name == user.name
+        assert cr.preferred_time == "Morning (9 AM - 12 PM)"
+
+    # 2. Submit with phone_option="custom"
+    resp_custom = client_a.post(
+        "/public/call-requests",
+        data={
+            "phone_option": "custom",
+            "custom_phone": "+919876500000",
+            "phone": "+919876500000",
+            "preferred_time": "Any time / ASAP",
+            "message": "Call alternate number",
+            "website": "",
+        },
+        follow_redirects=True,
+    )
+    assert resp_custom.status_code == 200
+
+    with tenant_context(org_a.id):
+        cr_custom = CallRequest.query.filter_by(phone="+919876500000").first()
+        assert cr_custom is not None
+        assert cr_custom.name == user.name
+
+
+
 def test_footer_and_cookie_banner_present_on_public_pages(client_a):
     """Footer and cookie consent banner are rendered on public pages."""
     resp = client_a.get("/")

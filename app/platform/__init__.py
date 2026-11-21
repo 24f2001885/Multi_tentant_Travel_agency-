@@ -12,6 +12,12 @@ platform_bp = Blueprint(
     url_prefix="/platform",
 )
 
+platform_root_bp = Blueprint(
+    "platform_root",
+    __name__,
+    template_folder="../templates/platform",
+)
+
 # print(f"[DEBUG] platform blueprint registered: {platform_bp.name}")
 
 from app.platform import routes  # noqa: E402, F401

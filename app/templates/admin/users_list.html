@@ -20,22 +20,82 @@
     <tbody>
       {% for user in users %}
       <tr>
-        <td><a href="{{ url_for('admin.user_detail', user_id=user.id) }}">{{ user.name }}</a></td>
+        <td>
+          <div class="d-flex align-items-center gap-2">
+            <!-- Clickable Profile Picture Thumbnail -->
+            <button type="button" 
+                    class="btn p-0 border-0 bg-transparent user-avatar-trigger"
+                    data-avatar-url="{{ user.avatar_url }}"
+                    data-user-name="{{ user.name }}"
+                    data-user-role="{{ user.role }}"
+                    data-user-email="{{ user.email }}"
+                    data-has-custom="{{ 'true' if user.has_profile_picture else 'false' }}"
+                    data-user-url="{{ url_for('admin.user_detail', user_id=user.id) }}"
+                    title="Click to view full profile photo"
+                    aria-label="View profile picture of {{ user.name }}">
+              <div class="position-relative d-inline-block">
+                <img src="{{ user.avatar_url }}" 
+                     alt="{{ user.name }}" 
+                     class="rounded-circle border shadow-sm flex-shrink-0" 
+                     style="width: 36px; height: 36px; object-fit: cover; border-color: #E2E8F0; transition: transform 0.15s ease, box-shadow 0.15s ease;"
+                     onmouseover="this.style.transform='scale(1.1)';this.style.boxShadow='0 .25rem .5rem rgba(0,0,0,.15)';"
+                     onmouseout="this.style.transform='scale(1)';this.style.boxShadow='none';"
+                     onerror="this.src='/static/img/default_avatar.svg'">
+                {% if user.has_profile_picture %}
+                  <span class="position-absolute bottom-0 end-0 bg-success rounded-circle border border-white" 
+                        style="width: 10px; height: 10px;" title="Custom photo uploaded"></span>
+                {% endif %}
+              </div>
+            </button>
+            <div class="d-flex flex-column">
+              <a href="{{ url_for('admin.user_detail', user_id=user.id) }}" class="fw-semibold text-dark text-decoration-none hover-primary">
+                {{ user.name }}
+              </a>
+              <button type="button" 
+                      class="btn p-0 border-0 bg-transparent text-muted text-start text-decoration-underline user-avatar-trigger"
+                      data-avatar-url="{{ user.avatar_url }}"
+                      data-user-name="{{ user.name }}"
+                      data-user-role="{{ user.role }}"
+                      data-user-email="{{ user.email }}"
+                      data-has-custom="{{ 'true' if user.has_profile_picture else 'false' }}"
+                      data-user-url="{{ url_for('admin.user_detail', user_id=user.id) }}"
+                      style="font-size: 0.72rem; line-height: 1.1;">
+                <i class="bi bi-eye me-1"></i>View Photo
+              </button>
+            </div>
+          </div>
+        </td>
         <td>{{ user.email }}</td>
-        <td>{{ user.role }}</td>
+        <td><span class="badge bg-light text-dark border">{{ user.role }}</span></td>
         <td>{{ 'Yes' if user.is_active else 'No' }}</td>
         <td>{{ user.created_at.strftime('%Y-%m-%d') }}</td>
         <td>
-          {% if user.role != 'admin' %}
-            <form method="post" action="{{ url_for('admin.user_deactivate', user_id=user.id) }}">
-              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-              <button type="submit" class="btn btn-sm {{ 'btn-outline-danger' if user.is_active else 'btn-outline-success' }}">
-                {{ 'Deactivate' if user.is_active else 'Reactivate' }}
-              </button>
-            </form>
-          {% else %}
-            <span class="badge bg-secondary">System Admin</span>
-          {% endif %}
+          <div class="d-flex align-items-center gap-2">
+            <!-- Dedicated View Photo button under Actions -->
+            <button type="button" 
+                    class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 user-avatar-trigger"
+                    data-avatar-url="{{ user.avatar_url }}"
+                    data-user-name="{{ user.name }}"
+                    data-user-role="{{ user.role }}"
+                    data-user-email="{{ user.email }}"
+                    data-has-custom="{{ 'true' if user.has_profile_picture else 'false' }}"
+                    data-user-url="{{ url_for('admin.user_detail', user_id=user.id) }}"
+                    title="View Profile Picture">
+              <i class="bi bi-image"></i>
+              <span>Photo</span>
+            </button>
+
+            {% if user.role != 'admin' %}
+              <form method="post" action="{{ url_for('admin.user_deactivate', user_id=user.id) }}" class="m-0">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-sm {{ 'btn-outline-danger' if user.is_active else 'btn-outline-success' }}">
+                  {{ 'Deactivate' if user.is_active else 'Reactivate' }}
+                </button>
+              </form>
+            {% else %}
+              <span class="badge bg-secondary">System Admin</span>
+            {% endif %}
+          </div>
         </td>
       </tr>
       {% else %}
@@ -44,4 +104,98 @@
     </tbody>
   </table>
 </div>
+
+<!-- Profile Picture Preview Modal -->
+<div class="modal fade" id="profilePicModal" tabindex="-1" aria-labelledby="profilePicModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+      <div class="modal-header border-0 pb-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-person-bounding-box text-primary fs-5"></i>
+          <h5 class="modal-title fs-6 fw-bold text-dark mb-0" id="profilePicModalLabel">Profile Picture</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center p-4">
+        <!-- Big Photo Display -->
+        <div class="position-relative d-inline-block mb-3">
+          <div class="rounded-circle p-1 bg-white shadow-sm border" style="border-color: #E2E8F0;">
+            <img id="modalAvatarImg" 
+                 src="/static/img/default_avatar.svg" 
+                 alt="Profile Photo" 
+                 class="rounded-circle" 
+                 style="width: 170px; height: 170px; object-fit: cover;"
+                 onerror="this.src='/static/img/default_avatar.svg'">
+          </div>
+        </div>
+        
+        <h4 id="modalUserName" class="h5 fw-bold mb-1 text-dark" style="font-family:'Bitter',serif;"></h4>
+        <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+          <span id="modalUserRole" class="badge bg-secondary-subtle text-secondary text-uppercase px-2 py-1"></span>
+          <span id="modalPhotoStatus" class="badge px-2 py-1"></span>
+        </div>
+        <p id="modalUserEmail" class="text-muted small mb-3 text-truncate" style="max-width: 320px; margin: 0 auto;"></p>
+        
+        <!-- Action Buttons -->
+        <div class="d-flex justify-content-center gap-2 pt-3 border-top">
+          <a id="modalFullImgBtn" href="#" target="_blank" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-box-arrow-up-right"></i> Open Full Image
+          </a>
+          <a id="modalUserDetailBtn" href="#" class="btn btn-sm btn-primary d-inline-flex align-items-center gap-1" style="background:#1F4FD8;border-color:#1F4FD8;">
+            <i class="bi bi-person-lines-fill"></i> View Details
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const modalEl = document.getElementById('profilePicModal');
+  if (!modalEl) return;
+  const bsModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+
+  document.querySelectorAll('.user-avatar-trigger').forEach(function (trigger) {
+    trigger.addEventListener('click', function (e) {
+      e.preventDefault();
+      const avatarUrl = this.dataset.avatarUrl || '/static/img/default_avatar.svg';
+      const userName = this.dataset.userName || 'User';
+      const userRole = this.dataset.userRole || 'User';
+      const userEmail = this.dataset.userEmail || '';
+      const hasCustom = this.dataset.hasCustom === 'true';
+      const userUrl = this.dataset.userUrl || '#';
+
+      document.getElementById('modalAvatarImg').src = avatarUrl;
+      document.getElementById('modalUserName').textContent = userName;
+      document.getElementById('modalUserRole').textContent = userRole;
+      document.getElementById('modalUserEmail').textContent = userEmail;
+
+      const statusBadge = document.getElementById('modalPhotoStatus');
+      const fullImgBtn = document.getElementById('modalFullImgBtn');
+
+      if (hasCustom) {
+        statusBadge.textContent = 'Custom Photo';
+        statusBadge.className = 'badge bg-success-subtle text-success border border-success-subtle px-2 py-1';
+        fullImgBtn.href = avatarUrl;
+        fullImgBtn.classList.remove('d-none');
+      } else {
+        statusBadge.textContent = 'Default Avatar';
+        statusBadge.className = 'badge bg-light text-muted border px-2 py-1';
+        fullImgBtn.href = avatarUrl;
+        fullImgBtn.classList.add('d-none');
+      }
+
+      const detailBtn = document.getElementById('modalUserDetailBtn');
+      if (detailBtn) {
+        detailBtn.href = userUrl;
+      }
+
+      bsModal.show();
+    });
+  });
+});
+</script>
 {% endblock %}

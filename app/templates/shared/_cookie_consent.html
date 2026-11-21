@@ -1,8 +1,8 @@
 <!-- DEBUG: _cookie_consent.html shown=true -->
-<div id="tma-cookie-banner" class="fixed-bottom p-3 bg-dark text-white border-top border-secondary shadow-lg" role="dialog" aria-label="Cookie notice" style="display: none; z-index: 1060;">
-  <div class="container d-flex flex-column flex-md-row align-items-center justify-content-between gap-3">
+<div id="tma-cookie-banner" class="tma-cookie-toast p-3 bg-dark text-white shadow-lg border border-secondary" role="dialog" aria-label="Cookie notice" style="display: none;">
+  <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3">
     <div class="small text-secondary">
-      <i class="bi bi-shield-check text-success me-2"></i>
+      <i class="bi bi-shield-check text-success me-1"></i>
       We use essential cookies to ensure secure logins and authenticate sessions across our platform.
       Review our <a href="{{ url_for('public.privacy') }}" class="text-white text-decoration-underline" target="_blank">Privacy Policy</a> to learn more.
     </div>
@@ -13,6 +13,29 @@
     </div>
   </div>
 </div>
+
+<style>
+  .tma-cookie-toast {
+    position: fixed;
+    bottom: 1.25rem;
+    right: 1.25rem;
+    max-width: 480px;
+    z-index: 1040;
+    border-radius: 12px;
+  }
+  @media (max-width: 576px) {
+    .tma-cookie-toast {
+      bottom: 0;
+      right: 0;
+      left: 0;
+      max-width: 100%;
+      border-radius: 0;
+      border-left: none;
+      border-right: none;
+      border-bottom: none;
+    }
+  }
+</style>
 
 <script>
   (function () {

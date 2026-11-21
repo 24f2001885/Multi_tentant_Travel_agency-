@@ -13,15 +13,30 @@ from sqlalchemy import select
 from app.extensions import db
 from app.models.audit_log import AuditLog
 from app.models.booking import Booking
+from app.models.booking_participant import BookingParticipant
 from app.models.call_request import CallRequest
+from app.models.coupon import Coupon
+from app.models.coupon_redemption import CouponRedemption
+from app.models.invoice import Invoice
 from app.models.organization import Organization
 from app.models.password_reset_token import PasswordResetToken
 from app.models.payment import Payment
+from app.models.refund_policy import RefundPolicy
 from app.models.role import Role
 from app.models.staff_profile import StaffProfile
 from app.models.ticket import Ticket
 from app.models.trek import Trek
 from app.models.user import User
+from app.models.waitlist_entry import WaitlistEntry
+from app.models.trek_itinerary_day import TrekItineraryDay
+from app.models.itinerary_element import ItineraryElement
+from app.models.trek_media import TrekMedia
+from app.models.trek_review import TrekReview
+from app.models.notification_consent import NotificationConsent
+from app.models.notification_preference import NotificationPreference
+from app.models.message_campaign import MessageCampaign
+from app.models.message_campaign_recipient import MessageCampaignRecipient
+from app.models.ticket_message import TicketMessage
 from app.services.id_codec import encode
 from app.tenancy.scoping import TenantScopedMixin, tenant_bypass, tenant_context
 from werkzeug.security import generate_password_hash
@@ -178,6 +193,219 @@ def _make_password_reset_token_row(org):
     return token
 
 
+def _make_booking_participant_row(org):
+    b = _make_booking_row(org)
+    bp = BookingParticipant(
+        organization_id=org.id,
+        booking_id=b.id,
+        name="Participant One",
+        age=28,
+        is_primary_contact=True,
+    )
+    db.session.add(bp)
+    db.session.flush()
+    return bp
+
+
+def _make_refund_policy_row(org):
+    rp = RefundPolicy(
+        organization_id=org.id,
+        min_days_before_trip=14,
+        max_days_before_trip=None,
+        refund_percentage=100.0,
+    )
+    db.session.add(rp)
+    db.session.flush()
+    return rp
+
+
+def _make_coupon_row(org):
+    c = Coupon(
+        organization_id=org.id,
+        code=f"SAVE_{uuid.uuid4().hex[:6].upper()}",
+        discount_type="percentage",
+        discount_value=15.0,
+        is_active=True,
+    )
+    db.session.add(c)
+    db.session.flush()
+    return c
+
+
+def _make_coupon_redemption_row(org):
+    c = _make_coupon_row(org)
+    b = _make_booking_row(org)
+    cr = CouponRedemption(
+        organization_id=org.id,
+        coupon_id=c.id,
+        booking_id=b.id,
+        user_id=b.user_id,
+        discount_applied=100.0,
+    )
+    db.session.add(cr)
+    db.session.flush()
+    return cr
+
+
+def _make_invoice_row(org):
+    b = _make_booking_row(org)
+    inv = Invoice(
+        organization_id=org.id,
+        booking_id=b.id,
+        invoice_number=f"INV-{uuid.uuid4().hex[:8].upper()}",
+        taxable_amount=5000.0,
+        gst_amount=900.0,
+        total_amount=5900.0,
+    )
+    db.session.add(inv)
+    db.session.flush()
+    return inv
+
+
+def _make_waitlist_entry_row(org):
+    t = _make_trek_row(org)
+    u = _make_user_row(org)
+    we = WaitlistEntry(
+        organization_id=org.id,
+        trek_id=t.id,
+        user_id=u.id,
+        requested_slot_count=1,
+        status="waiting",
+    )
+    db.session.add(we)
+    db.session.flush()
+    return we
+
+
+def _make_itinerary_day_row(org):
+    t = _make_trek_row(org)
+    day = TrekItineraryDay(
+        organization_id=org.id,
+        trek_id=t.id,
+        day_number=1,
+        title="Day 1",
+    )
+    db.session.add(day)
+    db.session.flush()
+    return day
+
+
+def _make_itinerary_element_row(org):
+    day = _make_itinerary_day_row(org)
+    el = ItineraryElement(
+        organization_id=org.id,
+        day_id=day.id,
+        sequence_order=1,
+        element_type="activity",
+        title="Activity 1",
+    )
+    db.session.add(el)
+    db.session.flush()
+    return el
+
+
+def _make_trek_media_row(org):
+    t = _make_trek_row(org)
+    m = TrekMedia(
+        organization_id=org.id,
+        trek_id=t.id,
+        asset_url=f"uploads/{org.id}/{t.id}/{uuid.uuid4().hex}.jpg",
+        sort_order=1,
+        caption="Sample Photo",
+    )
+    db.session.add(m)
+    db.session.flush()
+    return m
+
+
+def _make_trek_review_row(org):
+    t = _make_trek_row(org)
+    u = _make_user_row(org)
+    rev = TrekReview(
+        organization_id=org.id,
+        trek_id=t.id,
+        user_id=u.id,
+        rating=5,
+        comment="Awesome trek!",
+    )
+    db.session.add(rev)
+    db.session.flush()
+    return rev
+
+
+def _make_notification_consent_row(org):
+    u = _make_user_row(org)
+    nc = NotificationConsent(
+        organization_id=org.id,
+        user_id=u.id,
+        channel="email",
+        consent_type="transactional",
+        granted_at=datetime.now(timezone.utc),
+    )
+    db.session.add(nc)
+    db.session.flush()
+    return nc
+
+
+def _make_notification_preference_row(org):
+    u = _make_user_row(org)
+    np = NotificationPreference(
+        organization_id=org.id,
+        user_id=u.id,
+        channel="email",
+        is_enabled=True,
+    )
+    db.session.add(np)
+    db.session.flush()
+    return np
+
+
+def _make_message_campaign_row(org):
+    u = _make_user_row(org)
+    mc = MessageCampaign(
+        organization_id=org.id,
+        created_by=u.id,
+        channel="email",
+        subject="Iso Campaign",
+        template_body="Body",
+        audience_filter={},
+        status="draft",
+    )
+    db.session.add(mc)
+    db.session.flush()
+    return mc
+
+
+def _make_message_campaign_recipient_row(org):
+    mc = _make_message_campaign_row(org)
+    u = _make_user_row(org)
+    mcr = MessageCampaignRecipient(
+        organization_id=org.id,
+        campaign_id=mc.id,
+        user_id=u.id,
+        delivery_status="sent",
+        provider_message_id=f"msg_{uuid.uuid4().hex[:12]}",
+    )
+    db.session.add(mcr)
+    db.session.flush()
+    return mcr
+
+
+def _make_ticket_message_row(org):
+    t = _make_ticket_row(org)
+    u = _make_user_row(org)
+    tm = TicketMessage(
+        organization_id=org.id,
+        ticket_id=t.id,
+        sender_id=u.id,
+        message="Hello from isolation test thread",
+        created_at=datetime.now(timezone.utc),
+    )
+    db.session.add(tm)
+    db.session.flush()
+    return tm
+
+
 MODEL_FACTORIES = {
     User: _make_user_row,
     Role: _make_role_row,
@@ -189,6 +417,21 @@ MODEL_FACTORIES = {
     AuditLog: _make_audit_log_row,
     CallRequest: _make_call_request_row,
     PasswordResetToken: _make_password_reset_token_row,
+    BookingParticipant: _make_booking_participant_row,
+    RefundPolicy: _make_refund_policy_row,
+    Coupon: _make_coupon_row,
+    CouponRedemption: _make_coupon_redemption_row,
+    Invoice: _make_invoice_row,
+    WaitlistEntry: _make_waitlist_entry_row,
+    TrekItineraryDay: _make_itinerary_day_row,
+    ItineraryElement: _make_itinerary_element_row,
+    TrekMedia: _make_trek_media_row,
+    TrekReview: _make_trek_review_row,
+    NotificationConsent: _make_notification_consent_row,
+    NotificationPreference: _make_notification_preference_row,
+    MessageCampaign: _make_message_campaign_row,
+    MessageCampaignRecipient: _make_message_campaign_recipient_row,
+    TicketMessage: _make_ticket_message_row,
 }
 
 
@@ -203,7 +446,7 @@ def test_fail_closed_auto_discovery_of_scoped_models(app):
             for mapper in db.Model.registry.mappers
             if issubclass(mapper.class_, TenantScopedMixin)
         ]
-        assert len(discovered_scoped) >= 10
+        assert len(discovered_scoped) >= 24
 
         missing_factories = [
             cls.__name__
@@ -256,6 +499,14 @@ def test_cross_tenant_orm_isolation(app, org_a, org_b):
                     updated_count = model_cls.query.filter_by(id=row_id).update({"first_name": "Tampered"})
                 elif hasattr(model_cls, "status"):
                     updated_count = model_cls.query.filter_by(id=row_id).update({"status": "tampered"})
+                elif hasattr(model_cls, "code"):
+                    updated_count = model_cls.query.filter_by(id=row_id).update({"code": "TAMPERED"})
+                elif hasattr(model_cls, "invoice_number"):
+                    updated_count = model_cls.query.filter_by(id=row_id).update({"invoice_number": "INV-TAMPERED"})
+                elif hasattr(model_cls, "discount_applied"):
+                    updated_count = model_cls.query.filter_by(id=row_id).update({"discount_applied": 99.0})
+                elif hasattr(model_cls, "refund_percentage"):
+                    updated_count = model_cls.query.filter_by(id=row_id).update({"refund_percentage": 50.0})
                 elif hasattr(model_cls, "action"):
                     updated_count = model_cls.query.filter_by(id=row_id).update({"action": "tampered"})
                 elif hasattr(model_cls, "token_hash"):
@@ -337,7 +588,13 @@ def test_tenant_bypass_import_allowlist():
         "services/rbac_service.py",
         "services/payment_service.py",
         "services/ticket_service.py",
+        "services/auth_service.py",
+        "services/backup_service.py",
+        "services/monitoring_service.py",
+        "services/waitlist_service.py",
         "api/payments_resource.py",
+        "api/route_webhook_resource.py",
+        "api/whatsapp_webhook_resource.py",
         "__init__.py",
     }
 

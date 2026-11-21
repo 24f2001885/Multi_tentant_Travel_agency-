@@ -2,7 +2,43 @@
 {% from "shared/_badge_macros.html" import status_badge %}
 {% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
 {% block content %}
-<h1 class="h3 mb-4" style="font-family:'Bitter',serif;font-weight:700;">{{ user.name }}</h1>
+<div class="d-flex align-items-center gap-3 mb-4">
+  <!-- Interactive Profile Picture Thumbnail -->
+  <div class="position-relative" style="cursor: pointer;"
+       data-bs-toggle="modal" data-bs-target="#profilePicModal"
+       title="Click to view full profile photo">
+    <img src="{{ user.avatar_url }}" 
+         alt="{{ user.name }}" 
+         class="rounded-circle border shadow-sm flex-shrink-0" 
+         style="width: 64px; height: 64px; object-fit: cover; border-color: #E2E8F0; transition: transform 0.15s ease;"
+         onmouseover="this.style.transform='scale(1.05)'"
+         onmouseout="this.style.transform='scale(1)'"
+         onerror="this.src='/static/img/default_avatar.svg'">
+    <span class="position-absolute bottom-0 end-0 bg-white rounded-circle shadow-sm border d-flex align-items-center justify-content-center"
+          style="width: 20px; height: 20px; font-size: 10px; color: #4B5563;">
+      <i class="bi bi-zoom-in"></i>
+    </span>
+  </div>
+  <div>
+    <div class="d-flex align-items-center gap-2">
+      <h1 class="h3 mb-0" style="font-family:'Bitter',serif;font-weight:700;">{{ user.name }}</h1>
+      {% if user.has_profile_picture %}
+        <span class="badge bg-success-subtle text-success border border-success-subtle">Custom Photo</span>
+      {% else %}
+        <span class="badge bg-light text-muted border">Default Avatar</span>
+      {% endif %}
+    </div>
+    <div class="d-flex align-items-center gap-3 mt-1">
+      <span class="badge bg-secondary-subtle text-secondary text-uppercase">{{ user.role }}</span>
+      <button type="button" 
+              class="btn btn-link btn-sm p-0 text-decoration-none text-primary d-inline-flex align-items-center gap-1"
+              style="font-size: 0.8rem;"
+              data-bs-toggle="modal" data-bs-target="#profilePicModal">
+        <i class="bi bi-image"></i> View Full Photo
+      </button>
+    </div>
+  </div>
+</div>
 
 <div class="bg-white border rounded-3 p-4 mb-4" style="border-color:#E2E4E9;">
   <p><strong>Email:</strong> {{ user.email }}</p>
@@ -41,5 +77,51 @@
       {% endfor %}
     </tbody>
   </table>
+</div>
+
+<!-- Profile Picture Preview Modal -->
+<div class="modal fade" id="profilePicModal" tabindex="-1" aria-labelledby="profilePicModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered" style="max-width: 420px;">
+    <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+      <div class="modal-header border-0 pb-0 pt-3 px-3 d-flex justify-content-between align-items-center">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-person-bounding-box text-primary fs-5"></i>
+          <h5 class="modal-title fs-6 fw-bold text-dark mb-0" id="profilePicModalLabel">Profile Picture</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center p-4">
+        <!-- Big Photo Display -->
+        <div class="position-relative d-inline-block mb-3">
+          <div class="rounded-circle p-1 bg-white shadow-sm border" style="border-color: #E2E8F0;">
+            <img src="{{ user.avatar_url }}" 
+                 alt="{{ user.name }}" 
+                 class="rounded-circle" 
+                 style="width: 180px; height: 180px; object-fit: cover;"
+                 onerror="this.src='/static/img/default_avatar.svg'">
+          </div>
+        </div>
+        
+        <h4 class="h5 fw-bold mb-1 text-dark" style="font-family:'Bitter',serif;">{{ user.name }}</h4>
+        <div class="d-flex align-items-center justify-content-center gap-2 mb-2">
+          <span class="badge bg-secondary-subtle text-secondary text-uppercase px-2 py-1">{{ user.role }}</span>
+          {% if user.has_profile_picture %}
+            <span class="badge bg-success-subtle text-success border border-success-subtle px-2 py-1">Custom Photo</span>
+          {% else %}
+            <span class="badge bg-light text-muted border px-2 py-1">Default Avatar</span>
+          {% endif %}
+        </div>
+        <p class="text-muted small mb-3">{{ user.email }}</p>
+        
+        {% if user.has_profile_picture %}
+        <div class="d-flex justify-content-center pt-3 border-top">
+          <a href="{{ user.avatar_url }}" target="_blank" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1">
+            <i class="bi bi-box-arrow-up-right"></i> Open Full Resolution Image
+          </a>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
 </div>
 {% endblock %}

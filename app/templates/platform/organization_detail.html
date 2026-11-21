@@ -16,6 +16,9 @@
       {% else %}
         <span class="badge bg-danger-subtle text-danger border border-danger-subtle badge-status">Suspended</span>
       {% endif %}
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle text-uppercase badge-status">
+        <i class="bi bi-star-fill me-1 text-warning"></i>{{ org.subscription_tier or 'Enterprise' }} Plan
+      </span>
     </div>
   </div>
 
@@ -44,6 +47,85 @@
 <div class="row g-4">
   <!-- Org Details & Branding -->
   <div class="col-lg-7">
+    <!-- SaaS Subscription & Feature Entitlements Card -->
+    <div class="card mb-4 border-primary shadow-sm">
+      <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center">
+        <div>
+          <h5 class="fw-bold mb-0"><i class="bi bi-shield-lock-fill me-2"></i>SaaS Subscription & Feature Entitlements</h5>
+          <small class="text-white-50">Manage tenant feature access based on billing tier and contract agreements.</small>
+        </div>
+        <span class="badge bg-white text-primary text-uppercase px-3 py-1 fw-bold fs-6">
+          {{ org.subscription_tier or 'Enterprise' }}
+        </span>
+      </div>
+      <div class="card-body p-4">
+        <form action="{{ url_for('platform.organization_update_subscription', id=org.id) }}" method="POST" id="subscriptionForm">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+          <div class="row g-3 align-items-center mb-4 pb-3 border-bottom">
+            <div class="col-md-5">
+              <label for="subscription_tier" class="form-label fw-bold small text-uppercase text-muted">Subscription Plan</label>
+              <select name="subscription_tier" id="subscription_tier" class="form-select fw-semibold">
+                {% if subscription_tiers %}
+                  {% for tier_key, tier_info in subscription_tiers.items() %}
+                    <option value="{{ tier_key }}" {% if (org.subscription_tier or 'enterprise') == tier_key %}selected{% endif %}>
+                      {{ tier_info.name }}
+                    </option>
+                  {% endfor %}
+                {% else %}
+                  <option value="starter" {% if (org.subscription_tier or 'enterprise') == 'starter' %}selected{% endif %}>Starter Plan</option>
+                  <option value="growth" {% if (org.subscription_tier or 'enterprise') == 'growth' %}selected{% endif %}>Growth Plan</option>
+                  <option value="enterprise" {% if (org.subscription_tier or 'enterprise') == 'enterprise' %}selected{% endif %}>Enterprise Plan</option>
+                  <option value="custom" {% if (org.subscription_tier or 'enterprise') == 'custom' %}selected{% endif %}>Custom Plan</option>
+                {% endif %}
+              </select>
+            </div>
+            <div class="col-md-7">
+              <label class="form-label fw-bold small text-uppercase text-muted d-block">Tier Details</label>
+              <div id="tier_description_display" class="small text-muted p-2 bg-light rounded border">
+                Loading tier specifications...
+              </div>
+            </div>
+          </div>
+
+          <h6 class="fw-bold mb-3 d-flex justify-content-between align-items-center">
+            <span>Enabled Feature Flags</span>
+            <span class="badge bg-light text-dark border small fw-normal">Checked = Tenant Has Access</span>
+          </h6>
+
+          <div class="row g-3">
+            {% if available_features %}
+              {% for f_key, f_data in available_features.items() %}
+                <div class="col-md-6">
+                  <div class="border rounded p-3 h-100 feature-card {% if org.has_feature(f_key) %}bg-white border-primary-subtle{% else %}bg-light opacity-75{% endif %}">
+                    <div class="form-check form-switch mb-2">
+                      <input class="form-check-input feature-checkbox" type="checkbox" name="features" value="{{ f_key }}" id="feature_{{ f_key }}" {% if org.has_feature(f_key) %}checked{% endif %}>
+                      <label class="form-check-label fw-bold text-dark" for="feature_{{ f_key }}">
+                        {{ f_data.name }}
+                      </label>
+                      <span class="badge bg-secondary-subtle text-secondary small ms-1" style="font-size: 0.65rem;">{{ f_data.category }}</span>
+                    </div>
+                    <p class="small text-muted mb-0" style="min-height: 38px;">
+                      {{ f_data.description }}
+                    </p>
+                  </div>
+                </div>
+              {% endfor %}
+            {% endif %}
+          </div>
+
+          <div class="mt-4 pt-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <span class="small text-muted">
+              <i class="bi bi-info-circle me-1"></i> Toggling individual features will automatically switch tier to <strong>Custom</strong>.
+            </span>
+            <button type="submit" class="btn btn-primary px-4 fw-semibold">
+              <i class="bi bi-check2-circle me-1"></i> Save Subscription & Entitlements
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
     <div class="card mb-4">
       <div class="card-header bg-white py-3">
         <h5 class="fw-semibold mb-0">Tenant Configuration & Branding</h5>
@@ -67,8 +149,51 @@
             {% if org.razorpay_route_account_id %}
               <span class="badge bg-success-subtle text-success">Linked ({{ org.razorpay_route_account_id }})</span>
             {% else %}
-              <span class="badge bg-secondary-subtle text-secondary">Unlinked — Pending Milestone P9</span>
+              <span class="badge bg-secondary-subtle text-secondary">Unlinked</span>
             {% endif %}
+          </div>
+          <div class="col-sm-6">
+            <span class="text-muted small d-block">UI Theme Folder</span>
+            {% if org.theme %}
+              <span class="badge bg-info-subtle text-info font-monospace"><i class="bi bi-palette me-1"></i>{{ org.theme }}</span>
+            {% else %}
+              <span class="text-muted small">Default Core Theme</span>
+            {% endif %}
+          </div>
+        </div>
+
+        <hr class="my-4">
+
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h6 class="fw-semibold mb-0">Payout & Payment Gateway (Razorpay Route)</h6>
+          <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#payoutFormCollapse">
+            <i class="bi bi-gear me-1"></i> Edit Payout Settings
+          </button>
+        </div>
+
+        <div class="collapse mb-3" id="payoutFormCollapse">
+          <div class="border rounded p-3 bg-light">
+            <form action="{{ url_for('platform.organization_update_payout', id=org.id) }}" method="POST">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Razorpay Route Account ID</label>
+                <input type="text" name="razorpay_route_account_id" class="form-control form-control-sm" 
+                       placeholder="e.g. acc_N1234567890ABC" value="{{ org.razorpay_route_account_id or '' }}">
+                <div class="form-text small">Sub-merchant account ID from your Razorpay Route dashboard where net bookings are auto-transferred.</div>
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">GST Number</label>
+                <input type="text" name="gst_number" class="form-control form-control-sm" 
+                       placeholder="e.g. 07AAAAA0000A1Z5" value="{{ org.gst_number or '' }}">
+              </div>
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">UI Theme Folder / Directory (Optional)</label>
+                <input type="text" name="theme" class="form-control form-control-sm font-monospace" 
+                       placeholder="e.g. modern_alpine" value="{{ org.theme or '' }}">
+                <div class="form-text small">Theme directory located under <code>app/templates/themes/&lt;theme_name&gt;</code>. Leave blank for default UI.</div>
+              </div>
+              <button type="submit" class="btn btn-sm btn-primary">Save Payout Configuration</button>
+            </form>
           </div>
         </div>
 
@@ -171,4 +296,81 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tierConfig = {
+    {% if subscription_tiers %}
+      {% for tier_key, tier_info in subscription_tiers.items() %}
+        "{{ tier_key }}": {
+          "name": "{{ tier_info.name }}",
+          "description": "{{ tier_info.description }}",
+          "features": {{ tier_info.features | tojson }}
+        },
+      {% endfor %}
+    {% endif %}
+  };
+
+  const tierSelect = document.getElementById('subscription_tier');
+  const descDisplay = document.getElementById('tier_description_display');
+  const checkboxes = document.querySelectorAll('.feature-checkbox');
+
+  function updateTierDescription() {
+    if (!tierSelect || !descDisplay) return;
+    const selected = tierSelect.value;
+    if (tierConfig[selected]) {
+      descDisplay.innerHTML = '<strong>' + tierConfig[selected].name + ':</strong> ' + tierConfig[selected].description;
+    }
+  }
+
+  if (tierSelect) {
+    tierSelect.addEventListener('change', function() {
+      const selected = this.value;
+      updateTierDescription();
+      if (selected !== 'custom' && tierConfig[selected]) {
+        const allowed = new Set(tierConfig[selected].features);
+        checkboxes.forEach(cb => {
+          cb.checked = allowed.has(cb.value);
+          const card = cb.closest('.feature-card');
+          if (card) {
+            card.classList.toggle('bg-white', cb.checked);
+            card.classList.toggle('border-primary-subtle', cb.checked);
+            card.classList.toggle('bg-light', !cb.checked);
+            card.classList.toggle('opacity-75', !cb.checked);
+          }
+        });
+      }
+    });
+  }
+
+  checkboxes.forEach(cb => {
+    cb.addEventListener('change', function() {
+      const card = this.closest('.feature-card');
+      if (card) {
+        card.classList.toggle('bg-white', this.checked);
+        card.classList.toggle('border-primary-subtle', this.checked);
+        card.classList.toggle('bg-light', !this.checked);
+        card.classList.toggle('opacity-75', !this.checked);
+      }
+      // Check if match any standard tier, otherwise switch to custom
+      const currentChecked = Array.from(checkboxes).filter(c => c.checked).map(c => c.value).sort();
+      let matchedTier = 'custom';
+      for (const [tKey, tData] of Object.entries(tierConfig)) {
+        if (tKey === 'custom') continue;
+        const tierFeatures = [...tData.features].sort();
+        if (JSON.stringify(currentChecked) === JSON.stringify(tierFeatures)) {
+          matchedTier = tKey;
+          break;
+        }
+      }
+      if (tierSelect) {
+        tierSelect.value = matchedTier;
+        updateTierDescription();
+      }
+    });
+  });
+
+  updateTierDescription();
+});
+</script>
 {% endblock %}

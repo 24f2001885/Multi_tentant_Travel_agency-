@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TMA Multi-Tenant Platform — Milestones P7 to P11 Implementation & Operations Manual</title>
+<style>
+  :root {
+    --primary: #1e3a8a;
+    --primary-light: #3b82f6;
+    --secondary: #0f172a;
+    --accent: #059669;
+    --accent-warn: #d97706;
+    --bg-light: #f8fafc;
+    --card-bg: #ffffff;
+    --border: #e2e8f0;
+    --text-main: #1e293b;
+    --text-muted: #64748b;
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6;
+    color: var(--text-main);
+    background-color: var(--bg-light);
+    margin: 0;
+    padding: 0;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 40px auto;
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+    border: 1px solid var(--border);
+  }
+
+  .header {
+    background: linear-gradient(135deg, #1e3a8a 0%, #0f172a 100%);
+    color: #ffffff;
+    padding: 48px;
+  }
+
+  .header h1 {
+    margin: 0 0 12px 0;
+    font-size: 30px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+  }
+
+  .header .subtitle {
+    font-size: 16px;
+    color: #93c5fd;
+    margin: 0 0 20px 0;
+  }
+
+  .badges {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .badge {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .badge.success {
+    background: rgba(16, 185, 129, 0.25);
+    border-color: rgba(16, 185, 129, 0.4);
+    color: #a7f3d0;
+  }
+
+  .content {
+    padding: 48px;
+  }
+
+  h2 {
+    color: var(--primary);
+    border-bottom: 2px solid #e2e8f0;
+    padding-bottom: 8px;
+    margin-top: 40px;
+    margin-bottom: 20px;
+    font-size: 22px;
+  }
+
+  h3 {
+    color: var(--secondary);
+    margin-top: 24px;
+    margin-bottom: 12px;
+    font-size: 18px;
+  }
+
+  p {
+    margin: 0 0 16px 0;
+  }
+
+  ul, ol {
+    margin: 0 0 20px 24px;
+    padding: 0;
+  }
+
+  li {
+    margin-bottom: 8px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0 32px 0;
+    font-size: 14px;
+  }
+
+  th, td {
+    padding: 12px 14px;
+    text-align: left;
+    border: 1px solid var(--border);
+  }
+
+  th {
+    background-color: #f1f5f9;
+    color: var(--secondary);
+    font-weight: 600;
+  }
+
+  tr:nth-child(even) {
+    background-color: #f8fafc;
+  }
+
+  code {
+    font-family: Consolas, Monaco, "Courier New", monospace;
+    background: #f1f5f9;
+    color: #0f172a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+    border: 1px solid #e2e8f0;
+  }
+
+  pre {
+    background: #0f172a;
+    color: #f8fafc;
+    padding: 18px;
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: Consolas, Monaco, "Courier New", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    margin: 16px 0 24px 0;
+  }
+
+  pre code {
+    background: transparent;
+    color: inherit;
+    border: none;
+    padding: 0;
+  }
+
+  .callout {
+    background: #eff6ff;
+    border-left: 4px solid var(--primary-light);
+    padding: 16px 20px;
+    border-radius: 0 8px 8px 0;
+    margin: 20px 0;
+  }
+
+  .callout.success {
+    background: #ecfdf5;
+    border-left-color: var(--accent);
+  }
+
+  .callout.warn {
+    background: #fffbeb;
+    border-left-color: var(--accent-warn);
+  }
+
+  .callout-title {
+    font-weight: 700;
+    margin-bottom: 6px;
+    font-size: 15px;
+  }
+
+  .action-bar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 20px 48px 0 48px;
+  }
+
+  .btn {
+    background: var(--primary);
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .btn:hover {
+    background: var(--primary-light);
+  }
+
+  @media print {
+    body {
+      background: #ffffff;
+    }
+    .container {
+      max-width: 100%;
+      margin: 0;
+      border: none;
+      box-shadow: none;
+      border-radius: 0;
+    }
+    .action-bar {
+      display: none;
+    }
+    .header {
+      padding: 24px;
+    }
+    .content {
+      padding: 24px;
+    }
+    pre {
+      background: #f8fafc;
+      color: #0f172a;
+      border: 1px solid #cbd5e1;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="action-bar">
+  <button class="btn" onclick="window.print()">
+    <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M2.5 8a.5.5 0 1 0 0-1 .5.5 0 0 0 0 1z"/><path d="M5 1a2 2 0 0 0-2 2v2H2a2 2 0 0 0-2 2v3a2 2 0 0 0 2 2h1v1a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2v-1h1a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-1V3a2 2 0 0 0-2-2H5zm7 4V3a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v2h8zm-1 6v2a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-2h6zM1 7a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v-1a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v1H2a1 1 0 0 1-1-1V7z"/></svg>
+    Save as PDF / Print
+  </button>
+</div>
+
+<div class="container">
+  <div class="header">
+    <h1>TMA Multi-Tenant SaaS Platform</h1>
+    <div class="subtitle">Comprehensive Operations, Architecture & Integration Report (Milestones P7 to P11)</div>
+    <div class="badges">
+      <span class="badge success">Status: Verified & Production-Ready</span>
+      <span class="badge">Architecture: Multi-Tenant PostgreSQL</span>
+      <span class="badge">Scope: P7 through P11</span>
+      <span class="badge">Auth: Granular RBAC</span>
+    </div>
+  </div>
+
+  <div class="content">
+
+    <h2>1. Executive Summary & Architecture Overview</h2>
+    <p>
+      Between Milestone P7 and Milestone P11, TMA evolved from a single-tenant monolith into an enterprise-grade multi-tenant SaaS travel and expedition engine. The platform provides complete logical isolation between organizations while maintaining a shared database architecture with subdomain and custom-domain routing.
+    </p>
+
+    <div class="callout">
+      <div class="callout-title">Core Isolation Guarantee</div>
+      Every tenant's data is guarded by the <code>TenantScopedMixin</code>, contextual scopes (<code>tenant_context</code>), and host-only session cookies. Even under malicious parameter injection or direct ID referencing, requests cannot read or mutate data belonging to other organizations.
+    </div>
+
+    <h2>2. Milestone-by-Milestone Summary of Built Features</h2>
+
+    <h3>Milestone P7: Tenancy Core & Security Hardening</h3>
+    <ul>
+      <li><strong>Subdomain & Domain Resolver:</strong> Dynamically routes <code>&lt;subdomain&gt;.localhost:5000</code> and custom apex domains to their corresponding <code>Organization</code> records.</li>
+      <li><strong>Platform Admin Control Plane:</strong> Hosted on a dedicated host (<code>platform.localhost:5000</code>) for superadministrators to onboard, manage, and suspend tenant organizations.</li>
+      <li><strong>Host Barrier Isolation:</strong> Platform admin endpoints return HTTP 404 when requested from a tenant subdomain; tenant endpoints return HTTP 404 when requested from the platform domain.</li>
+      <li><strong>Auth Hardening:</strong> Standardized E.164 mobile number normalization via Google's <code>phonenumbers</code> library, mandatory Terms of Service acceptance gate (<code>terms_accepted_at</code>), and host-only session cookies.</li>
+    </ul>
+
+    <h3>Milestone P8: Identity, RBAC & Access Governance</h3>
+    <ul>
+      <li><strong>Capability Catalog:</strong> Granular permission system covering treks, bookings, payments, staff management, role administration, and marketing campaigns.</li>
+      <li><strong>Custom Role Builder:</strong> Tenant owners can create custom roles (e.g. Lead Guide, Logistics Manager) with fine-grained capability checkboxes.</li>
+      <li><strong>Protected Capabilities Guard:</strong> Critical administrative permissions (such as <code>roles.manage</code>, <code>staff.manage</code>, and organization settings) can only be accessed by the Tenant Owner. Non-owner staff attempting to assign or execute protected actions receive HTTP 403 / 422.</li>
+      <li><strong>Session Snapshot Caching:</strong> Fast capability checks cached directly in the user session for minimal database load.</li>
+    </ul>
+
+    <h3>Milestone P9: Booking Engine v2 & Money Platform</h3>
+    <ul>
+      <li><strong>Multi-Participant Bookings:</strong> Capture detailed participant profiles, dietary restrictions, medical conditions, and emergency contacts for all travellers on a booking.</li>
+      <li><strong>Promotional Coupons:</strong> Percentage and flat discounts with max uses, minimum order thresholds, and strict tenant isolation.</li>
+      <li><strong>Tiered Refund Policy:</strong> Automatic, rule-based cancellation refunds based on time windows prior to trek departure.</li>
+      <li><strong>Automated Tax Invoicing & WeasyPrint PDF:</strong> Sequential invoice numbering per organization with tax breakdown (GST) and on-the-fly downloadable PDF generation.</li>
+      <li><strong>Automated Waitlist FIFO Engine:</strong> Automated slot progression when bookings are cancelled, offering open spots to waitlisted travellers within a timed window.</li>
+      <li><strong>Razorpay Route Integration:</strong> Marketplace split payments between the platform and tenant vendors with webhook processing for automated settlements.</li>
+    </ul>
+
+    <h3>Milestone P10: Trek Content, Discovery & Itineraries</h3>
+    <ul>
+      <li><strong>Structured Daily Itineraries:</strong> Multi-day schedules with categorized elements (activities, meals, transport, accommodations, notes).</li>
+      <li><strong>Vector PDF Itinerary Export:</strong> Customer-facing printable brochure generation with day-by-day breakdowns.</li>
+      <li><strong>Media Gallery & EXIF Stripping:</strong> Upload handling with Pillow-based automatic removal of EXIF and GPS coordinates for privacy, storing files with unique UUIDs.</li>
+      <li><strong>Staff Trek Origination:</strong> Staff can draft treks that land in a "pending" queue; only tenant admins can approve and publish inventory.</li>
+      <li><strong>Verified Reviews:</strong> Trek reviews gated strictly to travellers who completed their trip, with masked public reviewer names (e.g., "Rahul K.").</li>
+    </ul>
+
+    <h3>Milestone P11: Communication Platform & Messaging Compliance</h3>
+    <ul>
+      <li><strong>Omnichannel Dispatch Gateway:</strong> Single entry point <code>dispatch()</code> handling Email, SMS, and WhatsApp Cloud API.</li>
+      <li><strong>Critical Notification Carve-Out:</strong> Transactional operational alerts (booking confirmation, cancellations, waitlist offers, OTPs) bypass marketing preference opt-outs.</li>
+      <li><strong>Consent & Preference Management:</strong> Granular opt-in ledger (<code>NotificationConsent</code>), channel toggles, and RFC 8058 one-click unsubscribe links/headers.</li>
+      <li><strong>Marketing Message Campaigns:</strong> Target audiences filtered by past trek history, with safety test-sends required before launch and recipient delivery tracking.</li>
+      <li><strong>Meta WhatsApp Cloud API Webhook:</strong> Verification challenge handling and HMAC-SHA256 signature verification with real-time delivery status updates.</li>
+    </ul>
+
+    <h2>3. Local Machine Runbook (Step-by-Step)</h2>
+
+    <h3>Step 1: Configure Windows Hosts File</h3>
+    <p>Open <code>C:\Windows\System32\drivers\etc\hosts</code> in Notepad (as Administrator) and add:</p>
+    <pre><code>127.0.0.1 platform.localhost
+127.0.0.1 tenantzero.localhost
+127.0.0.1 a.localhost
+127.0.0.1 b.localhost</code></pre>
+
+    <h3>Step 2: Environment File (.env)</h3>
+    <p>Ensure your <code>.env</code> file is in the root directory (copied from <code>.env.example</code>). The default development settings work out of the box:</p>
+    <pre><code>FLASK_APP=app:create_app
+FLASK_ENV=development
+SECRET_KEY=dev-secret-key-tma-multi-tenant
+HASHIDS_SALT=dev-salt-hashids-tma
+
+DATABASE_URL=postgresql://tma:tma_dev_password@db:5432/tma_platform
+TEST_DATABASE_URL=postgresql://tma:tma_dev_password@db_test:5432/tma_platform_test
+
+BASE_DOMAIN=localhost
+PLATFORM_ADMIN_HOST=platform.localhost
+TENANT_ZERO_NAME=Summit Expeditions
+TENANT_ZERO_SUBDOMAIN=tenantzero
+
+PLATFORM_ADMIN_NAME=Platform Owner
+PLATFORM_ADMIN_EMAIL=owner@platform.local
+PLATFORM_ADMIN_PASSWORD=PlatformOwnerPass123!
+ADMIN_EMAIL=admin@tma.local
+ADMIN_PASSWORD=AdminPass123!
+
+EMAIL_PROVIDER=smtp
+MAIL_SERVER=mailhog
+MAIL_PORT=1025
+MAIL_DEFAULT_SENDER=no-reply@tma.local
+SMS_PROVIDER=twilio
+WHATSAPP_PROVIDER=meta_cloud_api</code></pre>
+
+    <h3>Step 3: Start Docker Containers</h3>
+    <pre><code>docker compose build
+docker compose up -d</code></pre>
+
+    <h3>Step 4: Execute Database Migrations & Seeds</h3>
+    <pre><code># 1. Apply all database migrations (Baseline through P11)
+docker compose exec web flask db upgrade
+
+# 2. Seed Platform Superadmin
+docker compose exec web flask seed-platform-admin
+
+# 3. Seed Tenant Zero (default organization & primary subdomain)
+docker compose exec web flask seed-tenant-zero
+
+# 4. Seed the initial Tenant Administrator
+docker compose exec web flask seed-admin
+
+# 5. Seed the RBAC Capability Catalog and starter roles
+docker compose exec web flask seed-rbac
+
+# 6. Backfill communication consents for legacy accounts
+docker compose exec web flask backfill-consents</code></pre>
+
+    <h3>Step 5: Access Web Interfaces</h3>
+    <ul>
+      <li><strong>Platform Superadmin:</strong> <a href="http://platform.localhost:5000" target="_blank">http://platform.localhost:5000</a> (Login: <code>owner@platform.local</code> / <code>PlatformOwnerPass123!</code>)</li>
+      <li><strong>Tenant Zero Portal:</strong> <a href="http://tenantzero.localhost:5000" target="_blank">http://tenantzero.localhost:5000</a> (Login: <code>admin@tma.local</code> / <code>AdminPass123!</code>)</li>
+      <li><strong>MailHog Mailbox:</strong> <a href="http://localhost:8025" target="_blank">http://localhost:8025</a> (Captures all outgoing confirmation & invoice emails)</li>
+    </ul>
+
+    <h2>4. Third-Party Portals & Developer Consoles Reference</h2>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Provider</th>
+          <th>Purpose</th>
+          <th>Developer Console URL</th>
+          <th>Required Environment Variables</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>Razorpay</strong></td>
+          <td>Online checkout, test payments, marketplace split transfers</td>
+          <td><a href="https://dashboard.razorpay.com/" target="_blank">dashboard.razorpay.com</a></td>
+          <td>
+            <code>RAZORPAY_KEY_ID</code><br>
+            <code>RAZORPAY_KEY_SECRET</code><br>
+            <code>RAZORPAY_PLATFORM_ACCOUNT_ID</code><br>
+            <code>RAZORPAY_ROUTE_WEBHOOK_SECRET</code>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Meta for Developers</strong></td>
+          <td>WhatsApp Cloud API alerts & campaign broadcasts</td>
+          <td><a href="https://developers.facebook.com/" target="_blank">developers.facebook.com</a></td>
+          <td>
+            <code>WHATSAPP_ACCESS_TOKEN</code><br>
+            <code>WHATSAPP_PHONE_NUMBER_ID</code><br>
+            <code>WHATSAPP_BUSINESS_ACCOUNT_ID</code><br>
+            <code>WHATSAPP_WEBHOOK_VERIFY_TOKEN</code><br>
+            <code>WHATSAPP_APP_SECRET</code>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>Twilio</strong></td>
+          <td>SMS alerts & notifications</td>
+          <td><a href="https://console.twilio.com/" target="_blank">console.twilio.com</a></td>
+          <td>
+            <code>TWILIO_ACCOUNT_SID</code><br>
+            <code>TWILIO_AUTH_TOKEN</code><br>
+            <code>TWILIO_FROM_NUMBER</code>
+          </td>
+        </tr>
+        <tr>
+          <td><strong>SendGrid / SES</strong></td>
+          <td>Production email delivery</td>
+          <td><a href="https://app.sendgrid.com/" target="_blank">app.sendgrid.com</a> / <a href="https://aws.amazon.com/ses/" target="_blank">aws.amazon.com/ses</a></td>
+          <td>
+            <code>EMAIL_PROVIDER=sendgrid</code><br>
+            <code>SENDGRID_API_KEY</code><br>
+            <em>(or AWS SES SMTP keys)</em>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h2>5. Zero-Cost Development Mode</h2>
+    <div class="callout success">
+      <div class="callout-title">Testing Without Live Accounts</div>
+      <p>You can run and test 100% of the platform right now without paying or awaiting third-party approvals:</p>
+      <ul>
+        <li><strong>Payments:</strong> Razorpay test keys (<code>rzp_test_...</code>) provide dummy cards for instant checkouts and refunds.</li>
+        <li><strong>Email:</strong> Local <code>mailhog</code> container on port 1025 captures all outbound emails. View them in your browser at <code>http://localhost:8025</code>.</li>
+        <li><strong>WhatsApp & SMS:</strong> In development mode without API credentials, the notification service safely prints all outbound payloads to the console/container log without raising exceptions.</li>
+      </ul>
+    </div>
+
+  </div>
+</div>
+
+</body>
+</html>

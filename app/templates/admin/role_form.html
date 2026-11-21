@@ -1,6 +1,7 @@
 {% extends "shared/base.html" %}
 
 {% block title %}{{ 'Edit Role' if role else 'New Role' }} — {{ current_org.name or 'TMA' }}{% endblock %}
+{% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
 
 {% block content %}
 <!-- DEBUG: role_form.html mode={{ 'edit' if role else 'create' }} -->

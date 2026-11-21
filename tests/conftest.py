@@ -53,17 +53,50 @@ def app():
         "TESTING": True,
         "SQLALCHEMY_DATABASE_URI": test_db_url,
         "WTF_CSRF_ENABLED": False,
+        "SERVER_NAME": "localhost",
+        "SESSION_COOKIE_DOMAIN": False,
     }
 
     application = create_app(test_config)
-    # print(f"[DEBUG] conftest app db={application.config['SQLALCHEMY_DATABASE_URI'][:12]}")
+    import threading
+    db.session.registry.scopefunc = threading.get_ident
 
     with application.app_context():
         db.create_all()
     yield application
     with application.app_context():
         db.session.remove()
-        db.drop_all()
+        try:
+            db.drop_all()
+        except Exception:
+            db.session.rollback()
+            db.session.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public;"))
+            db.session.commit()
+
+
+def _sync_session_cookies(client, headers, app):
+    if headers and isinstance(headers, dict) and "Host" in headers:
+        host = headers["Host"].split(":")[0]
+        cookie_name = app.config.get("SESSION_COOKIE_NAME", "session")
+        if hasattr(client, "_cookies"):
+            cookie = client._cookies.get(("localhost", "/", cookie_name))
+            if cookie:
+                client.set_cookie(key=cookie_name, value=cookie.value, domain=host)
+
+
+@pytest.fixture
+def client(app):
+    """Generic test client with multi-host session cookie support."""
+    client = app.test_client()
+    orig_open = client.open
+
+    def bound_open(*args, **kwargs):
+        _sync_session_cookies(client, kwargs.get("headers"), app)
+        return orig_open(*args, **kwargs)
+
+    client.open = bound_open
+    return client
+
 
 
 @pytest.fixture(autouse=True)
@@ -75,6 +108,7 @@ def clean_db_session(app):
         # Clean up database tables between tests to prevent row leaks
         with tenant_bypass():
             db.session.execute(text("UPDATE organizations SET tenant_admin_user_id = NULL"))
+            db.session.execute(text("UPDATE bookings SET manual_sign_off_by = NULL, cancelled_by = NULL, coupon_id = NULL"))
             for table in reversed(db.metadata.sorted_tables):
                 db.session.execute(table.delete())
             db.session.commit()
@@ -94,7 +128,7 @@ import uuid
 @pytest.fixture
 def platform_admin(app):
     """Fixture providing a Platform Admin."""
-    with app.app_context(), tenant_bypass():
+    with tenant_bypass():
         db.session.expire_on_commit = False
         admin = PlatformAdmin(
             id=uuid.uuid4(),
@@ -105,14 +139,15 @@ def platform_admin(app):
         admin.set_password("change-me-platform-password")
         db.session.add(admin)
         db.session.commit()
-        make_transient(admin)
-        return admin
+        _ = admin.id
+        _ = admin.email
+    return admin
 
 
 @pytest.fixture
 def org_a(app, platform_admin):
     """Fixture providing Tenant A organization with domain a.localhost."""
-    with app.app_context(), tenant_bypass():
+    with tenant_bypass():
         db.session.expire_on_commit = False
         org = Organization(
             name="Organization A",
@@ -134,14 +169,13 @@ def org_a(app, platform_admin):
         _ = org.id
         _ = org.name
         _ = org.status
-        make_transient(org)
-        return org
+    return org
 
 
 @pytest.fixture
 def org_b(app, platform_admin):
     """Fixture providing Tenant B organization with domain b.localhost."""
-    with app.app_context(), tenant_bypass():
+    with tenant_bypass():
         db.session.expire_on_commit = False
         org = Organization(
             name="Organization B",
@@ -163,8 +197,7 @@ def org_b(app, platform_admin):
         _ = org.id
         _ = org.name
         _ = org.status
-        make_transient(org)
-        return org
+    return org
 
 
 @pytest.fixture

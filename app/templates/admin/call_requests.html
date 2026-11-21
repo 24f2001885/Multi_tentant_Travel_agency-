@@ -98,7 +98,13 @@
                         <button type="submit" class="btn btn-sm btn-outline-secondary">Close</button>
                       </form>
                     {% else %}
-                      <span class="text-muted small">No actions</span>
+                      <form method="POST" action="{{ url_for('admin.call_request_update_status', id=req.id, status=current_status) }}" class="d-inline">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="status" value="new">
+                        <button type="submit" class="btn btn-sm btn-outline-warning text-dark d-inline-flex align-items-center">
+                          <i class="bi bi-arrow-counterclockwise me-1"></i>Reopen
+                        </button>
+                      </form>
                     {% endif %}
                   </td>
                 </tr>

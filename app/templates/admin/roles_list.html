@@ -1,6 +1,7 @@
 {% extends "shared/base.html" %}
 
 {% block title %}Roles & Capabilities — {{ current_org.name or 'TMA' }}{% endblock %}
+{% block shell %}{% include "shared/sidebar_admin.html" %}{% endblock %}
 
 {% block content %}
 <!-- DEBUG: roles_list.html count={{ roles|length }} -->

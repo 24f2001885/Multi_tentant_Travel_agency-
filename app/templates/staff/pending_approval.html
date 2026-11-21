@@ -22,6 +22,7 @@
       <h1 class="h5 mb-3">Awaiting Approval</h1>
       <p class="text-muted mb-4">Your Trek Staff account is awaiting Admin approval — you'll get an email once you're approved.</p>
       <form method="POST" action="{{ url_for('auth.logout') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
         <button type="submit" class="btn btn-outline-secondary">Log Out</button>
       </form>
     </div>

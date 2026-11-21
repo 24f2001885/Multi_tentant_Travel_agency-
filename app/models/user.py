@@ -48,6 +48,7 @@ class User(TenantScopedMixin, db.Model, UserMixin):
     bookings = db.relationship(
         "Booking",
         back_populates="user",
+        foreign_keys="Booking.user_id",
         lazy=True,
         cascade="all, delete-orphan",
     )
@@ -93,6 +94,104 @@ class User(TenantScopedMixin, db.Model, UserMixin):
     @property
     def has_profile_picture(self) -> bool:
         return self.profile_picture_filename is not None
+
+    @property
+    def avatar_url(self) -> str:
+        """Returns the public URL for the user's profile picture or default SVG avatar."""
+        if self.profile_picture_filename:
+            try:
+                from flask import url_for
+                return url_for("static", filename=f"uploads/profile_pics/{self.profile_picture_filename}")
+            except RuntimeError:
+                return f"/static/uploads/profile_pics/{self.profile_picture_filename}"
+        try:
+            from flask import url_for
+            return url_for("static", filename="img/default_avatar.svg")
+        except RuntimeError:
+            return "/static/img/default_avatar.svg"
+
+    @property
+    def initials(self) -> str:
+        """Returns 1-2 uppercase letters representing user initials for fallback badges."""
+        if not self.name:
+            return "U"
+        parts = self.name.strip().split()
+        if len(parts) >= 2:
+            return f"{parts[0][0]}{parts[-1][0]}".upper()
+        return self.name[:2].upper()
+
+    @property
+    def full_name(self) -> str:
+        return self.name
+
+    @full_name.setter
+    def full_name(self, value: str) -> None:
+        self.name = value
+
+    @property
+    def mobile(self) -> str:
+        return f"{self.mobile_country_code}{self.mobile_number}" if self.mobile_number != LEGACY_MOBILE_SENTINEL else ""
+
+    def has_capability(self, key: str) -> bool:
+        """Checks if the user has the specified capability."""
+        if hasattr(self, "_temp_capabilities") and self._temp_capabilities is not None:
+            return key in self._temp_capabilities
+
+        if self.role == "admin":
+            from app.services.rbac_service import PROTECTED_CAPABILITY_KEYS
+            return key not in PROTECTED_CAPABILITY_KEYS
+
+        if self.role == "staff":
+            try:
+                from flask import session
+                snapshot = session.get("capability_keys")
+                if snapshot is not None:
+                    return key in snapshot
+            except RuntimeError:
+                pass
+
+            if getattr(self, "staff_profile", None) and getattr(self.staff_profile, "role", None):
+                return any(c.key == key for c in self.staff_profile.role.capabilities)
+
+        return False
+
+    def set_capabilities(self, keys: list) -> None:
+        """Sets capabilities for testing."""
+        self._temp_capabilities = set(keys)
+        if self.role == "staff":
+            from app.models.staff_profile import StaffProfile
+            from app.models.role import Role
+            from app.models.capability import Capability
+
+            profile = self.staff_profile
+            if not profile:
+                profile = StaffProfile(
+                    organization_id=self.organization_id,
+                    user_id=self.id,
+                    approval_status="approved",
+                )
+                db.session.add(profile)
+                db.session.flush()
+
+            role = profile.role
+            if not role:
+                role = Role(
+                    organization_id=self.organization_id,
+                    name=f"Custom Role {self.id}",
+                )
+                db.session.add(role)
+                db.session.flush()
+                profile.role = role
+
+            caps = []
+            for k in keys:
+                cap = Capability.query.filter_by(key=k).first()
+                if not cap:
+                    cap = Capability(key=k, description=k, is_protected=False)
+                    db.session.add(cap)
+                    db.session.flush()
+                caps.append(cap)
+            role.capabilities = caps
 
     def __repr__(self) -> str:
         return f"<User {self.id} {self.email} [{self.role}] org={self.organization_id}>"

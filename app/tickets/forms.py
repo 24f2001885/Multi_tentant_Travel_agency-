@@ -39,4 +39,16 @@ class RespondTicketForm(FlaskForm):
         'Response',
         validators=[DataRequired(message="Response cannot be blank.")]
     )
+
+
+class TicketReplyForm(FlaskForm):
+    """
+    Form for multi-turn thread replies (Milestone P12 Support v2).
+    Usable by the raising Trekker, assigned Staff, and Admin.
+    """
+    message = TextAreaField(
+        'Reply Message',
+        validators=[DataRequired(message="Message cannot be blank.")]
+    )
+
    

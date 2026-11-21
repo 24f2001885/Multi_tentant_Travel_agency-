@@ -72,13 +72,210 @@
           </div>
           
           <h4 class="fw-bold mb-3" style="font-family: 'Bitter', serif; color: #111827;">About this Trek</h4>
-          <p class="text-muted" style="line-height: 1.8; font-size: 1.05rem; white-space: pre-line;">
+          <p class="text-muted mb-4" style="line-height: 1.8; font-size: 1.05rem; white-space: pre-line;">
             {% if trek.description %}
               {{ trek.description }}
             {% else %}
               Experience the breathtaking landscapes and thrilling adventure of the {{ trek.name }}. Located in beautiful {{ trek.location | title }}, this {{ trek.difficulty }} level trek offers an unforgettable journey into nature. Prepare to challenge yourself and create lifelong memories along the trail.
             {% endif %}
           </p>
+
+          <!-- Day-by-Day Itinerary Component (Dynamic Layout Picker) -->
+          {% if trek.itinerary_layout == 'timeline' and (not current_org or current_org.has_feature('advanced_itineraries')) %}
+            {% include "shared/itinerary_layouts/_timeline.html" %}
+          {% elif trek.itinerary_layout == 'magazine' and (not current_org or current_org.has_feature('advanced_itineraries')) %}
+            {% include "shared/itinerary_layouts/_magazine.html" %}
+          {% else %}
+            {% include "shared/itinerary_layouts/_accordion.html" %}
+          {% endif %}
+
+          <!-- Past Trip Memories, Photos & Reviews Section (P10) -->
+          <div class="mb-5 pt-3" id="reviews">
+            <div class="d-flex justify-content-between align-items-center mb-2 flex-wrap gap-2">
+              <div>
+                <h4 class="fw-bold mb-1" style="font-family: 'Bitter', serif; color: #111827;">Past Trip Photos & Experiences</h4>
+                <p class="text-muted small mb-0">See how previous adventurers enjoyed this trek, the team support, and real trail memories.</p>
+              </div>
+              {% if review_count and review_count > 0 %}
+                <div class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-2 fs-6">
+                  &#9733; {{ avg_rating }} <span class="fw-normal text-muted" style="font-size: 0.85rem;">({{ review_count }} review{{ 's' if review_count != 1 else '' }})</span>
+                </div>
+              {% endif %}
+            </div>
+
+            <!-- Trip Photos Gallery (Posted via Trek Edit & Trekkers) -->
+            {% if trek.media %}
+              <div class="mb-4 mt-3">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                  <span class="small fw-bold text-uppercase text-muted"><i class="bi bi-images me-1"></i>Photos from the Trail</span>
+                  {% if current_user.is_authenticated and current_user.role in ('admin', 'staff') %}
+                    <a href="{{ url_for('staff.trek_content', trek_id=trek.id) if current_user.role == 'staff' else url_for('admin.trek_edit', trek_id=trek.id) }}" class="btn btn-outline-primary btn-sm py-0 px-2" style="font-size: 0.78rem;">
+                      <i class="bi bi-pencil-square me-1"></i>Manage Photos in Trek Edit
+                    </a>
+                  {% endif %}
+                </div>
+                <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 g-2">
+                  {% for m in trek.media %}
+                    <div class="col">
+                      <div class="card h-100 border rounded shadow-sm overflow-hidden">
+                        <a href="/media/{{ m.id }}" target="_blank" title="{{ m.caption or trek.name }}" class="d-block overflow-hidden" style="height: 120px;">
+                          <img src="/media/{{ m.id }}" class="w-100 h-100 object-fit-cover transition-transform" alt="{{ m.caption or trek.name }}">
+                        </a>
+                        {% if m.caption %}
+                          <div class="p-1 px-2 bg-light border-top">
+                            <small class="text-muted d-block text-truncate" style="font-size: 0.72rem;">{{ m.caption }}</small>
+                          </div>
+                        {% endif %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% endif %}
+
+            <!-- Interactive Share Review & Trip Photo Form -->
+            <div class="card shadow-sm border mb-4 rounded-3 overflow-hidden">
+              <div class="card-header bg-white py-3 border-bottom d-flex justify-content-between align-items-center">
+                <h6 class="fw-bold mb-0 text-dark"><i class="bi bi-chat-heart text-danger me-2"></i>Share Your Experience & Trip Photos</h6>
+                {% if can_review and review_reason == 'already_reviewed' %}
+                  <span class="badge bg-success-subtle text-success border border-success-subtle">You've Reviewed</span>
+                {% elif can_review %}
+                  <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Verified Explorer</span>
+                {% endif %}
+              </div>
+              <div class="card-body p-3">
+                {% if can_review %}
+                  {% if review_reason == 'already_reviewed' %}
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                      <div class="small text-muted">
+                        <i class="bi bi-check-circle-fill text-success me-1"></i>You previously shared your comments and rating for this trek.
+                      </div>
+                      <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseReviewForm">
+                        <i class="bi bi-pencil me-1"></i>Edit Your Review & Photo
+                      </button>
+                    </div>
+                  {% endif %}
+
+                  <div class="collapse {{ 'show' if review_reason != 'already_reviewed' else '' }}" id="collapseReviewForm">
+                    <form method="POST" action="{{ url_for('public.submit_trek_review', id=trek.id) }}" enctype="multipart/form-data">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      
+                      <div class="row g-2 mb-3">
+                        <div class="col-md-4">
+                          <label class="form-label small fw-bold mb-1">Your Rating</label>
+                          <select name="rating" class="form-select form-select-sm" required>
+                            <option value="5" {{ 'selected' if existing_user_review and existing_user_review.rating == 5 else '' }}>&#9733;&#9733;&#9733;&#9733;&#9733; (5 - Exceptional)</option>
+                            <option value="4" {{ 'selected' if existing_user_review and existing_user_review.rating == 4 else '' }}>&#9733;&#9733;&#9733;&#9733;&#9734; (4 - Very Good)</option>
+                            <option value="3" {{ 'selected' if existing_user_review and existing_user_review.rating == 3 else '' }}>&#9733;&#9733;&#9733;&#9734;&#9734; (3 - Average)</option>
+                            <option value="2" {{ 'selected' if existing_user_review and existing_user_review.rating == 2 else '' }}>&#9733;&#9733;&#9734;&#9734;&#9734; (2 - Below Expectations)</option>
+                            <option value="1" {{ 'selected' if existing_user_review and existing_user_review.rating == 1 else '' }}>&#9733;&#9734;&#9734;&#9734;&#9734; (1 - Poor)</option>
+                          </select>
+                        </div>
+                        <div class="col-md-8">
+                          <label class="form-label small fw-bold mb-1">Attach Trip Photo (Optional)</label>
+                          <input type="file" name="photo" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp">
+                          <div class="form-text" style="font-size: 0.72rem;">Share real moments (max 5 MB; JPG, PNG, WEBP).</div>
+                        </div>
+                      </div>
+
+                      <div class="mb-3">
+                        <label class="form-label small fw-bold mb-1">Comments & Trip Highlights</label>
+                        <textarea name="comment" class="form-control form-control-sm" rows="3" placeholder="Tell others how you enjoyed the trip! How was the trail, food, campsite, and guide team support?" required>{{ existing_user_review.comment if existing_user_review and existing_user_review.comment else '' }}</textarea>
+                      </div>
+
+                      <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary btn-sm px-4">
+                          <i class="bi bi-send me-1"></i>{{ 'Update Review & Photo' if review_reason == 'already_reviewed' else 'Post Review & Photo' }}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                {% elif review_reason == 'not_logged_in' %}
+                  <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                      <strong class="d-block small text-dark"><i class="bi bi-person-check me-1 text-primary"></i>Went on this trek?</strong>
+                      <span class="text-muted" style="font-size: 0.8rem;">Log in to share your comments, photos, and guide team experiences with future trekkers.</span>
+                    </div>
+                    <a href="{{ url_for('auth.login', next=request.path) }}" class="btn btn-outline-primary btn-sm px-3">
+                      Log In to Post
+                    </a>
+                  </div>
+                {% else %}
+                  <div class="d-flex align-items-center gap-2 text-muted small">
+                    <i class="bi bi-shield-check text-primary fs-5"></i>
+                    <div>
+                      <strong>Verified Explorer Community:</strong> Reviews and trip photos are posted by verified trekkers who have booked this expedition or by the expedition guide team.
+                    </div>
+                  </div>
+                {% endif %}
+              </div>
+            </div>
+
+            <!-- Reviews List -->
+            {% if reviews %}
+              <div class="d-flex flex-column gap-3 mb-3">
+                {% for r in reviews %}
+                  <div class="border rounded-3 p-3 bg-light shadow-sm">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                      <div class="d-flex align-items-center gap-2">
+                        <img src="{{ r.user.avatar_url if r.user else '/static/img/default_avatar.svg' }}" 
+                             alt="{{ r.user.name.split()[0] if r.user and r.user.name else 'Trekker' }}" 
+                             class="rounded-circle border flex-shrink-0" 
+                             style="width: 28px; height: 28px; object-fit: cover; border-color: #E2E8F0;"
+                             onerror="this.src='/static/img/default_avatar.svg'">
+                        <div>
+                          <div class="fw-semibold text-dark lh-sm" style="font-size: 0.9rem;">
+                            {{ r.user.name.split()[0] if r.user and r.user.name else 'Trekker' }}
+                            {% if r.user and r.user.role in ('admin', 'staff') %}
+                              <span class="badge bg-primary-subtle text-primary border border-primary-subtle ms-1" style="font-size: 0.65rem;">Guide / Organizer</span>
+                            {% else %}
+                              <span class="badge bg-success-subtle text-success border border-success-subtle ms-1" style="font-size: 0.65rem;">Verified Trekker</span>
+                            {% endif %}
+                          </div>
+                          <small class="text-muted" style="font-size: 0.72rem;">{{ r.created_at.strftime('%d %b %Y') if r.created_at else '' }}</small>
+                        </div>
+                      </div>
+                      <div class="d-flex align-items-center gap-2">
+                        <span class="text-warning small">{% for star in range(r.rating) %}&#9733;{% endfor %}</span>
+                        {% if current_user.is_authenticated and (current_user.id == r.user_id or current_user.role in ('admin', 'staff')) %}
+                          <form method="POST" action="{{ url_for('public.delete_trek_review', id=trek.id, review_id=r.id) }}" class="d-inline" onsubmit="return confirm('Remove this review?');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-link text-danger p-0" title="Delete Review" style="font-size: 0.8rem;">
+                              <i class="bi bi-trash"></i>
+                            </button>
+                          </form>
+                        {% endif %}
+                      </div>
+                    </div>
+
+                    {% if r.comment %}
+                      <p class="small text-dark mb-2" style="line-height: 1.6; white-space: pre-line;">{{ r.comment }}</p>
+                    {% endif %}
+
+                    <!-- Trip Photo attached to review -->
+                    {% if r.image_url %}
+                      <div class="mt-2">
+                        <a href="{{ r.image_url }}" target="_blank" class="d-inline-block rounded-2 overflow-hidden border shadow-sm" style="max-width: 220px; max-height: 150px;">
+                          <img src="{{ r.image_url }}" alt="Trip photo by {{ r.user.name.split()[0] if r.user and r.user.name else 'Trekker' }}" class="img-fluid object-fit-cover w-100" style="height: 140px;">
+                        </a>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.72rem;"><i class="bi bi-camera me-1"></i>Trip photo shared by trekker</small>
+                      </div>
+                    {% endif %}
+                  </div>
+                {% endfor %}
+              </div>
+              {% if review_count and review_count > reviews|length %}
+                <a href="{{ url_for('public.trek_reviews', id=trek.id) }}" class="btn btn-outline-secondary btn-sm">
+                  See all {{ review_count }} reviews &rarr;
+                </a>
+              {% endif %}
+            {% else %}
+              <div class="p-3 bg-light rounded text-center text-muted small">
+                <i class="bi bi-chat-square-text fs-4 d-block mb-1 text-muted"></i>
+                No reviews posted yet for this trek. Be the first to share your experience!
+              </div>
+            {% endif %}
+          </div>
         </div>
 
         <!-- Right Column: Booking Card -->

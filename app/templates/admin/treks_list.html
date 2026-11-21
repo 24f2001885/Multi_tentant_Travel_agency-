@@ -8,6 +8,14 @@
   <a href="{{ url_for('admin.trek_new') }}" class="btn" style="background:#1F4FD8;color:#fff;">+ New Trek</a>
 </div>
 
+<div class="d-flex align-items-center gap-2 mb-2">
+  <span class="small text-muted">Quick filters:</span>
+  <a href="{{ url_for('admin.treks_list') }}" class="badge {{ 'bg-primary' if not awaiting and not status else 'bg-secondary-subtle text-secondary' }} text-decoration-none">All</a>
+  <a href="{{ url_for('admin.treks_list', awaiting='1') }}" class="badge {{ 'bg-warning text-dark' if awaiting else 'bg-secondary-subtle text-secondary' }} text-decoration-none">
+    <i class="bi bi-person-exclamation me-1"></i> Awaiting Assignment
+  </a>
+</div>
+
 <form method="get" class="row g-2 bg-white border p-3" style="border-color:#E2E4E9;">
   <div class="col-md-3">
     <select name="difficulty" class="form-select form-select-sm">
@@ -37,30 +45,185 @@
   <table class="table mb-0 align-middle">
     <thead style="background:#F7F7F8;">
       <tr style="color:#6B7280;text-transform:uppercase;font-size:0.75rem;">
-        <th>Trek Name</th><th>Location</th><th>Difficulty</th><th>Slots</th><th>Status</th><th>Assigned Staff</th><th>Actions</th>
+        <th>Trek Name</th><th>Location</th><th>Difficulty</th><th>Slots</th><th>Status</th><th>Created By</th><th>Assigned Staff</th><th>Actions</th>
       </tr>
     </thead>
     <tbody>
       {% for trek in treks %}
       <tr>
-        <td>{{ trek.name }}</td>
+        <td class="fw-semibold text-dark">{{ trek.name }}</td>
         <td>{{ trek.location }}</td>
         <td><span class="badge bg-light text-dark border">{{ trek.difficulty }}</span></td>
         <td>{{ trek.available_slots }}/{{ trek.total_slots }}</td>
         <td>{{ status_badge(trek.status, 'trek') }}</td>
+        <td><small class="text-muted">{{ trek.created_by.name if trek.created_by else 'Admin' }}</small></td>
         <td>{{ trek.assigned_staff.user.name if trek.assigned_staff and trek.assigned_staff.user else '—' }}</td>
         <td>
-          <a href="{{ url_for('admin.trek_edit', trek_id=trek.id) }}" class="btn btn-sm btn-outline-secondary" aria-label="Edit {{ trek.name }}">Edit</a>
-          <form method="post" action="{{ url_for('admin.trek_delete', trek_id=trek.id) }}" class="d-inline" onsubmit="return confirm('Delete {{ trek.name }}? This cannot be undone.');">
-            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete {{ trek.name }}">Delete</button>
-          </form>
+          <div class="d-flex align-items-center gap-1">
+            <!-- Edit Button: Opens dedicated Trek Management Drawer -->
+            <button type="button" 
+                    class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
+                    data-bs-toggle="offcanvas" 
+                    data-bs-target="#trekActionDrawer" 
+                    data-trek-id="{{ trek.id }}" 
+                    data-trek-name="{{ trek.name }}"
+                    data-trek-location="{{ trek.location }}"
+                    data-trek-status="{{ trek.status }}"
+                    data-url-details="{{ url_for('admin.trek_edit', trek_id=trek.id, tab='details') }}"
+                    data-url-itinerary="{{ url_for('admin.trek_edit', trek_id=trek.id, tab='itinerary') }}"
+                    data-url-gallery="{{ url_for('admin.trek_edit', trek_id=trek.id, tab='gallery') }}"
+                    data-url-overview="{{ url_for('admin.trek_detail', trek_id=trek.id) }}"
+                    aria-label="Edit {{ trek.name }}"
+                    title="Manage {{ trek.name }}">
+              <i class="bi bi-pencil-square"></i> <span>Edit</span>
+            </button>
+
+            <!-- Quick Action Dropdown: uses fixed Popper strategy so it is never clipped by table-responsive -->
+            <div class="dropdown">
+              <button type="button" 
+                      class="btn btn-sm btn-outline-secondary dropdown-toggle dropdown-toggle-split" 
+                      data-bs-toggle="dropdown" 
+                      data-bs-popper-config='{"strategy":"fixed"}'
+                      data-bs-boundary="viewport"
+                      aria-expanded="false"
+                      title="More Options">
+                <span class="visually-hidden">Toggle Options</span>
+              </button>
+              <ul class="dropdown-menu dropdown-menu-end shadow border" style="border-color:#E2E4E9; z-index: 1060; min-width: 210px;">
+                <li><h6 class="dropdown-header text-uppercase small text-muted">{{ trek.name }}</h6></li>
+                <li>
+                  <a class="dropdown-item py-2" href="{{ url_for('admin.trek_edit', trek_id=trek.id, tab='details') }}">
+                    <i class="bi bi-pencil-square me-2 text-primary"></i>Edit Trek Details
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item py-2" href="{{ url_for('admin.trek_edit', trek_id=trek.id, tab='itinerary') }}">
+                    <i class="bi bi-map me-2 text-success"></i>Edit Itinerary
+                  </a>
+                </li>
+                <li>
+                  <a class="dropdown-item py-2" href="{{ url_for('admin.trek_edit', trek_id=trek.id, tab='gallery') }}">
+                    <i class="bi bi-images me-2 text-info"></i>Photo Gallery &amp; Groups
+                  </a>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                  <a class="dropdown-item py-2" href="{{ url_for('admin.trek_detail', trek_id=trek.id) }}">
+                    <i class="bi bi-eye me-2 text-secondary"></i>Trek Overview
+                  </a>
+                </li>
+              </ul>
+            </div>
+
+            <!-- Delete Action -->
+            <form method="post" action="{{ url_for('admin.trek_delete', trek_id=trek.id) }}" class="d-inline ms-1" onsubmit="return confirm('Delete {{ trek.name }}? This cannot be undone.');">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-sm btn-outline-danger" aria-label="Delete {{ trek.name }}" title="Delete {{ trek.name }}"><i class="bi bi-trash"></i></button>
+            </form>
+          </div>
         </td>
       </tr>
       {% else %}
-      <tr><td colspan="7" class="text-center text-muted py-4">No treks match these filters.</td></tr>
+      <tr><td colspan="8" class="text-center text-muted py-4">No treks match these filters.</td></tr>
       {% endfor %}
     </tbody>
   </table>
 </div>
+
+<!-- Dedicated Trek Management Drawer (Offcanvas) -->
+<div class="offcanvas offcanvas-end" tabindex="-1" id="trekActionDrawer" aria-labelledby="trekActionDrawerLabel" style="width: 380px;">
+  <div class="offcanvas-header border-bottom bg-light">
+    <div>
+      <h5 class="offcanvas-title fw-bold text-dark mb-1" id="trekActionDrawerLabel" style="font-family:'Bitter',serif;">Manage Trek</h5>
+      <p class="text-muted small mb-0" id="drawerTrekSubtitle">Select what you would like to edit or manage</p>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+  </div>
+  <div class="offcanvas-body p-3">
+    <div class="d-flex flex-column gap-3">
+      <!-- 1. Edit Trek Details -->
+      <a id="drawerEditDetailsLink" href="#" class="card text-decoration-none border shadow-sm p-3 hover-shadow transition">
+        <div class="d-flex align-items-center">
+          <div class="rounded-3 bg-primary bg-opacity-10 text-primary p-3 me-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+            <i class="bi bi-pencil-square fs-5"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="fw-bold mb-1 text-dark">Edit Trek Details</h6>
+            <p class="text-muted small mb-0">Update name, location, difficulty, slots, pricing, and dates</p>
+          </div>
+          <i class="bi bi-chevron-right text-muted ms-2"></i>
+        </div>
+      </a>
+
+      <!-- 2. Edit Itinerary -->
+      <a id="drawerEditItineraryLink" href="#" class="card text-decoration-none border shadow-sm p-3 hover-shadow transition">
+        <div class="d-flex align-items-center">
+          <div class="rounded-3 bg-success bg-opacity-10 text-success p-3 me-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+            <i class="bi bi-map fs-5"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="fw-bold mb-1 text-dark">Edit Itinerary</h6>
+            <p class="text-muted small mb-0">Plan day-by-day trail schedule, camps, meals, and highlights</p>
+          </div>
+          <i class="bi bi-chevron-right text-muted ms-2"></i>
+        </div>
+      </a>
+
+      <!-- 3. Photo Gallery & Groups -->
+      <a id="drawerGalleryLink" href="#" class="card text-decoration-none border shadow-sm p-3 hover-shadow transition">
+        <div class="d-flex align-items-center">
+          <div class="rounded-3 bg-info bg-opacity-10 text-info p-3 me-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+            <i class="bi bi-images fs-5"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="fw-bold mb-1 text-dark">Photo Gallery &amp; Groups</h6>
+            <p class="text-muted small mb-0">Upload photos, organize named photo groups, and edit captions</p>
+          </div>
+          <i class="bi bi-chevron-right text-muted ms-2"></i>
+        </div>
+      </a>
+
+      <!-- 4. Overview & Staff Assignment -->
+      <a id="drawerOverviewLink" href="#" class="card text-decoration-none border shadow-sm p-3 hover-shadow transition">
+        <div class="d-flex align-items-center">
+          <div class="rounded-3 bg-secondary bg-opacity-10 text-secondary p-3 me-3 d-flex align-items-center justify-content-center" style="width: 46px; height: 46px;">
+            <i class="bi bi-eye fs-5"></i>
+          </div>
+          <div class="flex-grow-1">
+            <h6 class="fw-bold mb-1 text-dark">Trek Overview</h6>
+            <p class="text-muted small mb-0">View full status, assign guide staff, and inspect bookings</p>
+          </div>
+          <i class="bi bi-chevron-right text-muted ms-2"></i>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  const drawer = document.getElementById("trekActionDrawer");
+  if (!drawer) return;
+  drawer.addEventListener("show.bs.offcanvas", function(event) {
+    const button = event.relatedTarget;
+    if (!button) return;
+    const trekId = button.getAttribute("data-trek-id");
+    const trekName = button.getAttribute("data-trek-name") || "Trek";
+    const trekLocation = button.getAttribute("data-trek-location") || "";
+    
+    document.getElementById("trekActionDrawerLabel").textContent = trekName;
+    document.getElementById("drawerTrekSubtitle").textContent = trekLocation ? "Location: " + trekLocation : "Select what to manage";
+    
+    const urlDetails = button.getAttribute("data-url-details") || ("/admin/treks/" + trekId + "/edit?tab=details");
+    const urlItinerary = button.getAttribute("data-url-itinerary") || ("/admin/treks/" + trekId + "/edit?tab=itinerary");
+    const urlGallery = button.getAttribute("data-url-gallery") || ("/admin/treks/" + trekId + "/edit?tab=gallery");
+    const urlOverview = button.getAttribute("data-url-overview") || ("/admin/treks/" + trekId);
+
+    document.getElementById("drawerEditDetailsLink").href = urlDetails;
+    document.getElementById("drawerEditItineraryLink").href = urlItinerary;
+    document.getElementById("drawerGalleryLink").href = urlGallery;
+    document.getElementById("drawerOverviewLink").href = urlOverview;
+  });
+});
+</script>
 {% endblock %}

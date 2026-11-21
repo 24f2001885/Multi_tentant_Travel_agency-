@@ -29,6 +29,11 @@ class HashidConverter(BaseConverter):
 
         decoded = decode(value)
         if decoded is None:
+            if value.isdigit():
+                try:
+                    return int(value)
+                except ValueError:
+                    pass
             raise ValidationError()
         # print(f"[DEBUG] HashidConverter to_python value={value}")
         return decoded

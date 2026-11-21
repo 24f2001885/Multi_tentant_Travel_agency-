@@ -4,7 +4,7 @@ from flask import render_template, redirect, url_for, flash, request, g, abort, 
 from flask_login import login_required, current_user
 from app import db
 from app.tickets import tickets_bp
-from app.tickets.forms import RaiseTicketForm, RespondTicketForm
+from app.tickets.forms import RaiseTicketForm, RespondTicketForm, TicketReplyForm
 from app.auth.decorators import role_required, ticket_access_required
 from app.models import Booking
 from app.services import ticket_service, notification_service
@@ -63,73 +63,92 @@ def list_tickets():
 @login_required
 @ticket_access_required
 def detail_ticket(id):
-    # print(f"[DEBUG] tickets cap check role={current_user.role} caps={session.get('capability_keys')}")
     if current_user.role == 'staff':
         caps = session.get("capability_keys") or []
         if 'tickets.view' not in caps:
             abort(403)
 
-    respond_form = None
-    if current_user.role == 'admin':
-        if g.ticket.response is None:
-            respond_form = RespondTicketForm()
-    elif current_user.role == 'staff':
-        caps = session.get("capability_keys") or []
-        if 'tickets.respond' in caps and g.ticket.response is None:
-            respond_form = RespondTicketForm()
-        
-    can_resolve = False
-    if current_user.id == g.ticket.user_id and g.ticket.status == 'answered':
-        can_resolve = True
-        
+    can_reply = False
+    if g.ticket.status != 'resolved':
+        if current_user.role == 'admin':
+            can_reply = True
+        elif current_user.role == 'staff':
+            caps = session.get("capability_keys") or []
+            if 'tickets.respond' in caps:
+                can_reply = True
+        elif current_user.role == 'trekker' and current_user.id == g.ticket.user_id:
+            can_reply = True
+
+    reply_form = TicketReplyForm() if can_reply else None
+    can_resolve = (current_user.id == g.ticket.user_id and g.ticket.status != 'resolved')
+
     return render_template(
-        'detail.html', 
-        ticket=g.ticket, 
-        form=respond_form, 
-        can_resolve=can_resolve
+        'detail.html',
+        ticket=g.ticket,
+        form=reply_form,
+        can_reply=can_reply,
+        can_resolve=can_resolve,
     )
 
+
+@tickets_bp.route('/<hashid:id>/reply', methods=['POST'])
 @tickets_bp.route('/<hashid:id>/respond', methods=['POST'])
 @login_required
 @ticket_access_required
 def respond_ticket(id):
-    # print(f"[DEBUG] tickets cap check role={current_user.role} caps={session.get('capability_keys')}")
-    if current_user.role not in ('staff', 'admin'):
-        abort(403)
+    if g.ticket.status == 'resolved':
+        flash("This ticket is marked resolved and cannot accept further replies.", "warning")
+        return redirect(url_for('tickets.detail_ticket', id=id))
 
     if current_user.role == 'staff':
         caps = session.get("capability_keys") or []
         if 'tickets.respond' not in caps:
             abort(403)
-        
-    form = RespondTicketForm()
-    if form.validate_on_submit():
-        if g.ticket.response is not None:
-            flash("This ticket has already been responded to. Overwriting is not permitted.", "danger")
-            return redirect(url_for('tickets.detail_ticket', id=id))
-            
-        ticket_service.respond_ticket(
-            g.ticket, 
-            responder=current_user, 
-            response_text=form.response.data
+    elif current_user.role == 'trekker':
+        if current_user.id != g.ticket.user_id:
+            abort(403)
+    elif current_user.role != 'admin':
+        abort(403)
+
+    msg_content = request.form.get('message') or request.form.get('response')
+    if not msg_content or not msg_content.strip():
+        flash("Reply message cannot be empty.", "danger")
+        return redirect(url_for('tickets.detail_ticket', id=id))
+
+    try:
+        ticket_service.add_ticket_message(
+            g.ticket,
+            sender=current_user,
+            message_text=msg_content.strip(),
         )
         db.session.commit()
-        
-        notification_service.send_ticket_response_email(g.ticket)
+
+        # Send notification to ticket owner if staff/admin responded
+        if current_user.role in ('staff', 'admin'):
+            try:
+                notification_service.send_ticket_response_email(g.ticket)
+            except Exception:
+                pass
+
         flash("Response submitted successfully.", "success")
-        
+    except (ticket_service.TicketResolvedError, ValueError) as err:
+        flash(str(err), "danger")
+
     return redirect(url_for('tickets.detail_ticket', id=id))
+
 
 @tickets_bp.route('/<hashid:id>/resolve', methods=['POST'])
 @login_required
 @ticket_access_required
 def resolve_ticket(id):
-    # print(f"[DEBUG] hashid route {request.path}")
     if current_user.id != g.ticket.user_id:
         abort(403)
-        
-    ticket_service.resolve_ticket(g.ticket)
-    db.session.commit()
-    
-    flash("Ticket has been marked as resolved.", "success")
+
+    try:
+        ticket_service.resolve_ticket(g.ticket, resolver=current_user)
+        db.session.commit()
+        flash("Ticket has been marked as resolved.", "success")
+    except ticket_service.UnauthorizedTicketActionError as err:
+        flash(str(err), "danger")
+
     return redirect(url_for('tickets.detail_ticket', id=id))

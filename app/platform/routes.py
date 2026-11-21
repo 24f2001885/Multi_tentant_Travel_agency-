@@ -23,7 +23,8 @@ from app.extensions import db, limiter
 from app.models.booking import Booking
 from app.models.domain import Domain
 from app.models.organization import Organization
-from app.platform import platform_bp
+from app.models.platform_admin import PlatformAdmin
+from app.platform import platform_bp, platform_root_bp
 from app.platform.auth import (
     current_platform_admin,
     platform_admin_required,
@@ -33,11 +34,17 @@ from app.platform.auth import (
 from app.platform.forms import (
     CustomDomainForm,
     OnboardOrganizationForm,
+    OrganizationPayoutForm,
     PlatformChangePasswordForm,
     PlatformLoginForm,
     PlatformProfileForm,
 )
 from app.services import tenancy_service
+from app.services.tenant_features_service import (
+    AVAILABLE_TENANT_FEATURES,
+    SUBSCRIPTION_TIERS,
+    update_organization_subscription,
+)
 from app.tenancy.scoping import tenant_bypass
 
 
@@ -81,6 +88,9 @@ def dashboard() -> Any:
         total_bookings = Booking.query.count()
 
     orgs_data = tenancy_service.list_organizations_with_counts()
+    from app.services import monitoring_service
+    business_metrics = monitoring_service.get_platform_business_metrics()
+    infra_metrics = monitoring_service.get_platform_infra_metrics()
 
     # print(f"[DEBUG] platform route {request.path} admin={session.get('platform_admin_id')}")
     return render_template(
@@ -91,10 +101,13 @@ def dashboard() -> Any:
         suspended_orgs=suspended_orgs,
         total_bookings=total_bookings,
         orgs=orgs_data,
+        business=business_metrics,
+        infra=infra_metrics,
     )
 
 
 @platform_bp.route("/organizations", methods=["GET"])
+@platform_root_bp.route("/organizations", methods=["GET"])
 @platform_admin_required
 def organizations_list() -> Any:
     """List of all tenant organizations."""
@@ -105,6 +118,7 @@ def organizations_list() -> Any:
 
 
 @platform_bp.route("/organizations/new", methods=["GET", "POST"])
+@platform_root_bp.route("/organizations/new", methods=["GET", "POST"])
 @platform_admin_required
 def organization_new() -> Any:
     """Onboards a new organization and shows the one-time temporary password."""
@@ -120,6 +134,8 @@ def organization_new() -> Any:
                 tenant_admin_email=form.tenant_admin_email.data,
                 tenant_admin_name=form.tenant_admin_name.data,
                 platform_admin=admin,
+                theme=form.theme.data if hasattr(form, "theme") and form.theme.data else None,
+                subscription_tier=form.subscription_tier.data if hasattr(form, "subscription_tier") and form.subscription_tier.data else "enterprise",
             )
             # Render one-time temporary password result state
             return render_template(
@@ -145,6 +161,7 @@ def organization_new() -> Any:
 
 
 @platform_bp.route("/organizations/<uuid:id>", methods=["GET"])
+@platform_root_bp.route("/organizations/<uuid:id>", methods=["GET"])
 @platform_admin_required
 def organization_detail(id: uuid.UUID) -> Any:
     """Detailed view of an organization, domains, and controls."""
@@ -156,6 +173,11 @@ def organization_detail(id: uuid.UUID) -> Any:
         domains = Domain.query.filter_by(organization_id=org.id).order_by(Domain.is_primary.desc()).all()
 
     domain_form = CustomDomainForm()
+    payout_form = OrganizationPayoutForm(
+        razorpay_route_account_id=org.razorpay_route_account_id or "",
+        gst_number=org.gst_number or "",
+        theme=org.theme or "",
+    )
     # print(f"[DEBUG] platform route {request.path} admin={session.get('platform_admin_id')}")
     return render_template(
         "platform/organization_detail.html",
@@ -163,7 +185,56 @@ def organization_detail(id: uuid.UUID) -> Any:
         org=org,
         domains=domains,
         domain_form=domain_form,
+        payout_form=payout_form,
+        subscription_tiers=SUBSCRIPTION_TIERS,
+        available_features=AVAILABLE_TENANT_FEATURES,
     )
+
+
+@platform_bp.route("/organizations/<uuid:id>/subscription", methods=["POST"])
+@platform_admin_required
+def organization_update_subscription(id: uuid.UUID) -> Any:
+    """Updates SaaS subscription tier and enabled features for a tenant."""
+    admin = current_platform_admin()
+    with tenant_bypass():
+        org = Organization.query.get(id)
+        if not org:
+            abort(404)
+
+        tier = request.form.get("subscription_tier", "starter").strip().lower()
+        selected_features = request.form.getlist("features")
+
+        update_organization_subscription(
+            org=org,
+            tier=tier,
+            selected_features=selected_features,
+            actor=admin,
+        )
+
+    flash(f"Subscription and feature entitlements updated for '{org.name}' ({tier.capitalize()}).", "success")
+    return redirect(url_for("platform.organization_detail", id=id))
+
+
+@platform_bp.route("/organizations/<uuid:id>/payout", methods=["POST"])
+@platform_admin_required
+def organization_update_payout(id: uuid.UUID) -> Any:
+    """Updates Razorpay Route linked account, GST, and UI theme details."""
+    with tenant_bypass():
+        org = Organization.query.get(id)
+        if not org:
+            abort(404)
+
+        route_acc = request.form.get("razorpay_route_account_id", "").strip()
+        gst = request.form.get("gst_number", "").strip()
+        theme = request.form.get("theme", "").strip()
+
+        org.razorpay_route_account_id = route_acc if route_acc else None
+        org.gst_number = gst if gst else None
+        org.theme = theme if theme else None
+        db.session.commit()
+
+    flash(f"Payout and UI theme configuration updated for '{org.name}'.", "success")
+    return redirect(url_for("platform.organization_detail", id=id))
 
 
 @platform_bp.route("/organizations/<uuid:id>/suspend", methods=["POST"])
@@ -296,3 +367,95 @@ def profile() -> Any:
         profile_form=profile_form,
         password_form=password_form,
     )
+
+
+# --- Milestone P13: Monitoring & Platform Backups ---
+@platform_bp.route("/monitoring", methods=["GET"])
+@platform_root_bp.route("/monitoring", methods=["GET"])
+@platform_admin_required
+def monitoring() -> Any:
+    """Platform business and infrastructure load monitoring dashboard."""
+    from app.services import monitoring_service
+    admin = current_platform_admin()
+    business_metrics = monitoring_service.get_platform_business_metrics()
+    infra_metrics = monitoring_service.get_platform_infra_metrics()
+    return render_template(
+        "platform/monitoring.html",
+        admin=admin,
+        business=business_metrics,
+        infra=infra_metrics,
+    )
+
+
+@platform_bp.route("/backups", methods=["GET"])
+@platform_root_bp.route("/backups", methods=["GET"])
+@platform_admin_required
+def backups() -> Any:
+    """Platform & tenant backup console."""
+    from app.models.tenant_backup import TenantBackup
+    admin = current_platform_admin()
+    with tenant_bypass():
+        all_backups = TenantBackup.query.order_by(TenantBackup.created_at.desc()).all()
+        orgs = Organization.query.order_by(Organization.name.asc()).all()
+    return render_template(
+        "platform/backups.html",
+        admin=admin,
+        backups=all_backups,
+        orgs=orgs,
+    )
+
+
+@platform_bp.route("/backups/trigger", methods=["POST"])
+@platform_root_bp.route("/backups/trigger", methods=["POST"])
+@platform_admin_required
+def trigger_backup() -> Any:
+    """Triggers either full platform backup or a targeted tenant export."""
+    from app.services import backup_service
+    admin = current_platform_admin()
+    target = request.form.get("target", "all").strip()
+
+    try:
+        if target == "all":
+            backup = backup_service.create_platform_backup(platform_admin_id=admin.id)
+            flash("Full platform backup created successfully.", "success")
+        else:
+            org_id = uuid.UUID(target)
+            backup = backup_service.create_tenant_backup(
+                organization_id=org_id,
+                triggered_by_platform_admin_id=admin.id,
+            )
+            flash("Targeted tenant backup created successfully.", "success")
+    except Exception as e:
+        flash(f"Backup generation failed: {str(e)}", "danger")
+
+    return redirect(url_for("platform.backups"))
+
+
+@platform_bp.route("/backups/<uuid:id>/download", methods=["GET"])
+@platform_root_bp.route("/backups/<uuid:id>/download", methods=["GET"])
+@platform_admin_required
+def download_backup(id: uuid.UUID) -> Any:
+    """Allows platform admin to securely download any backup archive."""
+    from flask import send_file
+    from app.models.tenant_backup import TenantBackup
+    with tenant_bypass():
+        backup = TenantBackup.query.get_or_404(id)
+
+    if not os.path.exists(backup.storage_location):
+        abort(404)
+
+    dl_name = f"platform_{backup.backup_type}_{backup.created_at.strftime('%Y%m%d_%H%M%S')}.json.gz"
+    return send_file(backup.storage_location, as_attachment=True, download_name=dl_name, mimetype="application/gzip")
+
+
+@platform_bp.route("/audit-logs", methods=["GET"])
+@platform_root_bp.route("/audit-logs", methods=["GET"])
+@platform_admin_required
+def audit_logs() -> Any:
+    """Meta-audit trail displaying platform admin accesses across tenants."""
+    from app.models.platform_access_log import PlatformAccessLog
+    admin = current_platform_admin()
+    with tenant_bypass():
+        logs = PlatformAccessLog.query.order_by(PlatformAccessLog.created_at.desc()).limit(100).all()
+    return render_template("platform/audit_logs.html", admin=admin, logs=logs)
+
