@@ -1,0 +1,106 @@
+<!-- ITINERARY LAYOUT: Interactive Accordion (Compact Collapsible) -->
+<div class="itinerary-layout-accordion mb-5">
+  <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+    <div>
+      <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 mb-1 text-uppercase" style="font-size: 0.72rem;">Interactive Accordion</span>
+      <h4 class="fw-bold mb-0 text-body">Stage-by-Stage Itinerary</h4>
+    </div>
+    {% if itinerary %}
+      <a href="{{ url_for('public.itinerary_pdf', id=trek.id) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Download Itinerary (PDF)
+      </a>
+    {% endif %}
+  </div>
+
+  {% if itinerary %}
+    <div class="accordion" id="accordionItinerary">
+      {% for day in itinerary %}
+        <div class="accordion-item mb-3 border rounded shadow-sm overflow-hidden itinerary-day-card" style="background-color: var(--bs-card-bg, #fff);">
+          <h2 class="accordion-header" id="headingDay{{ day.day_number }}">
+            <button class="accordion-button {{ 'collapsed' if not loop.first else '' }} py-3 px-3 fw-semibold" 
+                    type="button" data-bs-toggle="collapse" data-bs-target="#collapseDay{{ day.day_number }}" 
+                    style="background-color: var(--bs-tertiary-bg, #f8fafc);">
+              <span class="badge bg-primary me-2 px-2 py-1">Day {{ day.day_number }}</span>
+              <span class="fs-6 text-body">{{ day.title }}</span>
+              {% if day.elements %}
+                <span class="badge bg-secondary-subtle text-secondary ms-auto me-2 fw-normal d-none d-sm-inline" style="font-size: 0.72rem;">
+                  {{ day.elements|length }} event{{ 's' if day.elements|length != 1 else '' }}
+                </span>
+              {% endif %}
+            </button>
+          </h2>
+          <div id="collapseDay{{ day.day_number }}" class="accordion-collapse collapse {{ 'show' if loop.first else '' }}" data-bs-parent="#accordionItinerary">
+            <div class="accordion-body p-3">
+              {% if day.description %}
+                <div class="p-3 mb-3 rounded text-muted small border-start border-3 border-primary" style="background-color: var(--bs-tertiary-bg, #f8fafc);">
+                  {{ day.description }}
+                </div>
+              {% endif %}
+
+              <!-- Events Timeline -->
+              {% if day.elements %}
+                <div class="itinerary-events-timeline mb-3">
+                  {% for el in day.elements %}
+                    <div class="itinerary-event-entry py-2 {% if not loop.last %}border-bottom{% endif %}">
+                      <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                        {% if el.time_of_day %}
+                          <span class="badge bg-primary-subtle text-primary border border-primary-subtle py-1 px-2" style="font-size: 0.72rem;">
+                            <i class="bi bi-clock me-1"></i>{{ el.time_of_day }}
+                          </span>
+                        {% endif %}
+                        <span class="badge 
+                          {% if el.element_type == 'activity' %}bg-info-subtle text-info border border-info-subtle
+                          {% elif el.element_type == 'meal' %}bg-success-subtle text-success border border-success-subtle
+                          {% elif el.element_type == 'transport' %}bg-warning-subtle text-warning-emphasis border border-warning-subtle
+                          {% elif el.element_type == 'accommodation' %}bg-primary-subtle text-primary border border-primary-subtle
+                          {% else %}bg-secondary-subtle text-secondary border{% endif %} text-uppercase py-1 px-2" style="font-size: 0.68rem;">
+                          {{ el.element_type }}
+                        </span>
+                        <strong class="text-body">{{ el.title }}</strong>
+                        {% if el.description %}
+                          <span class="text-muted small">— {{ el.description }}</span>
+                        {% endif %}
+                      </div>
+
+                      <!-- Variable Points / Facts for this event -->
+                      {% if el.points_list %}
+                        <div class="itinerary-event-points ms-3 mt-1 ps-2 border-start border-2 border-secondary-subtle">
+                          <ul class="mb-0 text-muted ps-3" style="font-size: 0.85rem;">
+                            {% for pt in el.points_list %}
+                              <li class="mb-1">{{ pt }}</li>
+                            {% endfor %}
+                          </ul>
+                        </div>
+                      {% endif %}
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <!-- Important Points for this Day -->
+              {% if day.important_points_list %}
+                <div class="mt-3 p-3 rounded border border-warning-subtle bg-warning-subtle">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                    <span class="small fw-bold text-dark text-uppercase" style="letter-spacing: 0.05em;">Important Points for Day {{ day.day_number }}</span>
+                  </div>
+                  <ul class="mb-0 text-dark ps-3 small">
+                    {% for ipt in day.important_points_list %}
+                      <li class="mb-1">{{ ipt }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center py-4 border rounded bg-light text-muted small">
+      <i class="bi bi-map fs-3 d-block mb-1"></i>
+      Detailed day-by-day itinerary is being finalized. Check back shortly.
+    </div>
+  {% endif %}
+</div>

@@ -1,0 +1,137 @@
+<!-- ITINERARY LAYOUT: Mountain Trail Timeline (Step-by-Step Path) -->
+<div class="itinerary-layout-timeline mb-5">
+  <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2 pb-2 border-bottom">
+    <div>
+      <span class="badge bg-info-subtle text-info border border-info-subtle px-2 py-1 mb-1 text-uppercase" style="font-size: 0.72rem;">Mountain Trail Timeline</span>
+      <h4 class="fw-bold mb-0 text-body">Expedition Route Milestones</h4>
+    </div>
+    {% if itinerary %}
+      <a href="{{ url_for('public.itinerary_pdf', id=trek.id) }}" class="btn btn-outline-primary btn-sm">
+        <i class="bi bi-file-earmark-pdf me-1"></i> Download Itinerary (PDF)
+      </a>
+    {% endif %}
+  </div>
+
+  {% if itinerary %}
+    <div class="trail-timeline-container position-relative ps-4 ps-md-5">
+      <!-- Continuous Vertical Trail Line -->
+      <div class="position-absolute top-0 bottom-0 start-0 ms-3 ms-md-4 border-start border-3 border-primary border-opacity-50" style="left: -2px; z-index: 1;"></div>
+
+      {% for day in itinerary %}
+        <div class="trail-day-stage position-relative mb-5" id="timeline-stage-{{ day.day_number }}">
+          
+          <!-- Waypoint Marker Circle -->
+          <div class="position-absolute start-0 ms-3 ms-md-4 translate-middle-x rounded-circle d-flex align-items-center justify-content-center shadow" 
+               style="left: -2px; width: 44px; height: 44px; background: linear-gradient(135deg, #1F4FD8 0%, #00B4D8 100%); color: #fff; font-weight: 800; font-size: 0.95rem; z-index: 2; border: 3px solid #fff;">
+            D{{ day.day_number }}
+          </div>
+
+          <!-- Stage Main Card -->
+          <div class="card border shadow-sm rounded-4 ms-3 ms-md-4 overflow-hidden" style="background-color: var(--bs-card-bg, #fff);">
+            
+            <!-- Stage Header Banner -->
+            <div class="p-3 d-flex justify-content-between align-items-center flex-wrap gap-2 border-bottom" style="background-color: var(--bs-tertiary-bg, #f8fafc);">
+              <div>
+                <span class="text-uppercase small fw-bold text-primary tracking-wide d-block" style="font-size: 0.75rem; letter-spacing: 0.05em;">Stage {{ day.day_number }} Waypoint</span>
+                <h5 class="fw-bold mb-0 text-body">{{ day.title }}</h5>
+              </div>
+              <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1 small">
+                {{ day.elements|length }} Route Event{{ 's' if day.elements|length != 1 else '' }}
+              </span>
+            </div>
+
+            <div class="card-body p-3 p-md-4">
+              {% if day.description %}
+                <p class="text-muted small mb-3 fst-italic border-start border-3 border-info ps-3" style="line-height: 1.6;">
+                  {{ day.description }}
+                </p>
+              {% endif %}
+
+              <!-- Milestone Event Nodes -->
+              {% if day.elements %}
+                <div class="timeline-milestone-nodes my-3">
+                  {% for el in day.elements %}
+                    <div class="d-flex align-items-start gap-3 py-2 {% if not loop.last %}border-bottom border-light-subtle{% endif %}">
+                      
+                      <!-- Event Icon / Badge -->
+                      <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1" 
+                           style="width: 32px; height: 32px; 
+                           {% if el.element_type == 'activity' %}background: rgba(13, 202, 240, 0.15); color: #0dcaf0; border: 1px solid rgba(13, 202, 240, 0.3);
+                           {% elif el.element_type == 'meal' %}background: rgba(25, 135, 84, 0.15); color: #198754; border: 1px solid rgba(25, 135, 84, 0.3);
+                           {% elif el.element_type == 'transport' %}background: rgba(255, 193, 7, 0.15); color: #ffc107; border: 1px solid rgba(255, 193, 7, 0.3);
+                           {% elif el.element_type == 'accommodation' %}background: rgba(13, 110, 253, 0.15); color: #0d6efd; border: 1px solid rgba(13, 110, 253, 0.3);
+                           {% else %}background: rgba(108, 117, 125, 0.15); color: #6c757d; border: 1px solid rgba(108, 117, 125, 0.3);{% endif %}">
+                        {% if el.element_type == 'activity' %}
+                          <i class="bi bi-person-walking small"></i>
+                        {% elif el.element_type == 'meal' %}
+                          <i class="bi bi-cup-hot small"></i>
+                        {% elif el.element_type == 'transport' %}
+                          <i class="bi bi-truck small"></i>
+                        {% elif el.element_type == 'accommodation' %}
+                          <i class="bi bi-house-door small"></i>
+                        {% else %}
+                          <i class="bi bi-flag small"></i>
+                        {% endif %}
+                      </div>
+
+                      <!-- Event Details -->
+                      <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 flex-wrap mb-1">
+                          {% if el.time_of_day %}
+                            <span class="badge bg-secondary-subtle text-secondary py-1 px-2" style="font-size: 0.72rem;">
+                              <i class="bi bi-clock me-1"></i>{{ el.time_of_day }}
+                            </span>
+                          {% endif %}
+                          <strong class="text-body" style="font-size: 0.95rem;">{{ el.title }}</strong>
+                          <span class="badge text-uppercase border" style="font-size: 0.65rem; background: var(--bs-tertiary-bg, #f8fafc);">{{ el.element_type }}</span>
+                        </div>
+
+                        {% if el.description %}
+                          <div class="text-muted small mb-1">{{ el.description }}</div>
+                        {% endif %}
+
+                        <!-- Variable Facts / Pointers -->
+                        {% if el.points_list %}
+                          <div class="mt-1 ps-2 border-start border-2 border-primary border-opacity-25">
+                            <ul class="mb-0 text-muted ps-3 small">
+                              {% for pt in el.points_list %}
+                                <li class="mb-1">{{ pt }}</li>
+                              {% endfor %}
+                            </ul>
+                          </div>
+                        {% endif %}
+                      </div>
+
+                    </div>
+                  {% endfor %}
+                </div>
+              {% endif %}
+
+              <!-- Day Important Safety Notes Box -->
+              {% if day.important_points_list %}
+                <div class="mt-3 p-3 rounded-3 border border-warning-subtle bg-warning-subtle">
+                  <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-shield-exclamation text-warning fs-5"></i>
+                    <strong class="text-dark small text-uppercase" style="letter-spacing: 0.05em;">Stage Critical Safety &amp; Gear Guidelines</strong>
+                  </div>
+                  <ul class="mb-0 text-dark ps-3 small">
+                    {% for ipt in day.important_points_list %}
+                      <li class="mb-1">{{ ipt }}</li>
+                    {% endfor %}
+                  </ul>
+                </div>
+              {% endif %}
+
+            </div>
+
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="text-center py-4 border rounded bg-light text-muted small">
+      <i class="bi bi-compass fs-3 d-block mb-1"></i>
+      Expedition milestones are being scheduled. Check back shortly.
+    </div>
+  {% endif %}
+</div>

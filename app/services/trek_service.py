@@ -58,11 +58,99 @@ def transition_status(trek: Trek, new_status: str, actor) -> Trek:
 
 def complete_trek_bookings(trek: Trek) -> int:
     count = 0
+    from app.services import notification_service
     for booking in trek.bookings:
         if booking.status == "booked":
             booking.status = "completed"
             count += 1
+            try:
+                notification_service.send_review_request_email(booking)
+            except Exception:
+                pass
     return count
+
+
+def create_trek_as_staff(creator, data: dict) -> Trek:
+    """Creates a trek by staff landing in pending status and unassigned."""
+    from app.models.audit_log import AuditLog
+    import json
+
+    total_slots = int(data.get("total_slots", 0))
+    trek = Trek(
+        organization_id=creator.organization_id,
+        name=data.get("name", "").strip(),
+        description=data.get("description", "").strip() if data.get("description") else None,
+        location=data.get("location", "").strip(),
+        difficulty=data.get("difficulty", "moderate"),
+        duration_days=int(data.get("duration_days", 1)),
+        total_slots=total_slots,
+        available_slots=total_slots,
+        price=data.get("price", 0),
+        start_date=data.get("start_date"),
+        end_date=data.get("end_date"),
+        status="pending",
+        assigned_staff_id=None,
+        created_by_user_id=creator.id,
+        itinerary_layout=data.get("itinerary_layout") or "accordion",
+    )
+    db.session.add(trek)
+    db.session.flush()
+
+    log = AuditLog(
+        organization_id=creator.organization_id,
+        user_id=creator.id,
+        action="trek.create_by_staff",
+        target_type="trek",
+        target_id=trek.id,
+        details=json.dumps({"trek_id": trek.id, "name": trek.name}),
+    )
+    db.session.add(log)
+    return trek
+
+
+def can_edit_content(user, trek: Trek) -> bool:
+    """Determines whether the given user may edit trek itinerary and gallery media."""
+    if not user or not trek:
+        return False
+
+    # Tenant Admin can always edit
+    if getattr(user, "role", None) == "admin":
+        return True
+
+    # Check staff capability
+    if not user.has_capability("treks.edit_content"):
+        return False
+
+    # Staff can edit if they created the trek
+    if trek.created_by_user_id == user.id:
+        return True
+
+    # Staff can edit if they are the assigned guide
+    if hasattr(user, "staff_profile") and user.staff_profile and trek.assigned_staff_id == user.staff_profile.id:
+        return True
+
+    return False
+
+
+def get_visible_contacts(trek: Trek, booking) -> dict:
+    """
+    Returns single point of contact for booked trekkers (the assigned staff member).
+    Returns empty dict if booking is not booked or trek is unassigned.
+    """
+    if not booking or getattr(booking, "status", None) != "booked":
+        return {}
+
+    if not trek or not trek.assigned_staff or not trek.assigned_staff.user:
+        return {}
+
+    staff_user = trek.assigned_staff.user
+    staff_profile = trek.assigned_staff
+    return {
+        "name": staff_user.name,
+        "email": staff_user.email,
+        "phone": f"{staff_user.mobile_country_code} {staff_user.mobile_number}" if staff_user.mobile_number else None,
+        "details": staff_profile.contact_details if hasattr(staff_profile, "contact_details") else None,
+    }
 
 
 def list_open_treks(

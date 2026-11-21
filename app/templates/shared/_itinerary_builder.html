@@ -1,0 +1,315 @@
+<div class="card shadow-sm border-0 mb-4" id="itinerary-builder">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <div>
+      <h5 class="mb-0 fw-bold"><i class="bi bi-calendar3 me-2 text-primary"></i>Day-by-Day Itinerary</h5>
+      <small class="text-muted">Structured itinerary for this {{ trek.duration_days }}-day trek with time-based events, variable fact pointers, and day-level important notes.</small>
+    </div>
+    <span class="badge bg-light text-dark border">
+      {{ itinerary|length }} / {{ trek.duration_days }} Days Configured
+    </span>
+  </div>
+
+  <!-- Itinerary Web Layout Selector -->
+  <div class="px-4 py-2 bg-light border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-2">
+      <span class="small fw-bold text-dark"><i class="bi bi-palette2 text-primary me-1"></i>Web Display Layout:</span>
+      <form method="POST" action="{{ base_url }}/itinerary/layout" class="d-inline-flex align-items-center gap-2 mb-0">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <select name="itinerary_layout" class="form-select form-select-sm" onchange="this.form.submit()" style="width: auto; min-width: 250px;">
+          <option value="accordion" {{ 'selected' if trek.itinerary_layout == 'accordion' else '' }}>Interactive Accordion (Compact)</option>
+          <option value="timeline" {{ 'selected' if trek.itinerary_layout == 'timeline' else '' }} {% if current_org and not current_org.has_feature('advanced_itineraries') %}disabled{% endif %}>Mountain Trail Timeline {% if current_org and not current_org.has_feature('advanced_itineraries') %}(Locked - Upgrade Plan){% else %}(Step-by-Step){% endif %}</option>
+          <option value="magazine" {{ 'selected' if trek.itinerary_layout == 'magazine' else '' }} {% if current_org and not current_org.has_feature('advanced_itineraries') %}disabled{% endif %}>Expedition Magazine {% if current_org and not current_org.has_feature('advanced_itineraries') %}(Locked - Upgrade Plan){% else %}(PDF Brochure){% endif %}</option>
+        </select>
+        <noscript><button type="submit" class="btn btn-sm btn-outline-primary">Update</button></noscript>
+      </form>
+    </div>
+    <div class="small text-muted">
+      Current Public View: <span class="badge bg-primary text-uppercase">{{ trek.itinerary_layout or 'accordion' }}</span>
+    </div>
+  </div>
+
+  <div class="card-body p-4">
+    {% if itinerary %}
+      <div class="accordion mb-4" id="itineraryAccordion">
+        {% for day in itinerary %}
+          <div class="accordion-item mb-3 border rounded shadow-sm overflow-hidden itinerary-day-item" id="day-item-{{ day.day_number }}">
+            <h2 class="accordion-header" id="headingDay{{ day.day_number }}">
+              <button class="accordion-button {{ 'collapsed' if not loop.first else '' }} fw-semibold bg-light" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDay{{ day.day_number }}">
+                <span class="badge bg-primary me-2">Day {{ day.day_number }}</span>
+                <span class="me-2">{{ day.title }}</span>
+                <small class="text-muted ms-auto pe-2 fw-normal d-none d-md-inline">
+                  {{ day.elements|length }} event{{ 's' if day.elements|length != 1 else '' }}
+                  {% if day.important_points_list %} &bull; {{ day.important_points_list|length }} important point{{ 's' if day.important_points_list|length != 1 else '' }}{% endif %}
+                </small>
+              </button>
+            </h2>
+            <div id="collapseDay{{ day.day_number }}" class="accordion-collapse collapse {{ 'show' if loop.first else '' }}" data-bs-parent="#itineraryAccordion">
+              <div class="accordion-body p-3">
+                <!-- Day details & edit -->
+                <div class="p-3 bg-light rounded mb-3 border">
+                  <div class="d-flex justify-content-between align-items-center mb-2">
+                    <h6 class="small fw-bold text-uppercase text-muted mb-0"><i class="bi bi-geo-alt me-1"></i>Day Overview & Trail Route</h6>
+                    <form method="POST" action="{{ base_url }}/itinerary/days/{{ day.id }}/delete" onsubmit="return confirm('Delete Day {{ day.day_number }} and all its events?');" class="d-inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2" style="font-size: 0.8rem;">
+                        <i class="bi bi-trash"></i> Delete Day {{ day.day_number }}
+                      </button>
+                    </form>
+                  </div>
+                  <form method="POST" action="{{ base_url }}/itinerary/days/{{ day.id }}/update">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-2 mb-2">
+                      <div class="col-md-5">
+                        <label class="form-label small fw-bold mb-1">Day Title</label>
+                        <input type="text" name="title" class="form-control form-control-sm" value="{{ day.title }}" required>
+                      </div>
+                      <div class="col-md-7">
+                        <label class="form-label small fw-bold mb-1">Trail Overview / Route Description</label>
+                        <input type="text" name="description" class="form-control form-control-sm" value="{{ day.description or '' }}" placeholder="Overview of the day's route and terrain">
+                      </div>
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label small fw-bold mb-1">
+                        <i class="bi bi-exclamation-circle text-warning me-1"></i>Important Points for Day {{ day.day_number }} (1 pointer per line)
+                      </label>
+                      <textarea name="important_points" class="form-control form-control-sm" rows="2" placeholder="e.g.&#10;• Altitude: 10,500 ft (acclimatization protocol)&#10;• Stay: Dome tents on twin sharing&#10;• Network: No mobile connectivity beyond camp">{{ day.important_points_list|join('\n') }}</textarea>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                      <button type="submit" class="btn btn-sm btn-primary">Save Day Details</button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- Events list -->
+                <div class="d-flex justify-content-between align-items-center border-bottom pb-1 mb-2">
+                  <h6 class="small fw-bold text-uppercase text-muted mb-0"><i class="bi bi-clock-history me-1"></i>Day {{ day.day_number }} Events & Timeline</h6>
+                  <span class="badge bg-secondary-subtle text-secondary small">{{ day.elements|length }} Event{{ 's' if day.elements|length != 1 else '' }}</span>
+                </div>
+
+                {% if day.elements %}
+                  <div class="d-flex flex-column gap-2 mb-3">
+                    {% for el in day.elements %}
+                      <div class="border rounded p-3 bg-white shadow-sm itinerary-event-card">
+                        <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
+                          <div class="d-flex align-items-center gap-2 flex-wrap">
+                            {% if el.time_of_day %}
+                              <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-2 py-1">
+                                <i class="bi bi-clock me-1"></i>{{ el.time_of_day }}
+                              </span>
+                            {% endif %}
+                            <span class="badge 
+                              {% if el.element_type == 'activity' %}bg-info-subtle text-info border border-info-subtle
+                              {% elif el.element_type == 'meal' %}bg-success-subtle text-success border border-success-subtle
+                              {% elif el.element_type == 'transport' %}bg-warning-subtle text-warning-emphasis border border-warning-subtle
+                              {% elif el.element_type == 'accommodation' %}bg-primary-subtle text-primary border border-primary-subtle
+                              {% else %}bg-secondary-subtle text-secondary border{% endif %} text-uppercase px-2 py-1" style="font-size: 0.72rem;">
+                              {{ el.element_type }}
+                            </span>
+                            <span class="fw-bold fs-6 text-dark">{{ el.title }}</span>
+                          </div>
+                          <div class="btn-group btn-group-sm">
+                            <form method="POST" action="{{ base_url }}/itinerary/elements/{{ el.id }}/move" class="d-inline">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                              <input type="hidden" name="direction" value="up">
+                              <button type="submit" class="btn btn-outline-secondary btn-sm" title="Move Up" {{ 'disabled' if loop.first else '' }}>&uarr;</button>
+                            </form>
+                            <form method="POST" action="{{ base_url }}/itinerary/elements/{{ el.id }}/move" class="d-inline">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                              <input type="hidden" name="direction" value="down">
+                              <button type="submit" class="btn btn-outline-secondary btn-sm" title="Move Down" {{ 'disabled' if loop.last else '' }}>&darr;</button>
+                            </form>
+                            <button class="btn btn-outline-primary btn-sm" type="button" data-bs-toggle="collapse" data-bs-target="#editEvent{{ el.id }}" title="Edit Event Details">
+                              <i class="bi bi-pencil"></i>
+                            </button>
+                            <form method="POST" action="{{ base_url }}/itinerary/elements/{{ el.id }}/delete" class="d-inline" onsubmit="return confirm('Remove this event?');">
+                              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                              <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete">&times;</button>
+                            </form>
+                          </div>
+                        </div>
+
+                        {% if el.description %}
+                          <p class="small text-muted mb-2 mt-1">{{ el.description }}</p>
+                        {% endif %}
+
+                        <!-- Variable Points / Facts for this event -->
+                        {% if el.points_list %}
+                          <div class="mt-2 p-2 bg-light-subtle rounded border border-light-subtle">
+                            <div class="fw-semibold small text-secondary mb-1">
+                              <i class="bi bi-card-checklist me-1 text-primary"></i>Event Facts, Checkpoints & Trail Pointers:
+                            </div>
+                            <ul class="mb-0 small ps-3 text-secondary">
+                              {% for pt in el.points_list %}
+                                <li class="mb-1">{{ pt }}</li>
+                              {% endfor %}
+                            </ul>
+                          </div>
+                        {% endif %}
+
+                        <!-- Collapsible Edit Event Form -->
+                        <div class="collapse mt-3 pt-3 border-top" id="editEvent{{ el.id }}">
+                          <form method="POST" action="{{ base_url }}/itinerary/elements/{{ el.id }}/update">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <div class="row g-2 mb-2">
+                              <div class="col-md-2">
+                                <label class="form-label small fw-bold">Time</label>
+                                <input type="text" name="time_of_day" class="form-control form-control-sm" value="{{ el.time_of_day or '' }}" placeholder="06:00 AM">
+                              </div>
+                              <div class="col-md-2">
+                                <label class="form-label small fw-bold">Type</label>
+                                <select name="element_type" class="form-select form-select-sm" required>
+                                  <option value="activity" {{ 'selected' if el.element_type == 'activity' else '' }}>Activity</option>
+                                  <option value="meal" {{ 'selected' if el.element_type == 'meal' else '' }}>Meal</option>
+                                  <option value="transport" {{ 'selected' if el.element_type == 'transport' else '' }}>Transport</option>
+                                  <option value="accommodation" {{ 'selected' if el.element_type == 'accommodation' else '' }}>Stay</option>
+                                  <option value="note" {{ 'selected' if el.element_type == 'note' else '' }}>Note</option>
+                                </select>
+                              </div>
+                              <div class="col-md-4">
+                                <label class="form-label small fw-bold">Event Title</label>
+                                <input type="text" name="title" class="form-control form-control-sm" value="{{ el.title }}" required>
+                              </div>
+                              <div class="col-md-4">
+                                <label class="form-label small fw-bold">Short Summary</label>
+                                <input type="text" name="description" class="form-control form-control-sm" value="{{ el.description or '' }}" placeholder="Brief instructions or notes">
+                              </div>
+                            </div>
+                            <div class="mb-2">
+                              <label class="form-label small fw-bold">
+                                Variable Points / Facts for this Event (1 per line, e.g. Pass on people, trek team, terrain details):
+                              </label>
+                              <textarea name="points" class="form-control form-control-sm" rows="3" placeholder="• Trek team: 1 trek lead, 2 local guides, 1 cook&#10;• Pass on people: Mule train crossing on left edge, step aside to mountain side&#10;• Refill water: Stream crossing at km 3">{{ el.points_list|join('\n') }}</textarea>
+                            </div>
+                            <div class="d-flex justify-content-end gap-1">
+                              <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#editEvent{{ el.id }}">Cancel</button>
+                              <button type="submit" class="btn btn-sm btn-primary">Update Event</button>
+                            </div>
+                          </form>
+                        </div>
+                      </div>
+                    {% endfor %}
+                  </div>
+                {% else %}
+                  <div class="p-3 bg-white border rounded text-center mb-3">
+                    <p class="small text-muted mb-0 fst-italic">No events added to this day yet. Add the first event below.</p>
+                  </div>
+                {% endif %}
+
+                <!-- Add Event Sub-Form -->
+                <div class="bg-light p-3 rounded border mb-3">
+                  <h6 class="small fw-bold mb-2"><i class="bi bi-plus-circle text-primary me-1"></i>Add Event to Day {{ day.day_number }}</h6>
+                  <form method="POST" action="{{ base_url }}/itinerary/days/{{ day.id }}/elements/add">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="row g-2 mb-2">
+                      <div class="col-md-2">
+                        <label class="form-label small fw-bold">Time</label>
+                        <input type="text" name="time_of_day" class="form-control form-control-sm" placeholder="e.g. 06:30 AM">
+                      </div>
+                      <div class="col-md-2">
+                        <label class="form-label small fw-bold">Type</label>
+                        <select name="element_type" class="form-select form-select-sm" required>
+                          <option value="activity">Activity</option>
+                          <option value="meal">Meal</option>
+                          <option value="transport">Transport</option>
+                          <option value="accommodation">Stay</option>
+                          <option value="note">Note</option>
+                        </select>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label small fw-bold">Event Title</label>
+                        <input type="text" name="title" class="form-control form-control-sm" placeholder="e.g. Ascent to High Ridge" required>
+                      </div>
+                      <div class="col-md-4">
+                        <label class="form-label small fw-bold">Short Summary</label>
+                        <input type="text" name="description" class="form-control form-control-sm" placeholder="Brief notes or overview">
+                      </div>
+                    </div>
+                    <div class="mb-2">
+                      <label class="form-label small fw-bold">
+                        Variable Points / Facts for this Event (1 per line, e.g. Pass on people, trek team, terrain details):
+                      </label>
+                      <textarea name="points" class="form-control form-control-sm" rows="3" placeholder="Enter specific facts/pointers for this event (1 per line):&#10;• Trek team: Lead guide in front, sweep guide at rear&#10;• Pass on people: Always yield to pack animals and ascending trekkers&#10;• Water source: Refill bottles at the suspension bridge"></textarea>
+                    </div>
+                    <div class="d-flex justify-content-end">
+                      <button type="submit" class="btn btn-sm btn-success">+ Add Event to Day {{ day.day_number }}</button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- Day-level Important Points Callout -->
+                <div class="card border-warning-subtle bg-warning-subtle text-dark p-3 rounded">
+                  <div class="d-flex justify-content-between align-items-center mb-1">
+                    <h6 class="mb-0 fw-bold d-flex align-items-center" style="font-size: 0.9rem;">
+                      <i class="bi bi-stars text-warning-emphasis me-2"></i>Important Points for Day {{ day.day_number }}
+                    </h6>
+                    <button class="btn btn-sm btn-outline-warning text-dark py-0 px-2" type="button" data-bs-toggle="collapse" data-bs-target="#editDayPoints{{ day.id }}" style="font-size: 0.8rem;">
+                      <i class="bi bi-pencil-square me-1"></i>Edit Day Pointers
+                    </button>
+                  </div>
+                  {% if day.important_points_list %}
+                    <ul class="mb-0 small ps-3 mt-2">
+                      {% for pt in day.important_points_list %}
+                        <li class="mb-1 fw-medium">{{ pt }}</li>
+                      {% endfor %}
+                    </ul>
+                  {% else %}
+                    <p class="mb-0 small text-muted fst-italic">No important pointers specified for this day yet. Click 'Edit Day Pointers' above to mention key facts like altitude, overnight stay, weather advisory, and connectivity.</p>
+                  {% endif %}
+
+                  <div class="collapse mt-3 pt-2 border-top border-warning" id="editDayPoints{{ day.id }}">
+                    <form method="POST" action="{{ base_url }}/itinerary/days/{{ day.id }}/update">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="title" value="{{ day.title }}">
+                      <input type="hidden" name="description" value="{{ day.description or '' }}">
+                      <label class="form-label small fw-bold">Update Day {{ day.day_number }} Important Points (1 per line):</label>
+                      <textarea name="important_points" class="form-control form-control-sm mb-2" rows="3" placeholder="• Altitude: 10,200 ft&#10;• Night temperature: Drops to -3°C&#10;• Stay: Alpine dome tents&#10;• Connectivity: No mobile network">{{ day.important_points_list|join('\n') }}</textarea>
+                      <div class="d-flex justify-content-end gap-1">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#editDayPoints{{ day.id }}">Cancel</button>
+                        <button type="submit" class="btn btn-sm btn-warning">Save Day Pointers</button>
+                      </div>
+                    </form>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="alert alert-info py-3 mb-4">
+        <i class="bi bi-info-circle me-1"></i> No days added to this itinerary yet. Add Day 1 below to start building the itinerary.
+      </div>
+    {% endif %}
+
+    <!-- Add Day Form -->
+    <div class="card bg-light border-0">
+      <div class="card-body p-3">
+        {% if itinerary|length < trek.duration_days %}
+          <h6 class="fw-bold mb-2"><i class="bi bi-calendar-plus me-1 text-primary"></i>Add Day {{ itinerary|length + 1 }} of {{ trek.duration_days }}</h6>
+          <form method="POST" action="{{ base_url }}/itinerary/days/add">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="row g-2 mb-2">
+              <div class="col-md-5">
+                <input type="text" name="title" class="form-control" placeholder="Day Title (e.g. Base Camp to Camp 1)" required>
+              </div>
+              <div class="col-md-7">
+                <input type="text" name="description" class="form-control" placeholder="Description / Trail Summary">
+              </div>
+            </div>
+            <div class="mb-2">
+              <textarea name="important_points" class="form-control form-control-sm" rows="2" placeholder="Important Points for this day (optional, 1 pointer per line, e.g. altitude, stay, emergency contact)"></textarea>
+            </div>
+            <div class="d-flex justify-content-end">
+              <button type="submit" class="btn btn-success px-4">+ Add Day {{ itinerary|length + 1 }}</button>
+            </div>
+          </form>
+        {% else %}
+          <div class="text-center py-2 text-muted small">
+            <i class="bi bi-check-circle me-1 text-success"></i> All {{ trek.duration_days }} days of the itinerary have been configured. To add more days, increase the trek duration in settings.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,151 @@
+<div class="card shadow-sm border-0 mb-4" id="media-manager">
+  <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+    <div>
+      <h5 class="mb-0 fw-bold"><i class="bi bi-images me-2 text-primary"></i>Photo Gallery &amp; Groups</h5>
+      <small class="text-muted">High-resolution showcase images for the trek discovery page.</small>
+    </div>
+    <span class="badge bg-light text-dark border">{{ trek.media|length }} Photos Uploaded</span>
+  </div>
+  <div class="card-body p-4">
+    <!-- Upload form -->
+    <div class="bg-light p-3 rounded mb-4 border">
+      <h6 class="fw-bold mb-3"><i class="bi bi-cloud-arrow-up me-1"></i> Upload Photos &amp; Set Groups</h6>
+      <form method="POST" action="{{ base_url }}/media/upload" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="row g-3">
+          <div class="col-md-4">
+            <label class="form-label small fw-semibold">Select Photo(s)</label>
+            <input type="file" name="files" class="form-control" accept="image/jpeg,image/png,image/webp" multiple required>
+            <div class="form-text small">Select one or multiple photos (JPG, PNG, WEBP up to 25 MB).</div>
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Photo Group / Category</label>
+            <select name="group_select" id="groupSelect" class="form-select" onchange="toggleCustomGroup(this)">
+              <option value="" selected>General / No Group</option>
+              <option value="Summit Views">Summit Views</option>
+              <option value="Base Camp & Tents">Base Camp &amp; Tents</option>
+              <option value="Trail Highlights">Trail Highlights</option>
+              <option value="Flora & Fauna">Flora &amp; Fauna</option>
+              <option value="Team & Trekkers">Team &amp; Trekkers</option>
+              <option value="Route Map & Terrain">Route Map &amp; Terrain</option>
+              <option value="__custom__">+ Custom Group...</option>
+            </select>
+            <input type="text" name="custom_group" id="customGroupInput" class="form-control mt-2" placeholder="Enter group name" style="display: none;">
+          </div>
+          <div class="col-md-3">
+            <label class="form-label small fw-semibold">Caption / Location</label>
+            <input type="text" name="caption" class="form-control" placeholder="e.g. Sunrise at Summit Ridge">
+          </div>
+          <div class="col-md-2 d-flex align-items-end">
+            <button type="submit" class="btn btn-primary w-100 py-2"><i class="bi bi-upload me-1"></i> Upload</button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Media Filter Controls -->
+    {% if trek.media %}
+      <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
+        <span class="small fw-semibold text-muted me-1"><i class="bi bi-filter me-1"></i>Filter by Group:</span>
+        <button type="button" class="btn btn-sm btn-dark active filter-group-btn" data-group="all" onclick="filterGallery('all', this)">All ({{ trek.media|length }})</button>
+        {% set existing_groups = [] %}
+        {% for m in trek.media %}
+          {% if m.caption and m.caption.startswith('[') and ']' in m.caption %}
+            {% set grp = m.caption.split(']')[0][1:] %}
+            {% if grp not in existing_groups %}
+              {% set _ = existing_groups.append(grp) %}
+              <button type="button" class="btn btn-sm btn-outline-secondary filter-group-btn" data-group="{{ grp }}" onclick="filterGallery('{{ grp }}', this)">{{ grp }}</button>
+            {% endif %}
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      <!-- Media Grid -->
+      <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3" id="galleryGrid">
+        {% for m in trek.media %}
+          {% set item_grp = '' %}
+          {% set item_cap = m.caption or '' %}
+          {% if m.caption and m.caption.startswith('[') and ']' in m.caption %}
+            {% set item_grp = m.caption.split(']')[0][1:] %}
+            {% set item_cap = m.caption.split(']')[1]|trim %}
+          {% endif %}
+          <div class="col gallery-item" data-group="{{ item_grp if item_grp else 'general' }}">
+            <div class="card h-100 shadow-sm border overflow-hidden">
+              <div style="height: 160px; background-color: #f8f9fa; display: flex; align-items: center; justify-content: center; overflow: hidden; position: relative;">
+                <img src="/media/{{ m.id }}" class="card-img-top w-100 h-100 object-fit-cover" alt="{{ item_cap or trek.name }}">
+                {% if item_grp %}
+                  <span class="badge bg-dark bg-opacity-75 position-absolute top-0 start-0 m-2">{{ item_grp }}</span>
+                {% endif %}
+              </div>
+              <div class="card-body p-2 d-flex flex-column justify-content-between">
+                <form method="POST" action="{{ base_url }}/media/{{ m.id }}/caption" class="mb-2">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                  <div class="input-group input-group-sm">
+                    <input type="text" name="caption" class="form-control form-control-sm" value="{{ m.caption or '' }}" placeholder="[Group] Caption">
+                    <button type="submit" class="btn btn-outline-secondary" title="Save Caption"><i class="bi bi-check"></i></button>
+                  </div>
+                </form>
+
+                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                  <div class="btn-group btn-group-sm">
+                    <form method="POST" action="{{ base_url }}/media/{{ m.id }}/move" class="d-inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="direction" value="left">
+                      <button type="submit" class="btn btn-outline-secondary btn-sm" title="Move Left" {{ 'disabled' if loop.first else '' }}>&larr;</button>
+                    </form>
+                    <form method="POST" action="{{ base_url }}/media/{{ m.id }}/move" class="d-inline">
+                      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                      <input type="hidden" name="direction" value="right">
+                      <button type="submit" class="btn btn-outline-secondary btn-sm" title="Move Right" {{ 'disabled' if loop.last else '' }}>&rarr;</button>
+                    </form>
+                  </div>
+
+                  <form method="POST" action="{{ base_url }}/media/{{ m.id }}/delete" onsubmit="return confirm('Delete this image?');" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-outline-danger btn-sm" title="Delete Image">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="text-center py-4 text-muted">
+        <i class="bi bi-image fs-1 d-block mb-2"></i>
+        No photos added to this gallery yet. Upload one above.
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+function toggleCustomGroup(select) {
+  var customInput = document.getElementById('customGroupInput');
+  if (select.value === '__custom__') {
+    customInput.style.display = 'block';
+    customInput.focus();
+  } else {
+    customInput.style.display = 'none';
+  }
+}
+
+function filterGallery(group, btn) {
+  document.querySelectorAll('.filter-group-btn').forEach(function(b) {
+    b.classList.remove('btn-dark', 'active');
+    b.classList.add('btn-outline-secondary');
+  });
+  btn.classList.remove('btn-outline-secondary');
+  btn.classList.add('btn-dark', 'active');
+
+  document.querySelectorAll('.gallery-item').forEach(function(item) {
+    if (group === 'all' || item.getAttribute('data-group') === group) {
+      item.style.display = '';
+    } else {
+      item.style.display = 'none';
+    }
+  });
+}
+</script>

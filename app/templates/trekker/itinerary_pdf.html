@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>{{ trek.name }} — Itinerary</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 20mm 15mm 20mm 15mm;
+      @bottom-right {
+        content: "Page " counter(page) " of " counter(pages);
+        font-size: 9pt;
+        color: #718096;
+      }
+      @bottom-left {
+        content: "{{ org.name if org else 'TMA Platform' }}";
+        font-size: 9pt;
+        color: #718096;
+      }
+    }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      color: #2d3748;
+      line-height: 1.5;
+      font-size: 11pt;
+    }
+    .header {
+      border-bottom: 2px solid #3182ce;
+      padding-bottom: 15px;
+      margin-bottom: 20px;
+    }
+    .org-title {
+      font-size: 14pt;
+      font-weight: bold;
+      color: #3182ce;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .trek-title {
+      font-size: 22pt;
+      font-weight: bold;
+      color: #1a202c;
+      margin: 10px 0 5px 0;
+    }
+    .meta-table {
+      width: 100%;
+      margin-bottom: 25px;
+      border-collapse: collapse;
+      background: #f7fafc;
+      border: 1px solid #e2e8f0;
+    }
+    .meta-table td {
+      padding: 8px 12px;
+      font-size: 10pt;
+    }
+    .meta-label {
+      font-weight: bold;
+      color: #4a5568;
+    }
+    .day-card {
+      margin-bottom: 20px;
+      page-break-inside: avoid;
+    }
+    .day-header {
+      background: #edf2f7;
+      padding: 8px 12px;
+      font-size: 12pt;
+      font-weight: bold;
+      color: #2b6cb0;
+      border-left: 4px solid #3182ce;
+    }
+    .day-desc {
+      padding: 6px 12px;
+      font-size: 10pt;
+      color: #4a5568;
+      font-style: italic;
+    }
+    .elements-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 5px;
+    }
+    .elements-table th {
+      background: #f8fafc;
+      font-size: 9pt;
+      text-transform: uppercase;
+      color: #718096;
+      padding: 6px 10px;
+      border-bottom: 1px solid #e2e8f0;
+      text-align: left;
+    }
+    .elements-table td {
+      padding: 6px 10px;
+      font-size: 10pt;
+      border-bottom: 1px solid #edf2f7;
+    }
+    .pill {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 8pt;
+      font-weight: bold;
+      text-transform: uppercase;
+      background: #e2e8f0;
+      color: #4a5568;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="org-title">{{ org.name if org else 'TMA Platform' }}</div>
+    <div class="trek-title">{{ trek.name }}</div>
+    <div style="font-size: 10pt; color: #718096;">
+      Official Itinerary & Expedition Guide
+    </div>
+  </div>
+
+  <table class="meta-table">
+    <tr>
+      <td class="meta-label">Location:</td>
+      <td>{{ trek.location }}</td>
+      <td class="meta-label">Duration:</td>
+      <td>{{ trek.duration_days }} Days</td>
+    </tr>
+    <tr>
+      <td class="meta-label">Difficulty:</td>
+      <td style="text-transform: capitalize;">{{ trek.difficulty }}</td>
+      <td class="meta-label">Dates:</td>
+      <td>{{ trek.start_date.strftime('%d %b %Y') if trek.start_date else 'TBA' }} to {{ trek.end_date.strftime('%d %b %Y') if trek.end_date else 'TBA' }}</td>
+    </tr>
+  </table>
+
+  {% if itinerary %}
+    {% for day in itinerary %}
+      <div class="day-card">
+        <div class="day-header">Day {{ day.day_number }}: {{ day.title }}</div>
+        {% if day.description %}
+          <div class="day-desc">{{ day.description }}</div>
+        {% endif %}
+
+        {% if day.elements %}
+          <table class="elements-table">
+            <thead>
+              <tr>
+                <th style="width: 15%;">Time</th>
+                <th style="width: 15%;">Type</th>
+                <th style="width: 35%;">Activity</th>
+                <th style="width: 35%;">Details</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for el in day.elements %}
+                <tr>
+                  <td>{{ el.time_of_day or '—' }}</td>
+                  <td><span class="pill">{{ el.element_type }}</span></td>
+                  <td style="font-weight: 600;">{{ el.title }}</td>
+                  <td style="color: #4a5568;">
+                    {{ el.description or '' }}
+                    {% if el.points_list %}
+                      <ul style="margin: 4px 0 0 0; padding-left: 16px; font-size: 8pt; color: #475569;">
+                        {% for pt in el.points_list %}
+                          <li>{{ pt }}</li>
+                        {% endfor %}
+                      </ul>
+                    {% endif %}
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% endif %}
+
+        {% if day.important_points_list %}
+          <div style="margin-top: 10px; padding: 8px 12px; background: #fefce8; border: 1px solid #fef08a; border-radius: 4px;">
+            <div style="font-weight: bold; font-size: 8.5pt; color: #854d0e; margin-bottom: 4px;">
+              Important Points for Day {{ day.day_number }}:
+            </div>
+            <ul style="margin: 0; padding-left: 16px; font-size: 8pt; color: #713f12;">
+              {% for pt in day.important_points_list %}
+                <li>{{ pt }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    {% endfor %}
+  {% else %}
+    <p>Detailed day-by-day itinerary will be published soon.</p>
+  {% endif %}
+</body>
+</html>
