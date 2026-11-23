@@ -34,14 +34,14 @@ def resolve_tenant():
     host = request.host.split(":")[0].strip().lower()
 
     # Friendly redirect for bare base domain / localhost / 127.0.0.1 development access
-    base_domain = os.environ.get("BASE_DOMAIN", "abhishek4312.info").split(":")[0].strip().lower()
-    platform_admin_host = os.environ.get("PLATFORM_ADMIN_HOST", f"platform.{base_domain}").split(":")[0].strip().lower()
+    base_domain = os.environ.get("BASE_DOMAIN", "abhishekpathak.site").split(":")[0].strip().lower()
+    platform_admin_host = os.environ.get("PLATFORM_ADMIN_HOST", f"tma.{base_domain}").split(":")[0].strip().lower()
 
     if host in (base_domain, "localhost", "127.0.0.1"):
         port = f":{request.host.split(':')[1]}" if ":" in request.host else ""
         query_suffix = f"?{request.query_string.decode('utf-8')}" if request.query_string else ""
         if request.path.startswith("/platform"):
-            target_platform = "platform.localhost" if host == "localhost" else platform_admin_host
+            target_platform = "platform.localhost" if host in ("localhost", "127.0.0.1") else platform_admin_host
             return redirect(f"{request.scheme}://{target_platform}{port}{request.path}{query_suffix}", 302)
 
         # Check if incoming OAuth callback carries originating tenant host in state parameter
@@ -52,7 +52,7 @@ def resolve_tenant():
                 return redirect(f"{request.scheme}://{origin_host}{request.path}{query_suffix}", 302)
 
         tenant_zero_subdomain = os.environ.get("TENANT_ZERO_SUBDOMAIN", "tma.tenant0").strip().lower()
-        target_domain_base = "localhost" if host == "localhost" else base_domain
+        target_domain_base = "localhost" if host in ("localhost", "127.0.0.1") else base_domain
         target_domain = (
             f"{tenant_zero_subdomain}.{target_domain_base}"
             if not tenant_zero_subdomain.endswith(target_domain_base)
@@ -71,7 +71,8 @@ def resolve_tenant():
 
     # 3. Platform boundary enforcement (P8)
     if host == platform_admin_host or (
-        platform_admin_host != "platform.localhost" and host == "platform.localhost"
+        platform_admin_host not in ("platform.localhost", "tma.localhost")
+        and host in ("platform.localhost", "tma.localhost")
     ):
         # print(f"[DEBUG] boundary host={host} path={request.path}")
         allowed_prefixes = (

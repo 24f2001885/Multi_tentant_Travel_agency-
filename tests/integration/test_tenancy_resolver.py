@@ -128,14 +128,14 @@ def test_cross_host_session_cookie_rejected(app, client_a, client_b, org_a, org_
 
 
 def test_tma_subdomain_routing_and_local_fallback(app, org_a, monkeypatch):
-    """Verifies resolution for tma.tenant0.abhishek4312.info and fallback from tma.tenant0.localhost."""
-    monkeypatch.setenv("BASE_DOMAIN", "abhishek4312.info")
-    monkeypatch.setenv("PLATFORM_ADMIN_HOST", "platform.abhishek4312.info")
+    """Verifies resolution for tma.tenant0.abhishekpathak.site and fallback from tma.tenant0.localhost."""
+    monkeypatch.setenv("BASE_DOMAIN", "abhishekpathak.site")
+    monkeypatch.setenv("PLATFORM_ADMIN_HOST", "tma.abhishekpathak.site")
 
     with app.app_context(), tenant_bypass():
         dom_prod = Domain(
             organization_id=org_a.id,
-            domain_name="tma.tenant0.abhishek4312.info",
+            domain_name="tma.tenant0.abhishekpathak.site",
             domain_type="subdomain",
             is_primary=True,
             verified_at=datetime.now(timezone.utc),
@@ -146,14 +146,14 @@ def test_tma_subdomain_routing_and_local_fallback(app, org_a, monkeypatch):
     client = app.test_client()
 
     # Exact production domain resolves 200
-    resp_prod = client.get("/", headers={"Host": "tma.tenant0.abhishek4312.info"})
+    resp_prod = client.get("/", headers={"Host": "tma.tenant0.abhishekpathak.site"})
     assert resp_prod.status_code == 200
 
-    # Local testing fallback resolves 200 via .localhost -> .abhishek4312.info fallback
+    # Local testing fallback resolves 200 via .localhost -> .abhishekpathak.site fallback
     resp_local = client.get("/", headers={"Host": "tma.tenant0.localhost:5000"})
     assert resp_local.status_code == 200
 
     # Platform host skips tenancy without 404
-    resp_platform = client.get("/platform/login", headers={"Host": "platform.abhishek4312.info"})
+    resp_platform = client.get("/platform/login", headers={"Host": "tma.abhishekpathak.site"})
     assert resp_platform.status_code == 200
 

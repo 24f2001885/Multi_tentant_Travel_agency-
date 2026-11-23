@@ -66,8 +66,8 @@ jobs:
           SECRET_KEY: ci-secret-key-tma-multi-tenant
           HASHIDS_SALT: ci-salt-hashids-tma
           FLASK_APP: app:create_app
-          BASE_DOMAIN: abhishek4312.info
-          PLATFORM_ADMIN_HOST: platform.abhishek4312.info
+          BASE_DOMAIN: abhishekpathak.site
+          PLATFORM_ADMIN_HOST: tma.abhishekpathak.site
           RAZORPAY_KEY_ID: rzp_test_mock_ci_id
           RAZORPAY_KEY_SECRET: mock_ci_secret_key_12345
         run: |
@@ -80,8 +80,8 @@ jobs:
           SECRET_KEY: ci-secret-key-tma-multi-tenant
           HASHIDS_SALT: ci-salt-hashids-tma
           FLASK_APP: app:create_app
-          BASE_DOMAIN: abhishek4312.info
-          PLATFORM_ADMIN_HOST: platform.abhishek4312.info
+          BASE_DOMAIN: abhishekpathak.site
+          PLATFORM_ADMIN_HOST: tma.abhishekpathak.site
           RAZORPAY_KEY_ID: rzp_test_mock_ci_id
           RAZORPAY_KEY_SECRET: mock_ci_secret_key_12345
         run: |
@@ -91,9 +91,10 @@ jobs:
         env:
           DATABASE_URL: postgresql://tma:tma_dev_password@localhost:5432/tma_platform_test
           FLASK_APP: app:create_app
-          BASE_DOMAIN: abhishek4312.info
-          PLATFORM_ADMIN_HOST: platform.abhishek4312.info
+          BASE_DOMAIN: abhishekpathak.site
+          PLATFORM_ADMIN_HOST: tma.abhishekpathak.site
           RAZORPAY_KEY_ID: rzp_test_mock_ci_id
           RAZORPAY_KEY_SECRET: mock_ci_secret_key_12345
         run: |
           flask init-live-tenants
+          flask seed-recruiter-demo

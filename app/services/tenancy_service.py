@@ -288,11 +288,11 @@ def _ensure_domain(org_id, domain_name: str, is_primary: bool = True) -> Domain:
 def init_live_tenants() -> Dict[str, Any]:
     """
     Production Tenant Provisioning:
-    - Tenant 0: 'Tenant Zero' (Summit Expeditions) -> tma.tenant0.abhishek4312.info & tma.tenant0.localhost
-    - Tenant 1: 'Apex Altitude Expeditions' -> tma.tenant1.abhishek4312.info & tma.tenant1.localhost
+    - Tenant 0: 'Tenant Zero' (Summit Expeditions) -> tma.tenant0.abhishekpathak.site & tma.tenant0.localhost
+    - Tenant 1: 'Apex Altitude Expeditions' -> tma.tenant1.abhishekpathak.site & tma.tenant1.localhost
     - All other tenant organizations are deactivated / marked 'suspended'.
     """
-    base_domain = (os.environ.get("BASE_DOMAIN") or "abhishek4312.info").split(":")[0].strip().lower()
+    base_domain = (os.environ.get("BASE_DOMAIN") or "abhishekpathak.site").split(":")[0].strip().lower()
 
     with tenant_bypass():
         creator = _ensure_platform_admin()
@@ -398,7 +398,7 @@ def seed_recruiter_demo() -> Dict[str, Any]:
     # First ensure live tenant subdomains exist
     summary = init_live_tenants()
 
-    base_domain = (os.environ.get("BASE_DOMAIN") or "abhishek4312.info").split(":")[0].strip().lower()
+    base_domain = (os.environ.get("BASE_DOMAIN") or "abhishekpathak.site").split(":")[0].strip().lower()
 
     with tenant_bypass():
         dom0 = Domain.query.filter_by(domain_name=f"tma.tenant0.{base_domain}").first()
@@ -532,7 +532,7 @@ def seed_recruiter_demo() -> Dict[str, Any]:
                     user_id=trekker0.id,
                     slot_count=1,
                     total_price=12500.0,
-                    status="confirmed",
+                    status="booked",
                     payment_status="paid",
                 )
                 db.session.add(b1)
@@ -545,7 +545,7 @@ def seed_recruiter_demo() -> Dict[str, Any]:
                     user_id=trekker0_sample.id,
                     slot_count=2,
                     total_price=17000.0,
-                    status="confirmed",
+                    status="booked",
                     payment_status="paid",
                 )
                 db.session.add(b2)

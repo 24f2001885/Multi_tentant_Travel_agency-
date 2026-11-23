@@ -4,42 +4,56 @@ on:
   push:
     branches:
       - main
+      - master
+      - phase/production-deployment
   workflow_dispatch:
 
 jobs:
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
 
     steps:
       - name: Deploy to AWS EC2 via SSH
         uses: appleboy/ssh-action@v1.2.0
         with:
-          host: ${{ secrets.AWS_HOST }}
-          username: ${{ secrets.AWS_USER || 'ubuntu' }}
-          key: ${{ secrets.AWS_SSH_KEY }}
+          host: ${{ secrets.AWS_HOST || secrets.AWS_EC2_HOST || secrets.EC2_HOST }}
+          username: ${{ secrets.AWS_USER || secrets.AWS_EC2_USER || secrets.EC2_USER || 'ubuntu' }}
+          key: ${{ secrets.AWS_SSH_KEY || secrets.AWS_EC2_SSH_KEY || secrets.EC2_SSH_KEY }}
           port: 22
           script_stop: true
           script: |
             set -e
             echo "=== [1/5] Navigating to TMA Project Directory ==="
+            if [ ! -d "/home/ubuntu/mad1" ]; then
+              git clone https://github.com/24f2001885/Multi_tentant_Travel_agency-.git /home/ubuntu/mad1
+            fi
             cd /home/ubuntu/mad1
 
-            echo "=== [2/5] Pulling Latest Changes from GitHub (main) ==="
-            git fetch origin main
-            git reset --hard origin/main
+            echo "=== [2/5] Pulling Latest Changes from GitHub ==="
+            git fetch origin
+            CURRENT_BRANCH="${{ github.ref_name }}"
+            git checkout $CURRENT_BRANCH || git checkout master || git checkout main
+            git reset --hard origin/$CURRENT_BRANCH || git reset --hard origin/master
 
-            echo "=== [3/5] Building & Launching Low-Memory Production Containers ==="
+            echo "=== [3/5] Setting up Production Environment & Launching Containers ==="
+            if [ ! -f .env.production ]; then
+              cp .env.production.example .env.production
+            fi
+            sed -i 's|BASE_DOMAIN=.*|BASE_DOMAIN=abhishekpathak.site|' .env.production
+            sed -i 's|PLATFORM_ADMIN_HOST=.*|PLATFORM_ADMIN_HOST=tma.abhishekpathak.site|' .env.production
+            sed -i 's|TENANT_ZERO_SUBDOMAIN=.*|TENANT_ZERO_SUBDOMAIN=tma.tenant0|' .env.production
+            sed -i 's|SECRET_KEY=generate_a_64_character_hex_string_here|SECRET_KEY=prod-secret-tma-secure-84c29d10e53|' .env.production
             docker compose -f docker-compose.prod.yml up -d --build
 
             echo "=== [4/5] Executing Database Migrations ==="
             docker compose -f docker-compose.prod.yml exec -T web flask db upgrade
 
-            echo "=== [5/5] Initializing Live Production Tenants ==="
+            echo "=== [5/5] Initializing Live Production Tenants & Seeding Recruiter Demo Data ==="
             docker compose -f docker-compose.prod.yml exec -T web flask init-live-tenants
+            docker compose -f docker-compose.prod.yml exec -T web flask seed-recruiter-demo
 
             echo "=== [Verification] Checking Container Status ==="
             docker compose -f docker-compose.prod.yml ps
 
-            echo "Deployment to abhishek4312.info subdomains completed successfully!"
+            echo "🚀 Deployment to https://tma.abhishekpathak.site completed successfully!"
