@@ -3,10 +3,12 @@ name: TMA Multi-Tenant Platform CI
 on:
   push:
     branches:
+      - master
       - main
       - 'phase/**'
   pull_request:
     branches:
+      - master
       - main
 
 jobs:
