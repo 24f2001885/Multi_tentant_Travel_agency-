@@ -17,9 +17,14 @@ jobs:
       - name: Debug Environment and Secrets Preflight
         run: |
           echo "=== Preflight Secret Check ==="
-          [ -n "${{ secrets.AWS_HOST }}" ] && echo "AWS_HOST: [PRESENT]" || echo "AWS_HOST: [MISSING]"
-          [ -n "${{ secrets.AWS_USER }}" ] && echo "AWS_USER: [PRESENT]" || echo "AWS_USER: [MISSING]"
-          [ -n "${{ secrets.AWS_SSH_KEY }}" ] && echo "AWS_SSH_KEY: [PRESENT]" || echo "AWS_SSH_KEY: [MISSING]"
+          [ -n "${{ secrets.AWS_HOST }}" ] && echo "::notice::AWS_HOST is PRESENT" || echo "::warning::AWS_HOST is MISSING"
+          [ -n "${{ secrets.AWS_USER }}" ] && echo "::notice::AWS_USER is PRESENT" || echo "::warning::AWS_USER is MISSING"
+          [ -n "${{ secrets.AWS_SSH_KEY }}" ] && echo "::notice::AWS_SSH_KEY is PRESENT" || echo "::warning::AWS_SSH_KEY is MISSING"
+          [ -n "${{ secrets.EC2_HOST }}" ] && echo "::notice::EC2_HOST is PRESENT" || true
+          [ -n "${{ secrets.EC2_USER }}" ] && echo "::notice::EC2_USER is PRESENT" || true
+          [ -n "${{ secrets.EC2_SSH_KEY }}" ] && echo "::notice::EC2_SSH_KEY is PRESENT" || true
+          [ -n "${{ secrets.SSH_KEY }}" ] && echo "::notice::SSH_KEY is PRESENT" || true
+          [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ] && echo "::notice::SSH_PRIVATE_KEY is PRESENT" || true
 
       - name: Deploy to AWS EC2 via SSH
         env:
