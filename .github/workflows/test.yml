@@ -96,5 +96,6 @@ jobs:
           RAZORPAY_KEY_ID: rzp_test_mock_ci_id
           RAZORPAY_KEY_SECRET: mock_ci_secret_key_12345
         run: |
+          flask db upgrade
           flask init-live-tenants
           flask seed-recruiter-demo
