@@ -48,6 +48,23 @@ from app.services.tenant_features_service import (
 from app.tenancy.scoping import tenant_bypass
 
 
+@platform_bp.route("/", methods=["GET"])
+@platform_bp.route("", methods=["GET"])
+def platform_root() -> Any:
+    """Redirects platform root to platform dashboard / login."""
+    if current_platform_admin():
+        return redirect(url_for("platform.dashboard"))
+    return redirect(url_for("platform.login"))
+
+
+@platform_root_bp.route("/", methods=["GET"])
+def platform_root_index() -> Any:
+    """Root redirect on PLATFORM_ADMIN_HOST to platform dashboard / login."""
+    if current_platform_admin():
+        return redirect(url_for("platform.dashboard"))
+    return redirect(url_for("platform.login"))
+
+
 @platform_bp.route("/login", methods=["GET", "POST"])
 @limiter.limit("5 per minute")
 def login() -> Any:

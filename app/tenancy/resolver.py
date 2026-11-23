@@ -84,7 +84,7 @@ def resolve_tenant():
             "/audit-logs",
             "/domains",
         )
-        if any(request.path.startswith(p) for p in allowed_prefixes):
+        if request.path == "/" or any(request.path.startswith(p) for p in allowed_prefixes):
             return
         abort(404)
 
