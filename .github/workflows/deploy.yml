@@ -16,21 +16,19 @@ jobs:
     steps:
       - name: Debug Environment and Secrets Preflight
         run: |
-          echo "=== Preflight Secret Check ==="
-          [ -n "${{ secrets.AWS_HOST }}" ] && echo "::notice::AWS_HOST is PRESENT" || echo "::warning::AWS_HOST is MISSING"
-          [ -n "${{ secrets.AWS_USER }}" ] && echo "::notice::AWS_USER is PRESENT" || echo "::warning::AWS_USER is MISSING"
-          [ -n "${{ secrets.AWS_SSH_KEY }}" ] && echo "::notice::AWS_SSH_KEY is PRESENT" || echo "::warning::AWS_SSH_KEY is MISSING"
-          [ -n "${{ secrets.EC2_HOST }}" ] && echo "::notice::EC2_HOST is PRESENT" || true
-          [ -n "${{ secrets.EC2_USER }}" ] && echo "::notice::EC2_USER is PRESENT" || true
-          [ -n "${{ secrets.EC2_SSH_KEY }}" ] && echo "::notice::EC2_SSH_KEY is PRESENT" || true
-          [ -n "${{ secrets.SSH_KEY }}" ] && echo "::notice::SSH_KEY is PRESENT" || true
-          [ -n "${{ secrets.SSH_PRIVATE_KEY }}" ] && echo "::notice::SSH_PRIVATE_KEY is PRESENT" || true
+          echo "=== Preflight Secret & Variable Check ==="
+          [ -n "${{ secrets.AWS_HOST }}" ] && echo "::notice::secrets.AWS_HOST is PRESENT" || echo "::warning::secrets.AWS_HOST is MISSING"
+          [ -n "${{ secrets.AWS_USER }}" ] && echo "::notice::secrets.AWS_USER is PRESENT" || echo "::warning::secrets.AWS_USER is MISSING"
+          [ -n "${{ secrets.AWS_SSH_KEY }}" ] && echo "::notice::secrets.AWS_SSH_KEY is PRESENT" || echo "::warning::secrets.AWS_SSH_KEY is MISSING"
+          [ -n "${{ vars.AWS_HOST }}" ] && echo "::notice::vars.AWS_HOST is PRESENT" || true
+          [ -n "${{ vars.AWS_USER }}" ] && echo "::notice::vars.AWS_USER is PRESENT" || true
+          [ -n "${{ vars.AWS_SSH_KEY }}" ] && echo "::notice::vars.AWS_SSH_KEY is PRESENT" || true
 
       - name: Deploy to AWS EC2 via SSH
         env:
-          SSH_KEY: ${{ secrets.AWS_SSH_KEY || secrets.EC2_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
-          HOST: ${{ secrets.AWS_HOST || secrets.EC2_HOST || '3.27.28.167' }}
-          USER: ${{ secrets.AWS_USER || secrets.EC2_USER || 'ubuntu' }}
+          SSH_KEY: ${{ secrets.AWS_SSH_KEY || vars.AWS_SSH_KEY || secrets.EC2_SSH_KEY || vars.EC2_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
+          HOST: ${{ secrets.AWS_HOST || vars.AWS_HOST || secrets.EC2_HOST || '3.27.28.167' }}
+          USER: ${{ secrets.AWS_USER || vars.AWS_USER || secrets.EC2_USER || 'ubuntu' }}
         run: |
           if [ -z "$SSH_KEY" ]; then
             echo "::error::SSH private key secret (AWS_SSH_KEY) is missing or empty."
