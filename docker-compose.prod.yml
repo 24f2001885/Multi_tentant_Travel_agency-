@@ -35,6 +35,7 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     command: postgres -c shared_buffers=64MB -c work_mem=4MB -c max_connections=30 -c maintenance_work_mem=16MB
+    env_file: .env.production
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-tma_admin}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-change_this_secure_db_password}

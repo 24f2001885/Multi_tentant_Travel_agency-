@@ -136,6 +136,7 @@ def create_app(config_object=None) -> Flask:
     email_prov = app.config.get("EMAIL_PROVIDER", os.environ.get("EMAIL_PROVIDER", "smtp")).lower()
     sms_prov = app.config.get("SMS_PROVIDER", os.environ.get("SMS_PROVIDER", "twilio")).lower()
     wa_prov = app.config.get("WHATSAPP_PROVIDER", os.environ.get("WHATSAPP_PROVIDER", "meta_cloud_api")).lower()
+    app.config["SENDGRID_API_KEY"] = app.config.get("SENDGRID_API_KEY", os.environ.get("SENDGRID_API_KEY"))
 
     valid_email_provs = ("smtp", "sendgrid", "ses")
     if email_prov not in valid_email_provs:
