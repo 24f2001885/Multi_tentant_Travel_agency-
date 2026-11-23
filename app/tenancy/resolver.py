@@ -74,7 +74,9 @@ def resolve_tenant():
         platform_admin_host not in ("platform.localhost", "tma.localhost")
         and host in ("platform.localhost", "tma.localhost")
     ):
-        # print(f"[DEBUG] boundary host={host} path={request.path}")
+        if request.path in ("/", "/platform", "/platform/"):
+            return redirect("/platform/login", 302)
+
         allowed_prefixes = (
             "/platform",
             "/static",
@@ -84,7 +86,7 @@ def resolve_tenant():
             "/audit-logs",
             "/domains",
         )
-        if request.path == "/" or any(request.path.startswith(p) for p in allowed_prefixes):
+        if any(request.path.startswith(p) for p in allowed_prefixes):
             return
         abort(404)
 
