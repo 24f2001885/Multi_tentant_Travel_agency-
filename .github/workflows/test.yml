@@ -90,6 +90,8 @@ jobs:
       - name: "Verify Live Tenant Seeding Command"
         env:
           DATABASE_URL: postgresql://tma:tma_dev_password@localhost:5432/tma_platform_test
+          SECRET_KEY: ci-secret-key-tma-multi-tenant
+          HASHIDS_SALT: ci-salt-hashids-tma
           FLASK_APP: app:create_app
           BASE_DOMAIN: abhishekpathak.site
           PLATFORM_ADMIN_HOST: tma.abhishekpathak.site
