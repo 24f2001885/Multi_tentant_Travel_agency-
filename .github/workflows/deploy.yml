@@ -29,6 +29,26 @@ jobs:
           SSH_KEY: ${{ secrets.AWS_SSH_KEY || vars.AWS_SSH_KEY || secrets.EC2_SSH_KEY || vars.EC2_SSH_KEY || secrets.SSH_PRIVATE_KEY }}
           HOST: ${{ secrets.AWS_HOST || vars.AWS_HOST || secrets.EC2_HOST || '3.27.28.167' }}
           USER: ${{ secrets.AWS_USER || vars.AWS_USER || secrets.EC2_USER || 'ubuntu' }}
+          SECRET_KEY: ${{ secrets.SECRET_KEY || vars.SECRET_KEY || 'prod-secret-tma-secure-84c29d10e53' }}
+          HASHIDS_SALT: ${{ secrets.HASHIDS_SALT || vars.HASHIDS_SALT || 'prod-salt-tma-hashids-94a10c8' }}
+          MAIL_SERVER: ${{ secrets.MAIL_SERVER || vars.MAIL_SERVER }}
+          MAIL_PORT: ${{ secrets.MAIL_PORT || vars.MAIL_PORT }}
+          MAIL_USE_TLS: ${{ secrets.MAIL_USE_TLS || vars.MAIL_USE_TLS }}
+          MAIL_USERNAME: ${{ secrets.MAIL_USERNAME || vars.MAIL_USERNAME }}
+          MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD || vars.MAIL_PASSWORD }}
+          MAIL_DEFAULT_SENDER: ${{ secrets.MAIL_DEFAULT_SENDER || vars.MAIL_DEFAULT_SENDER }}
+          WHATSAPP_ACCESS_TOKEN: ${{ secrets.WHATSAPP_ACCESS_TOKEN || vars.WHATSAPP_ACCESS_TOKEN }}
+          WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID || vars.WHATSAPP_PHONE_NUMBER_ID }}
+          WHATSAPP_BUSINESS_ACCOUNT_ID: ${{ secrets.WHATSAPP_BUSINESS_ACCOUNT_ID || vars.WHATSAPP_BUSINESS_ACCOUNT_ID }}
+          WHATSAPP_WEBHOOK_VERIFY_TOKEN: ${{ secrets.WHATSAPP_WEBHOOK_VERIFY_TOKEN || vars.WHATSAPP_WEBHOOK_VERIFY_TOKEN }}
+          RAZORPAY_KEY_ID: ${{ secrets.RAZORPAY_KEY_ID || vars.RAZORPAY_KEY_ID }}
+          RAZORPAY_KEY_SECRET: ${{ secrets.RAZORPAY_KEY_SECRET || vars.RAZORPAY_KEY_SECRET }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID || vars.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET || vars.GOOGLE_CLIENT_SECRET }}
+          ADMIN_EMAIL: ${{ secrets.ADMIN_EMAIL || vars.ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.ADMIN_PASSWORD || vars.ADMIN_PASSWORD }}
+          PLATFORM_ADMIN_EMAIL: ${{ secrets.PLATFORM_ADMIN_EMAIL || vars.PLATFORM_ADMIN_EMAIL }}
+          PLATFORM_ADMIN_PASSWORD: ${{ secrets.PLATFORM_ADMIN_PASSWORD || vars.PLATFORM_ADMIN_PASSWORD }}
         run: |
           if [ -z "$SSH_KEY" ]; then
             echo "::error::SSH private key secret (AWS_SSH_KEY) is missing or empty."
@@ -40,6 +60,23 @@ jobs:
           echo "$SSH_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
           ssh-keyscan -H -p 22 "$HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+
+          # Collect non-empty secrets into a temporary file
+          touch env_updates.txt
+          for var in SECRET_KEY HASHIDS_SALT MAIL_SERVER MAIL_PORT MAIL_USE_TLS MAIL_USERNAME MAIL_PASSWORD MAIL_DEFAULT_SENDER \
+                     WHATSAPP_ACCESS_TOKEN WHATSAPP_PHONE_NUMBER_ID WHATSAPP_BUSINESS_ACCOUNT_ID WHATSAPP_WEBHOOK_VERIFY_TOKEN \
+                     RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET GOOGLE_CLIENT_ID GOOGLE_CLIENT_SECRET \
+                     ADMIN_EMAIL ADMIN_PASSWORD PLATFORM_ADMIN_EMAIL PLATFORM_ADMIN_PASSWORD; do
+            val="${!var}"
+            if [ -n "$val" ]; then
+              echo "${var}=${val}" >> env_updates.txt
+            fi
+          done
+
+          if [ -s env_updates.txt ]; then
+            scp -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -P 22 env_updates.txt "$USER@$HOST:/home/ubuntu/mad1/.env.updates"
+          fi
+          rm -f env_updates.txt
 
           ssh -i ~/.ssh/deploy_key -o StrictHostKeyChecking=accept-new -p 22 "$USER@$HOST" << 'EOF'
             set -e
@@ -62,7 +99,40 @@ jobs:
             sed -i 's|BASE_DOMAIN=.*|BASE_DOMAIN=abhishekpathak.site|' .env.production
             sed -i 's|PLATFORM_ADMIN_HOST=.*|PLATFORM_ADMIN_HOST=tma.abhishekpathak.site|' .env.production
             sed -i 's|TENANT_ZERO_SUBDOMAIN=.*|TENANT_ZERO_SUBDOMAIN=tma.tenant0|' .env.production
-            sed -i 's|SECRET_KEY=generate_a_64_character_hex_string_here|SECRET_KEY=prod-secret-tma-secure-84c29d10e53|' .env.production
+
+            if [ -f .env.updates ]; then
+              echo "=== Merging GitHub Secrets into .env.production ==="
+              python3 -c "
+import os
+updates = {}
+if os.path.exists('.env.updates'):
+    with open('.env.updates') as f:
+        for line in f:
+            if '=' in line:
+                k, v = line.strip().split('=', 1)
+                if v: updates[k] = v
+    if os.path.exists('.env.production'):
+        with open('.env.production') as f:
+            lines = f.readlines()
+        new_lines = []
+        seen = set()
+        for line in lines:
+            if '=' in line and not line.strip().startswith('#'):
+                k = line.split('=', 1)[0].strip()
+                if k in updates:
+                    new_lines.append(f'{k}={updates[k]}\n')
+                    seen.add(k)
+                    continue
+            new_lines.append(line)
+        for k, v in updates.items():
+            if k not in seen:
+                new_lines.append(f'{k}={v}\n')
+        with open('.env.production', 'w') as f:
+            f.writelines(new_lines)
+    os.remove('.env.updates')
+"
+            fi
+
             docker compose -f docker-compose.prod.yml up -d --build
 
             echo "=== [4/5] Executing Database Migrations ==="
