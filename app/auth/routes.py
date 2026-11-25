@@ -274,7 +274,7 @@ def _get_google_redirect_uri() -> str:
     host = request.host.split(":")[0].strip().lower()
     port = f":{request.host.split(':')[1]}" if ":" in request.host else ""
     scheme = request.headers.get("X-Forwarded-Proto", request.scheme)
-    if "ngrok" in host or host.endswith((".loca.lt", ".trycloudflare.com")):
+    if "ngrok" in host or host.endswith((".loca.lt", ".trycloudflare.com")) or not (host.endswith(".localhost") or host in ("localhost", "127.0.0.1")):
         scheme = "https"
 
     if host.endswith(".localhost"):
